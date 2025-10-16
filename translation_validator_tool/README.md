@@ -17,6 +17,7 @@ Quick start (Windows PowerShell)
 1) Clonar
 ```powershell
 git clone https://github.com/aalvarez-fiuni/guarani-corpus-lacuna-uni.git
+cd guarani-corpus-lacuna-uni
 git checkout translation-validator
 cd translation-validator-tool
 ```
