@@ -1,0 +1,192 @@
+import { useState } from 'react';
+
+const SuggestionModal = ({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  currentTranslation,
+  isLoading = false 
+}) => {
+  const [formData, setFormData] = useState({
+    suggested_guarani: '',
+    suggested_spanish: '',
+    reason: ''
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate that at least one suggestion is provided
+    if (!formData.suggested_guarani.trim() && !formData.suggested_spanish.trim()) {
+      alert('Please provide at least one translation suggestion.');
+      return;
+    }
+
+    try {
+      await onSubmit({
+        translation_id: currentTranslation.id,
+        suggested_guarani: formData.suggested_guarani.trim() || null,
+        suggested_spanish: formData.suggested_spanish.trim() || null,
+        reason: formData.reason.trim() || null
+      });
+
+      // Reset form
+      setFormData({
+        suggested_guarani: '',
+        suggested_spanish: '',
+        reason: ''
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error('Error submitting suggestion:', error);
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      suggested_guarani: '',
+      suggested_spanish: '',
+      reason: ''
+    });
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">
+              Suggest New Translation
+            </h2>
+            <button
+              onClick={handleCancel}
+              className="text-gray-400 hover:text-gray-600 text-2xl"
+              disabled={isLoading}
+            >
+              ×
+            </button>
+          </div>
+
+          {/* Current translation */}
+          {currentTranslation && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Current Translation:
+              </h3>
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-green-700">Guaraní:</span>
+                  <p className="text-gray-800 mt-1">{currentTranslation.guarani_text}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-blue-700">Español:</span>
+                  <p className="text-gray-800 mt-1">{currentTranslation.spanish_text}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Suggested Guarani */}
+            <div>
+              <label htmlFor="suggested_guarani" className="block text-sm font-medium text-gray-700 mb-1">
+                Suggested Guaraní Translation
+              </label>
+              <textarea
+                id="suggested_guarani"
+                name="suggested_guarani"
+                value={formData.suggested_guarani}
+                onChange={handleChange}
+                placeholder="Enter your suggested Guaraní translation..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows="3"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Suggested Spanish */}
+            <div>
+              <label htmlFor="suggested_spanish" className="block text-sm font-medium text-gray-700 mb-1">
+                Suggested Spanish Translation
+              </label>
+              <textarea
+                id="suggested_spanish"
+                name="suggested_spanish"
+                value={formData.suggested_spanish}
+                onChange={handleChange}
+                placeholder="Enter your suggested Spanish translation..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows="3"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Reason */}
+            <div>
+              <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-1">
+                Reason for Change (Optional)
+              </label>
+              <textarea
+                id="reason"
+                name="reason"
+                value={formData.reason}
+                onChange={handleChange}
+                placeholder="Explain why you think this change would improve the translation..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows="3"
+                disabled={isLoading}
+              />
+            </div>
+
+            {/* Note */}
+            <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+              <p><strong>Note:</strong> You must provide at least one translation suggestion (Guaraní or Spanish).</p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="btn btn-secondary"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Submitting...
+                  </div>
+                ) : (
+                  'Submit Suggestion'
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SuggestionModal;

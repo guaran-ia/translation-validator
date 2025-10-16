@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+htmlcov/
+coverage.xml
+.coverage
+.cache
+.pytest_cache/
+.mypy_cache/
+.tox/
+venv/
+ENV/
+env/
+.envrc
+
+# Virtualenvs inside subfolders (explicit)
+api/venv/
+db_schema/venv/
+ui/venv/
+
+# Node / Frontend
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+ui/dist/
+ui/.env.local
+ui/.vite
+
+# Env files (keep .env.example)
+.env
+*.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+*.log
+logs/
+*.out
+
+# Database / runtime
+*.sqlite3
+*.db
+*.sql.gz
+
+# Build / packaging
+*.tar.gz
+*.zip
+
+# Misc
+coverage/
+coverage-report/
+*.bak
+*.swp
+*.tmp
+
+# Keep Alembic migrations tracked (do NOT ignore db_schema/alembic/versions/)
+# If you have generated SQL dumps for local testing you may add patterns:
+# db_schema/*.sql     # uncomment only if you want to ignore generated SQL files

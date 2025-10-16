@@ -1,0 +1,351 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
+
+from app.database import get_db
+from app.models.user import User
+from app.models.translation import Translation
+from app.models.validation import Validation
+from app.models.suggestion import TranslationSuggestion
+from app.schemas.translation import TranslationResponse, TranslationWithStats
+from app.api.deps import get_current_active_user
+
+router = APIRouter()
+
+
+@router.get("/stats/public")
+async def get_public_stats(
+    db: Session = Depends(get_db)
+):
+    """Get public translation statistics (no authentication required)."""
+    total_translations = db.query(func.count(Translation.id)).scalar()
+    validated_translations = db.query(func.count(func.distinct(Validation.translation_id))).scalar()
+    
+    return {
+        "total": total_translations or 0,
+        "validated": validated_translations or 0,
+        "pending": (total_translations or 0) - (validated_translations or 0)
+    }
+
+
+@router.get("/stats")
+async def get_translation_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get translation statistics."""
+    total_translations = db.query(func.count(Translation.id)).scalar()
+    
+    # Count validated translations by current user
+    user_validated = db.query(func.count(Validation.id)).filter(
+        Validation.user_id == current_user.id
+    ).scalar()
+    
+    # Count unique translations with at least one validation
+    validated_translations = db.query(func.count(func.distinct(Validation.translation_id))).scalar()
+    
+    return {
+        "total": total_translations or 0,
+        "validated": validated_translations or 0,
+        "pending": (total_translations or 0) - (validated_translations or 0),
+        "user_progress": user_validated or 0
+    }
+
+
+@router.get("/next", response_model=TranslationWithStats)
+async def get_next_translation(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get the next translation that hasn't been validated by the current user."""
+    # Find translations not validated by current user
+    subquery = db.query(Validation.translation_id).filter(
+        Validation.user_id == current_user.id
+    ).subquery()
+    
+    translation = db.query(Translation).filter(
+        ~Translation.id.in_(subquery)
+    ).first()
+    
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No more translations to validate"
+        )
+    
+    # Get validation count for this translation
+    validation_count = db.query(func.count(Validation.id)).filter(
+        Validation.translation_id == translation.id
+    ).scalar()
+    # Get suggestion count and whether current user suggested
+    suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+        TranslationSuggestion.translation_id == translation.id
+    ).scalar()
+    user_has_suggested = db.query(TranslationSuggestion).filter(
+        TranslationSuggestion.translation_id == translation.id,
+        TranslationSuggestion.user_id == current_user.id
+    ).first() is not None
+    
+    return TranslationWithStats(
+        **translation.__dict__,
+        validation_count=validation_count or 0,
+        user_has_validated=False,
+        suggestion_count=suggestion_count or 0,
+        user_has_suggested=user_has_suggested
+    )
+
+
+@router.get("/random", response_model=TranslationWithStats)
+async def get_random_translation(
+    db: Session = Depends(get_db)
+):
+    """Get a random translation (no authentication required)."""
+    # Get a random translation
+    translation = db.query(Translation).order_by(func.random()).first()
+    
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No translations available"
+        )
+    
+    # Get validation count for this translation
+    validation_count = db.query(func.count(Validation.id)).filter(
+        Validation.translation_id == translation.id
+    ).scalar()
+    # Suggestion info (no user context -> only count)
+    suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+        TranslationSuggestion.translation_id == translation.id
+    ).scalar()
+    
+    return TranslationWithStats(
+        **translation.__dict__,
+        validation_count=validation_count or 0,
+        user_has_validated=False,
+        suggestion_count=suggestion_count or 0,
+        user_has_suggested=False
+    )
+
+
+@router.get("/{translation_id}", response_model=TranslationResponse)
+async def get_translation(
+    translation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get a specific translation by ID."""
+    translation = db.query(Translation).filter(Translation.id == translation_id).first()
+    
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Translation not found"
+        )
+    
+    return TranslationResponse.model_validate(translation)
+
+
+@router.get("/navigation/next/{current_id}", response_model=TranslationWithStats)
+async def get_next_translation_from_id(
+    current_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get the next translation after the current ID that hasn't been validated by the user."""
+    # Find translations not validated by current user with ID greater than current_id
+    subquery = db.query(Validation.translation_id).filter(
+        Validation.user_id == current_user.id
+    ).subquery()
+    
+    translation = db.query(Translation).filter(
+        and_(Translation.id > current_id, ~Translation.id.in_(subquery))
+    ).order_by(Translation.id).first()
+    
+    if not translation:
+        # If no next translation found, get the first available one
+        translation = db.query(Translation).filter(
+            ~Translation.id.in_(subquery)
+        ).order_by(Translation.id).first()
+    
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No more translations to validate"
+        )
+    
+    # Get validation count and user validation status
+    validation_count = db.query(func.count(Validation.id)).filter(
+        Validation.translation_id == translation.id
+    ).scalar()
+    
+    user_has_validated = db.query(Validation).filter(
+        and_(Validation.translation_id == translation.id, Validation.user_id == current_user.id)
+    ).first() is not None
+    # Suggestion info
+    suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+        TranslationSuggestion.translation_id == translation.id
+    ).scalar()
+    user_has_suggested = db.query(TranslationSuggestion).filter(
+        TranslationSuggestion.translation_id == translation.id,
+        TranslationSuggestion.user_id == current_user.id
+    ).first() is not None
+    
+    return TranslationWithStats(
+        **translation.__dict__,
+        validation_count=validation_count or 0,
+        user_has_validated=user_has_validated,
+        suggestion_count=suggestion_count or 0,
+        user_has_suggested=user_has_suggested
+    )
+
+
+@router.get("/navigation/previous/{current_id}", response_model=TranslationWithStats)
+async def get_previous_translation_from_id(
+    current_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get the previous translation before the current ID."""
+    translation = db.query(Translation).filter(
+        Translation.id < current_id
+    ).order_by(Translation.id.desc()).first()
+    
+    if not translation:
+        # If no previous translation found, get the last one
+        translation = db.query(Translation).order_by(Translation.id.desc()).first()
+    
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No translations available"
+        )
+    
+    # Get validation count and user validation status
+    validation_count = db.query(func.count(Validation.id)).filter(
+        Validation.translation_id == translation.id
+    ).scalar()
+    
+    user_has_validated = db.query(Validation).filter(
+        and_(Validation.translation_id == translation.id, Validation.user_id == current_user.id)
+    ).first() is not None
+    # Suggestion info
+    suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+        TranslationSuggestion.translation_id == translation.id
+    ).scalar()
+    user_has_suggested = db.query(TranslationSuggestion).filter(
+        TranslationSuggestion.translation_id == translation.id,
+        TranslationSuggestion.user_id == current_user.id
+    ).first() is not None
+    
+    return TranslationWithStats(
+        **translation.__dict__,
+        validation_count=validation_count or 0,
+        user_has_validated=user_has_validated,
+        suggestion_count=suggestion_count or 0,
+        user_has_suggested=user_has_suggested
+    )
+
+
+@router.get("/validated/my-history")
+async def get_my_validated_translations(
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get paginated list of translations validated by the current user."""
+    # Get validations with translation data
+    validations = db.query(Validation).filter(
+        Validation.user_id == current_user.id
+    ).order_by(Validation.created_at.desc()).offset(skip).limit(limit).all()
+    
+    # Get translation details for each validation
+    result = []
+    for validation in validations:
+        translation = db.query(Translation).filter(Translation.id == validation.translation_id).first()
+        if translation:
+            validation_count = db.query(func.count(Validation.id)).filter(
+                Validation.translation_id == translation.id
+            ).scalar()
+            
+            result.append({
+                "translation": TranslationWithStats(
+                    **translation.__dict__,
+                    validation_count=validation_count or 0,
+                    user_has_validated=True
+                ),
+                "validation": {
+                    "id": validation.id,
+                    "correctness": validation.correctness,
+                    "fluency_score": validation.fluency_score,
+                    "accuracy_score": validation.accuracy_score,
+                    "notes": validation.notes,
+                    "created_at": validation.created_at
+                }
+            })
+    
+    # Get total count for pagination
+    total = db.query(func.count(Validation.id)).filter(
+        Validation.user_id == current_user.id
+    ).scalar()
+    
+    return {
+        "items": result,
+        "total": total or 0,
+        "skip": skip,
+        "limit": limit,
+        "has_next": (skip + limit) < (total or 0)
+    }
+
+
+@router.get("/pending/for-me")
+async def get_my_pending_translations(
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get paginated list of translations pending validation by the current user."""
+    # Find translations not validated by current user
+    subquery = db.query(Validation.translation_id).filter(
+        Validation.user_id == current_user.id
+    ).subquery()
+    
+    translations = db.query(Translation).filter(
+        ~Translation.id.in_(subquery)
+    ).order_by(Translation.id).offset(skip).limit(limit).all()
+    
+    result = []
+    for translation in translations:
+        validation_count = db.query(func.count(Validation.id)).filter(
+            Validation.translation_id == translation.id
+        ).scalar()
+        # Suggestion info (user context)
+        suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+            TranslationSuggestion.translation_id == translation.id
+        ).scalar()
+        user_has_suggested = db.query(TranslationSuggestion).filter(
+            TranslationSuggestion.translation_id == translation.id,
+            TranslationSuggestion.user_id == current_user.id
+        ).first() is not None
+
+        result.append(TranslationWithStats(
+            **translation.__dict__,
+            validation_count=validation_count or 0,
+            user_has_validated=False,
+            suggestion_count=suggestion_count or 0,
+            user_has_suggested=user_has_suggested
+        ))
+    
+    # Get total count of pending translations
+    total = db.query(func.count(Translation.id)).filter(
+        ~Translation.id.in_(subquery)
+    ).scalar()
+    
+    return {
+        "items": result,
+        "total": total or 0,
+        "skip": skip,
+        "limit": limit,
+        "has_next": (skip + limit) < (total or 0)
+    }
