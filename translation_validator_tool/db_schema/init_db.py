@@ -46,24 +46,33 @@ def create_database_if_not_exists():
         # Create engine without database name to connect to PostgreSQL server
         base_url = f"{parsed_url.scheme}://{parsed_url.netloc}/postgres"
         base_engine = create_engine(base_url)
-        
+
         # Check if database exists
-        with base_engine.connect() as conn:
-            # Use autocommit mode for database creation
-            conn = conn.execution_options(autocommit=True)
-            
-            # Check if database exists
+        # Use one connection to check existence, then if needed open a fresh
+        # connection with AUTOCOMMIT to run CREATE DATABASE (cannot run in a transaction)
+        conn = base_engine.connect()
+        try:
             result = conn.execute(text(
                 "SELECT 1 FROM pg_database WHERE datname = :database_name"
             ), {"database_name": database_name})
-            
+
             if not result.fetchone():
                 logger.info(f"🏗️  Creating database: {database_name}")
-                conn.execute(text(f'CREATE DATABASE "{database_name}"'))
+                # Close the select connection before opening autocommit connection
+                conn.close()
+                # Open a new connection configured for autocommit and run CREATE DATABASE
+                with base_engine.connect().execution_options(isolation_level="AUTOCOMMIT") as ac:
+                    ac.execute(text(f'CREATE DATABASE "{database_name}"'))
                 logger.info(f"✅ Database '{database_name}' created successfully")
             else:
                 logger.info(f"📊 Database '{database_name}' already exists")
-                
+        finally:
+            try:
+                if not conn.closed:
+                    conn.close()
+            except Exception:
+                pass
+
         base_engine.dispose()
         
     except Exception as e:
