@@ -59,7 +59,8 @@ translation_validator_tool/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/translation-validator-tool.git
+git clone https://github.com/aalvarez-fiuni/guarani-corpus-lacuna-uni.git
+git checkout translation-validator
 cd translation-validator-tool
 ```
 
