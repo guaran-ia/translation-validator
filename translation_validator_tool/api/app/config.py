@@ -1,4 +1,6 @@
 import json
+import os
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings
 
@@ -17,7 +19,8 @@ class Settings(BaseSettings):
         return json.loads(self.CORS_ORIGINS)
     
     class Config:
-        env_file = ".env"
+        # Ensure .env is loaded from the api folder even if cwd is different (e.g. when running Alembic)
+        env_file = str(Path(__file__).resolve().parent.parent.joinpath('.env'))
 
 
 settings = Settings()
