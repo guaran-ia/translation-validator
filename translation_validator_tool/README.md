@@ -33,13 +33,31 @@ copy .env.example .env     # editar .env -> DATABASE_URL, SECRET_KEY, CORS_ORIGI
 ```
 
 Migraciones / inicialización (usar db_schema)
+
+Opción 1 — Inicializar automáticamente (recomendado)
+
 ```powershell
+# 1. Desde la carpeta `api` instala deps en el venv (si aún no lo hiciste)
+cd api
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# 2. Ejecuta el helper que crea la BD (si no existe), tablas y admin por defecto
 cd ..\db_schema
-# con el venv activado desde api:
-python -m alembic upgrade head
-# o:
-python init_database.py init
+..\api\venv\Scripts\python.exe init_database.py init
 ```
+
+Opción 2 — Crear la base de datos manualmente y aplicar migraciones
+
+```powershell
+# 1. Crear la base de datos en Postgres (ajusta usuario/host/puerto según tu instalación)
+psql -U postgres -c "CREATE DATABASE translation_validator;"
+
+# 2. Aplicar migraciones con Alembic
+cd C:\ruta\al\proyecto\translation_validator_tool\db_schema
+..\api\venv\Scripts\python.exe -m alembic upgrade head
+```
+
+Nota: si ejecutas Alembic directamente sin crear la BD verás errores de conexión. Usa la Opción 1 para automatizar la creación.
 
 3) Frontend (ui)
 ```powershell
