@@ -3,6 +3,14 @@ import os
 
 # Add the api directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'api'))
+# Ensure environment variables from the API .env are loaded before importing the app
+try:
+    # python-dotenv is in requirements; if available, use it to load the .env file
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', 'api', '.env'))
+except Exception:
+    # If python-dotenv isn't available, silently continue; Settings will try other sources
+    pass
 
 from logging.config import fileConfig
 
