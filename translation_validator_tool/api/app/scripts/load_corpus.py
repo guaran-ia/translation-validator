@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 import pandas as pd
 from sqlalchemy.orm import Session
+from sqlalchemy import tuple_
 from app.database import SessionLocal, engine
 from app.models.translation import Translation
 from app.models import user, validation, suggestion  # Import to ensure tables are created
@@ -30,6 +31,22 @@ def load_corpus_from_csv(file_path: str):
             return
         
         df = pd.read_csv(file_path)
+
+        # Allow common alias column names and normalize to expected names
+        # e.g. 'gn' -> 'guarani', 'es' -> 'spanish'
+        col_map = {}
+        if 'gn' in df.columns and 'guarani' not in df.columns:
+            col_map['gn'] = 'guarani'
+        if 'es' in df.columns and 'spanish' not in df.columns:
+            col_map['es'] = 'spanish'
+        if 'gn_text' in df.columns and 'guarani' not in df.columns:
+            col_map['gn_text'] = 'guarani'
+        if 'es_text' in df.columns and 'spanish' not in df.columns:
+            col_map['es_text'] = 'spanish'
+
+        if col_map:
+            df = df.rename(columns=col_map)
+            print(f"Note: normalized columns: {col_map}")
         
         # Validate required columns
         required_columns = ['guarani', 'spanish']
@@ -42,34 +59,57 @@ def load_corpus_from_csv(file_path: str):
         if 'source' not in df.columns:
             df['source'] = 'jojajovai'
         
-        count = 0
-        skipped = 0
-        
-        for _, row in df.iterrows():
-            # Skip rows with empty text
-            if pd.isna(row['guarani']) or pd.isna(row['spanish']):
-                skipped += 1
-                continue
-            
-            # Check if translation already exists
-            exists = db.query(Translation).filter(
-                Translation.guarani_text == str(row['guarani']).strip(),
-                Translation.spanish_text == str(row['spanish']).strip()
-            ).first()
-            
-            if not exists:
-                translation = Translation(
-                    guarani_text=str(row['guarani']).strip(),
-                    spanish_text=str(row['spanish']).strip(),
-                    source=str(row.get('source', 'jojajovai')).strip()
-                )
-                db.add(translation)
-                count += 1
-            else:
-                skipped += 1
-        
-        db.commit()
-        print(f"✅ Successfully loaded {count} new translations")
+        # Normalize values and drop empty rows
+        df = df.dropna(subset=['guarani', 'spanish'])
+        df['guarani'] = df['guarani'].astype(str).str.strip()
+        df['spanish'] = df['spanish'].astype(str).str.strip()
+        if 'source' not in df.columns:
+            df['source'] = 'jojajovai'
+        else:
+            df['source'] = df['source'].fillna('jojajovai').astype(str).str.strip()
+
+        # Deduplicate CSV by (guarani, spanish)
+        dedupe_df = df[['guarani', 'spanish', 'source']].drop_duplicates(subset=['guarani', 'spanish'])
+        pairs = list(zip(dedupe_df['guarani'], dedupe_df['spanish']))
+
+        total_pairs = len(pairs)
+        if total_pairs == 0:
+            print("No valid rows to load after normalization.")
+            return
+
+        # Find existing translations in DB in chunks to avoid huge IN lists
+        existing = set()
+        CHUNK = 1000
+        for i in range(0, total_pairs, CHUNK):
+            chunk_pairs = pairs[i:i+CHUNK]
+            q = db.query(Translation.guarani_text, Translation.spanish_text).filter(
+                tuple_(Translation.guarani_text, Translation.spanish_text).in_(chunk_pairs)
+            ).all()
+            for row_pair in q:
+                existing.add((row_pair[0], row_pair[1]))
+
+        # Prepare new translations (those not in existing)
+        to_add = []
+        for g, s, src in zip(dedupe_df['guarani'], dedupe_df['spanish'], dedupe_df['source']):
+            if (g, s) not in existing:
+                to_add.append(Translation(guarani_text=g, spanish_text=s, source=src))
+
+        # Bulk insert in chunks
+        added = 0
+        BATCH = 500
+        for i in range(0, len(to_add), BATCH):
+            batch = to_add[i:i+BATCH]
+            db.add_all(batch)
+            try:
+                db.commit()
+            except Exception as e:
+                print(f"❌ Error committing batch: {e}")
+                db.rollback()
+                raise
+            added += len(batch)
+
+        skipped = total_pairs - len(to_add)
+        print(f"✅ Successfully loaded {added} new translations")
         print(f"📋 Skipped {skipped} duplicates or empty entries")
         
     except Exception as e:

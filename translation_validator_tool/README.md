@@ -115,7 +115,7 @@ cd ..\api
 4. Ejecutar el script de carga (usa el script incluido app.scripts.load_corpus):
 ```powershell
 # ruta relativa al CSV: ../../data/translations.csv
-python -m app.scripts.load_corpus --csv ../../data/translations.csv
+..\api\venv\Scripts\python.exe -m app.scripts.load_corpus --file ..\..\data\translations.csv
 # o, si solo quieres una muestra:
 python -m app.scripts.load_corpus --sample
 ```
