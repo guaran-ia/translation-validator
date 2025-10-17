@@ -15,11 +15,11 @@ const StatsBar = ({ stats }) => {
             <span className="text-blue-600 font-semibold">{stats.total}</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="font-medium text-gray-700">Validated:</span>
+            <span className="font-medium text-gray-700">Validadas:</span>
             <span className="text-green-600 font-semibold">{stats.validated}</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="font-medium text-gray-700">Pending:</span>
+            <span className="font-medium text-gray-700">Pendientes:</span>
             <span className="text-orange-600 font-semibold">{stats.pending}</span>
           </div>
         </div>
@@ -27,7 +27,7 @@ const StatsBar = ({ stats }) => {
         {/* User progress */}
         <div className="flex items-center space-x-3">
           <span className="text-sm font-medium text-gray-700">
-            Your progress: {stats.user_progress}/{stats.total}
+            Tu progreso: {stats.user_progress}/{stats.total}
           </span>
           <div className="w-24 bg-gray-200 rounded-full h-2">
             <div 

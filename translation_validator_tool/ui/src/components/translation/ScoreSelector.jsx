@@ -26,7 +26,7 @@ const ScoreSelector = ({ label, selectedScore, onSelect, disabled }) => {
               className={buttonClasses}
               onClick={() => !disabled && onSelect(score)}
               disabled={disabled}
-              title={`Score: ${score}/5`}
+              title={`Puntuación: ${score}/5`}
             >
               {score}
             </button>
@@ -34,7 +34,7 @@ const ScoreSelector = ({ label, selectedScore, onSelect, disabled }) => {
         })}
       </div>
       <p className="text-xs text-gray-500">
-        1 = Poor, 5 = Excellent
+        1 = Pobre, 5 = Excelente
       </p>
     </div>
   );

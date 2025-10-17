@@ -2,7 +2,7 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
   const options = [
     {
       value: 'correct',
-      label: 'Correct',
+      label: 'Correcta',
       icon: '✓',
       bgColor: 'bg-green-600 hover:bg-green-700',
       selectedBg: 'bg-green-700',
@@ -11,7 +11,7 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
     },
     {
       value: 'partial',
-      label: 'Partial',
+      label: 'Parcial',
       icon: '~',
       bgColor: 'bg-yellow-500 hover:bg-yellow-600',
       selectedBg: 'bg-yellow-600',
@@ -20,7 +20,7 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
     },
     {
       value: 'incorrect',
-      label: 'Incorrect',
+      label: 'Incorrecta',
       icon: '✗',
       bgColor: 'bg-red-600 hover:bg-red-700',
       selectedBg: 'bg-red-700',
@@ -32,7 +32,7 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
   return (
     <div className="space-y-2">
       <h3 className="text-lg font-medium text-gray-800">
-        Translation Correctness
+        Corrección de la traducción
       </h3>
       <div className="flex flex-wrap gap-3">
         {options.map((option) => {

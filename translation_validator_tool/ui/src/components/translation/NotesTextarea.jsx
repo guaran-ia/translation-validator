@@ -13,7 +13,7 @@ const NotesTextarea = ({ notes, onNotesChange, disabled, maxLength = 500 }) => {
   return (
     <div className="space-y-2">
       <h4 className="text-base font-medium text-gray-800">
-        Notes (Optional)
+        Notas (Opcional)
       </h4>
       <div className="relative">
         <textarea
@@ -22,7 +22,7 @@ const NotesTextarea = ({ notes, onNotesChange, disabled, maxLength = 500 }) => {
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           disabled={disabled}
-          placeholder="Add any comments about the translation quality, errors, or suggestions..."
+          placeholder="Agrega comentarios sobre la calidad, errores o sugerencias de la traducción..."
           className={`
             w-full px-3 py-2 border rounded-lg resize-none transition-all duration-200
             focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
@@ -40,12 +40,12 @@ const NotesTextarea = ({ notes, onNotesChange, disabled, maxLength = 500 }) => {
       
       {/* Tips */}
       <div className="text-xs text-gray-500">
-        <p>💡 Include notes about:</p>
+        <p>💡 Incluye notas sobre:</p>
         <ul className="ml-4 mt-1 space-y-1">
-          <li>• Grammar or vocabulary errors</li>
-          <li>• Cultural context issues</li>
-          <li>• Alternative translations</li>
-          <li>• Clarity or naturalness</li>
+          <li>• Errores gramaticales o de vocabulario</li>
+          <li>• Problemas de contexto cultural</li>
+          <li>• Traducciones alternativas</li>
+          <li>• Claridad o naturalidad</li>
         </ul>
       </div>
     </div>

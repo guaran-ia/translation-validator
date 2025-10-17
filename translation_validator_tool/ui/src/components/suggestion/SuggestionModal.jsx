@@ -26,13 +26,13 @@ const SuggestionModal = ({
     
     // Validate that at least one suggestion is provided
     if (!formData.suggested_guarani.trim() && !formData.suggested_spanish.trim()) {
-      alert('Please provide at least one translation suggestion.');
+      alert('Por favor proporciona al menos una sugerencia de traducción (guaraní o español).');
       return;
     }
 
     try {
       await onSubmit({
-        translation_id: currentTranslation.id,
+        translation_id: currentTranslation?.id,
         suggested_guarani: formData.suggested_guarani.trim() || null,
         suggested_spanish: formData.suggested_spanish.trim() || null,
         reason: formData.reason.trim() || null
@@ -47,7 +47,7 @@ const SuggestionModal = ({
       
       onClose();
     } catch (error) {
-      console.error('Error submitting suggestion:', error);
+      console.error('Error enviando la sugerencia:', error);
     }
   };
 
@@ -69,7 +69,7 @@ const SuggestionModal = ({
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-gray-900">
-              Suggest New Translation
+              Sugerir nueva traducción
             </h2>
             <button
               onClick={handleCancel}
@@ -84,7 +84,7 @@ const SuggestionModal = ({
           {currentTranslation && (
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
               <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Current Translation:
+                Traducción actual:
               </h3>
               <div className="grid md:grid-cols-2 gap-4 text-sm">
                 <div>
@@ -104,14 +104,14 @@ const SuggestionModal = ({
             {/* Suggested Guarani */}
             <div>
               <label htmlFor="suggested_guarani" className="block text-sm font-medium text-gray-700 mb-1">
-                Suggested Guaraní Translation
+                Sugerencia en guaraní
               </label>
               <textarea
                 id="suggested_guarani"
                 name="suggested_guarani"
                 value={formData.suggested_guarani}
                 onChange={handleChange}
-                placeholder="Enter your suggested Guaraní translation..."
+                placeholder="Introduce tu sugerencia en guaraní..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows="3"
                 disabled={isLoading}
@@ -121,14 +121,14 @@ const SuggestionModal = ({
             {/* Suggested Spanish */}
             <div>
               <label htmlFor="suggested_spanish" className="block text-sm font-medium text-gray-700 mb-1">
-                Suggested Spanish Translation
+                Sugerencia en español
               </label>
               <textarea
                 id="suggested_spanish"
                 name="suggested_spanish"
                 value={formData.suggested_spanish}
                 onChange={handleChange}
-                placeholder="Enter your suggested Spanish translation..."
+                placeholder="Introduce tu sugerencia en español..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows="3"
                 disabled={isLoading}
@@ -138,14 +138,14 @@ const SuggestionModal = ({
             {/* Reason */}
             <div>
               <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-1">
-                Reason for Change (Optional)
+                Motivo del cambio (opcional)
               </label>
               <textarea
                 id="reason"
                 name="reason"
                 value={formData.reason}
                 onChange={handleChange}
-                placeholder="Explain why you think this change would improve the translation..."
+                placeholder="Explica por qué crees que esto mejora la traducción..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 rows="3"
                 disabled={isLoading}
@@ -154,7 +154,7 @@ const SuggestionModal = ({
 
             {/* Note */}
             <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-              <p><strong>Note:</strong> You must provide at least one translation suggestion (Guaraní or Spanish).</p>
+              <p><strong>Nota:</strong> Debes proporcionar al menos una sugerencia de traducción (guaraní o español).</p>
             </div>
 
             {/* Buttons */}
@@ -165,7 +165,7 @@ const SuggestionModal = ({
                 className="btn btn-secondary"
                 disabled={isLoading}
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 type="submit"
@@ -175,10 +175,10 @@ const SuggestionModal = ({
                 {isLoading ? (
                   <div className="flex items-center">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Submitting...
+                    Enviando...
                   </div>
                 ) : (
-                  'Submit Suggestion'
+                  'Enviar sugerencia'
                 )}
               </button>
             </div>
