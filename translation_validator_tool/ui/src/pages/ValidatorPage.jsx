@@ -262,97 +262,89 @@ const ValidatorPage = () => {
         {/* Tarjeta de traducción */}
         <TranslationCard translation={currentTranslation} />
 
-        {/* Formulario de validación o aviso si ya sugeriste */}
+        {/* Formulario de validación (ahora siempre disponible). Si ya sugeriste, mostramos un aviso pero permitimos validar igualmente. */}
         <div className="card mt-6">
           <div className="space-y-6">
-            {currentTranslation.user_has_suggested ? (
-              <div className="p-4">
+            {currentTranslation.user_has_suggested && (
+              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
                 <h3 className="text-lg font-medium">Has sugerido una traducción</h3>
                 <p className="text-sm text-gray-600 mt-2">
-                  Ya enviaste una sugerencia para esta traducción. Gracias — puedes revisar o eliminar tu sugerencia desde <strong>Mis sugerencias</strong>.
+                  Ya enviaste una sugerencia para esta traducción. Puedes editarla si lo deseas, pero esto no impide que puedas validar la traducción.
                 </p>
-                <div className="pt-4">
+                <div className="pt-3">
                   <button
                     onClick={() => setShowSuggestionModal(true)}
                     className="btn btn-secondary"
                   >
                     ✏️ Editar sugerencia
                   </button>
-                  <button
-                    onClick={handleSkip}
-                    className="btn btn-secondary ml-3"
-                  >
-                    Omitir →
-                  </button>
                 </div>
               </div>
-            ) : (
-              <>
-                {/* Corrección */}
-                <CorrectnessButtons
-                  selectedCorrectness={formData.correctness}
-                  onSelect={handleCorrectnessSelect}
-                  disabled={submitting}
-                />
-
-                {/* Puntuaciones */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <ScoreSelector
-                    label="Puntuación de fluidez"
-                    selectedScore={formData.fluency_score}
-                    onSelect={handleFluencySelect}
-                    disabled={submitting}
-                  />
-                  <ScoreSelector
-                    label="Puntuación de precisión"
-                    selectedScore={formData.accuracy_score}
-                    onSelect={handleAccuracySelect}
-                    disabled={submitting}
-                  />
-                </div>
-
-                {/* Notas */}
-                <NotesTextarea
-                  notes={formData.notes}
-                  onNotesChange={handleNotesChange}
-                  disabled={submitting}
-                />
-
-                {/* Botones de acción */}
-                <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={handleSubmitValidation}
-                    disabled={!isFormValid() || submitting}
-                    className="btn btn-primary flex-1 min-w-[200px]"
-                  >
-                    {submitting ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Enviando...
-                      </div>
-                    ) : (
-                      'Enviar validación'
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => setShowSuggestionModal(true)}
-                    disabled={submitting}
-                    className="btn btn-secondary"
-                  >
-                    🔄 Sugerir nueva traducción
-                  </button>
-
-                  <button
-                    onClick={handleSkip}
-                    disabled={submitting}
-                    className="btn btn-secondary"
-                  >
-                    Omitir →
-                  </button>
-                </div>
-              </>
             )}
+
+            {/* Corrección */}
+            <CorrectnessButtons
+              selectedCorrectness={formData.correctness}
+              onSelect={handleCorrectnessSelect}
+              disabled={submitting}
+            />
+
+            {/* Puntuaciones */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <ScoreSelector
+                label="Puntuación de fluidez"
+                selectedScore={formData.fluency_score}
+                onSelect={handleFluencySelect}
+                disabled={submitting}
+              />
+              <ScoreSelector
+                label="Puntuación de precisión"
+                selectedScore={formData.accuracy_score}
+                onSelect={handleAccuracySelect}
+                disabled={submitting}
+              />
+            </div>
+
+            {/* Notas */}
+            <NotesTextarea
+              notes={formData.notes}
+              onNotesChange={handleNotesChange}
+              disabled={submitting}
+            />
+
+            {/* Botones de acción */}
+            <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleSubmitValidation}
+                disabled={!isFormValid() || submitting}
+                className="btn btn-primary flex-1 min-w-[200px]"
+              >
+                {submitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Enviando...
+                  </div>
+                ) : (
+                  'Enviar validación'
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowSuggestionModal(true)}
+                disabled={submitting}
+                className="btn btn-secondary"
+              >
+                🔄 Sugerir nueva traducción
+              </button>
+
+              <button
+                onClick={handleSkip}
+                disabled={submitting}
+                className="btn btn-secondary"
+              >
+                Omitir →
+              </button>
+            </div>
           </div>
         </div>
       </div>

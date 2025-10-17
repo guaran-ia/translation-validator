@@ -37,7 +37,7 @@ const HistoryPage = () => {
         }
       }));
     } catch (error) {
-      console.error('Error loading validated translations:', error);
+      console.error('Error cargando traducciones evaluadas:', error);
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,7 @@ const HistoryPage = () => {
         }
       }));
     } catch (error) {
-      console.error('Error loading pending translations:', error);
+      console.error('Error cargando traducciones pendientes:', error);
     } finally {
       setLoading(false);
     }

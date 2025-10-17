@@ -20,10 +20,10 @@ const TranslationCard = ({ translation }) => {
     <div className="card">
       <div className="mb-4 text-center">
         <h2 className="text-xl font-semibold text-gray-800">
-          Evaluate the following translation
+          Evalúa la siguiente traducción
         </h2>
         <p className="text-sm text-gray-600 mt-1">
-          Translation ID: {translation.id}
+          ID de traducción: {translation.id}
         </p>
       </div>
 
@@ -58,24 +58,24 @@ const TranslationCard = ({ translation }) => {
       {/* Additional info */}
       <div className="mt-4 pt-4 border-t border-gray-200">
         <div className="flex justify-between items-center text-sm text-gray-600">
-          <span>Source: {translation.source}</span>
+          <span>Fuente: {translation.source}</span>
           <div className="flex items-center gap-4">
             {translation.validation_count !== undefined && (
               <span>
-                Validations: {translation.validation_count}
+                Evaluaciones: {translation.validation_count}
               </span>
             )}
 
             {/* Suggestion info */}
             {translation.suggestion_count !== undefined && (
               <span className="text-sm text-gray-600">
-                Suggestions: {translation.suggestion_count}
+                Sugerencias: {translation.suggestion_count}
               </span>
             )}
 
             {translation.user_has_suggested && (
               <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
-                You suggested this
+                Has sugerido esto
               </span>
             )}
           </div>
