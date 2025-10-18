@@ -100,8 +100,23 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        # Enable detailed autogenerate comparisons so Alembic detects
+        # type changes and server_default changes.
+        def _process_revision_directives(context, revision, directives):
+            # If autogenerate produced an empty migration, don't create a file
+            if getattr(config.cmd_opts, 'autogenerate', False):
+                script = directives[0]
+                if not script.upgrade_ops.is_empty():
+                    return
+                # If empty, clear directives to prevent creating an empty revision
+                directives[:] = []
+
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
+            process_revision_directives=_process_revision_directives,
         )
 
         with context.begin_transaction():

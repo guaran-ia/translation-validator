@@ -10,13 +10,22 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
       selectedBorder: 'border-green-700'
     },
     {
-      value: 'partial',
-      label: 'Parcial',
-      icon: '~',
-      bgColor: 'bg-yellow-500 hover:bg-yellow-600',
-      selectedBg: 'bg-yellow-600',
-      borderColor: 'border-yellow-500',
-      selectedBorder: 'border-yellow-600'
+      value: 'gn_more',
+      label: 'Guaraní tiene más información',
+      icon: 'G',
+      bgColor: 'bg-indigo-600 hover:bg-indigo-700',
+      selectedBg: 'bg-indigo-700',
+      borderColor: 'border-indigo-600',
+      selectedBorder: 'border-indigo-700'
+    },
+    {
+      value: 'es_more',
+      label: 'Español tiene más información',
+      icon: 'E',
+      bgColor: 'bg-purple-600 hover:bg-purple-700',
+      selectedBg: 'bg-purple-700',
+      borderColor: 'border-purple-600',
+      selectedBorder: 'border-purple-700'
     },
     {
       value: 'incorrect',
@@ -38,13 +47,12 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
         {options.map((option) => {
           const isSelected = selectedCorrectness === option.value;
           const buttonClasses = `
-            flex-1 min-w-[120px] px-4 py-3 border-2 rounded-lg font-medium text-white
-            transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+            flex-1 min-w-[140px] px-5 py-3 border-2 rounded-lg font-semibold text-white text-sm
+            transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2
+            ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
             ${isSelected 
-              ? `${option.selectedBg} ${option.selectedBorder} ring-2 ring-offset-2 ring-gray-400` 
-              : `${option.bgColor} ${option.borderColor}`
-            }
+              ? `${option.selectedBg} ${option.selectedBorder} shadow-md scale-105` 
+              : `${option.bgColor} ${option.borderColor} hover:shadow-sm`}
           `.replace(/\s+/g, ' ').trim();
 
           return (

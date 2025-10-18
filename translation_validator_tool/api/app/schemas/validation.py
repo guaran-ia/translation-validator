@@ -6,8 +6,9 @@ from enum import Enum
 
 class CorrectnessEnum(str, Enum):
     CORRECT = "correct"
-    PARTIAL = "partial"
     INCORRECT = "incorrect"
+    GN_MORE = "gn_more"  # Guarani has more information
+    ES_MORE = "es_more"  # Spanish has more information
 
 
 class ValidationBase(BaseModel):

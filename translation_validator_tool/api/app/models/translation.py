@@ -14,6 +14,8 @@ class Translation(Base):
     source: Mapped[str] = mapped_column(String(255), default="jojajovai")
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    # Direction of translation: 'sp-gn' means Spanish -> Guarani (default), 'gn-sp' means Guarani -> Spanish
+    direction: Mapped[str] = mapped_column(String(10), nullable=False, default='sp-gn')
     
     # Relationships - using string names to avoid circular imports
     validations = relationship("Validation", back_populates="translation", cascade="all, delete-orphan")

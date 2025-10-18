@@ -34,7 +34,7 @@ const ScoreSelector = ({ label, selectedScore, onSelect, disabled }) => {
         })}
       </div>
       <p className="text-xs text-gray-500">
-        1 = Pobre, 5 = Excelente
+        <strong>Escala:</strong> 1 = Nada (pobre) — 5 = Excelente
       </p>
     </div>
   );

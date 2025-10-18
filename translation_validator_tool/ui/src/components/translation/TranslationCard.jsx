@@ -16,6 +16,14 @@ const TranslationCard = ({ translation }) => {
     );
   }
 
+  // Determine ordering based on translation.direction (default sp-gn)
+  const dir = translation?.direction || 'sp-gn';
+  const leftIsOriginal = dir === 'sp-gn' ? 'spanish' : 'guarani';
+  const rightIsTranslation = leftIsOriginal === 'spanish' ? 'guarani' : 'spanish';
+
+  const leftText = leftIsOriginal === 'spanish' ? translation.spanish_text : translation.guarani_text;
+  const rightText = rightIsTranslation === 'guarani' ? translation.guarani_text : translation.spanish_text;
+
   return (
     <div className="card">
       <div className="mb-4 text-center">
@@ -28,29 +36,31 @@ const TranslationCard = ({ translation }) => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Guarani Text */}
+        {/* Left (original) */}
         <div className="space-y-2">
-          <h3 className="text-lg font-medium text-green-700 flex items-center">
-            <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
-            Guaraní
-          </h3>
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 min-h-[120px]">
-            <p className="text-gray-800 leading-relaxed">
-              {translation.guarani_text}
-            </p>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-700 flex items-center">
+              <span className="w-3 h-3 bg-blue-400 rounded-full mr-2 shadow-sm"></span>
+              {leftIsOriginal === 'spanish' ? 'Español (original)' : 'Guaraní (original)'}
+            </h3>
+            <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Original</span>
+          </div>
+          <div className="bg-white border border-blue-100 rounded-lg p-4 min-h-[120px] shadow-sm">
+            <p className="text-gray-900 leading-relaxed">{leftText}</p>
           </div>
         </div>
 
-        {/* Spanish Text */}
+        {/* Right (translation) */}
         <div className="space-y-2">
-          <h3 className="text-lg font-medium text-blue-700 flex items-center">
-            <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-            Español
-          </h3>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 min-h-[120px]">
-            <p className="text-gray-800 leading-relaxed">
-              {translation.spanish_text}
-            </p>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-700 flex items-center">
+              <span className="w-3 h-3 bg-green-400 rounded-full mr-2 shadow-sm"></span>
+              {rightIsTranslation === 'guarani' ? 'Guaraní' : 'Español'}
+            </h3>
+            <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-100">Traducción</span>
+          </div>
+          <div className="bg-white border border-green-100 rounded-lg p-4 min-h-[120px] shadow-sm">
+            <p className="text-gray-900 leading-relaxed">{rightText}</p>
           </div>
         </div>
       </div>

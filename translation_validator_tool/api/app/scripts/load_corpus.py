@@ -44,6 +44,12 @@ def load_corpus_from_csv(file_path: str):
         if 'es_text' in df.columns and 'spanish' not in df.columns:
             col_map['es_text'] = 'spanish'
 
+        # direction aliases
+        if 'dir' in df.columns and 'direction' not in df.columns:
+            col_map['dir'] = 'direction'
+        if 'lang_dir' in df.columns and 'direction' not in df.columns:
+            col_map['lang_dir'] = 'direction'
+
         if col_map:
             df = df.rename(columns=col_map)
             print(f"Note: normalized columns: {col_map}")
@@ -58,6 +64,9 @@ def load_corpus_from_csv(file_path: str):
         # Add source column if not present
         if 'source' not in df.columns:
             df['source'] = 'jojajovai'
+        # Add default direction if not present
+        if 'direction' not in df.columns:
+            df['direction'] = 'sp-gn'
         
         # Normalize values and drop empty rows
         df = df.dropna(subset=['guarani', 'spanish'])
@@ -69,7 +78,7 @@ def load_corpus_from_csv(file_path: str):
             df['source'] = df['source'].fillna('jojajovai').astype(str).str.strip()
 
         # Deduplicate CSV by (guarani, spanish)
-        dedupe_df = df[['guarani', 'spanish', 'source']].drop_duplicates(subset=['guarani', 'spanish'])
+        dedupe_df = df[['guarani', 'spanish', 'source', 'direction']].drop_duplicates(subset=['guarani', 'spanish'])
         pairs = list(zip(dedupe_df['guarani'], dedupe_df['spanish']))
 
         total_pairs = len(pairs)
@@ -90,9 +99,13 @@ def load_corpus_from_csv(file_path: str):
 
         # Prepare new translations (those not in existing)
         to_add = []
-        for g, s, src in zip(dedupe_df['guarani'], dedupe_df['spanish'], dedupe_df['source']):
+        for g, s, src, dirv in zip(dedupe_df['guarani'], dedupe_df['spanish'], dedupe_df['source'], dedupe_df['direction']):
             if (g, s) not in existing:
-                to_add.append(Translation(guarani_text=g, spanish_text=s, source=src))
+                # normalize direction value
+                dir_val = str(dirv).strip() if dirv is not None else 'sp-gn'
+                if dir_val not in ('sp-gn', 'gn-sp'):
+                    dir_val = 'sp-gn'
+                to_add.append(Translation(guarani_text=g, spanish_text=s, source=src, direction=dir_val))
 
         # Bulk insert in chunks
         added = 0

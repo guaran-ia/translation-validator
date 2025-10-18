@@ -11,7 +11,7 @@ class Validation(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     translation_id: Mapped[int] = mapped_column(ForeignKey("translations.id"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    correctness: Mapped[str] = mapped_column(String(20))  # "correct", "partial", "incorrect"
+    correctness: Mapped[str] = mapped_column(String(20))  # "correct", "gn_more", "es_more", "incorrect"
     fluency_score: Mapped[int] = mapped_column(Integer)  # 1-5
     accuracy_score: Mapped[int] = mapped_column(Integer)  # 1-5
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

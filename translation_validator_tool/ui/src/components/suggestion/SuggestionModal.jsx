@@ -24,19 +24,40 @@ const SuggestionModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate that at least one suggestion is provided
-    if (!formData.suggested_guarani.trim() && !formData.suggested_spanish.trim()) {
-      alert('Por favor proporciona al menos una sugerencia de traducción (guaraní o español).');
-      return;
+    if (!currentTranslation) return;
+
+    // Determine target language based on direction
+    const dir = currentTranslation.direction || 'sp-gn';
+    const targetIsGuarani = dir === 'sp-gn';
+
+    // Validate that suggestion for target language is provided
+    if (targetIsGuarani) {
+      if (!formData.suggested_guarani.trim()) {
+        alert('Por favor proporciona una sugerencia en Guaraní.');
+        return;
+      }
+    } else {
+      if (!formData.suggested_spanish.trim()) {
+        alert('Por favor proporciona una sugerencia en Español.');
+        return;
+      }
     }
 
     try {
-      await onSubmit({
-        translation_id: currentTranslation?.id,
-        suggested_guarani: formData.suggested_guarani.trim() || null,
-        suggested_spanish: formData.suggested_spanish.trim() || null,
+      const payload = {
+        translation_id: currentTranslation.id,
         reason: formData.reason.trim() || null
-      });
+      };
+
+      if (targetIsGuarani) {
+        payload.suggested_guarani = formData.suggested_guarani.trim();
+        payload.suggested_spanish = null;
+      } else {
+        payload.suggested_spanish = formData.suggested_spanish.trim();
+        payload.suggested_guarani = null;
+      }
+
+      await onSubmit(payload);
 
       // Reset form
       setFormData({
@@ -87,53 +108,78 @@ const SuggestionModal = ({
                 Traducción actual:
               </h3>
               <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-green-700">Guaraní:</span>
-                  <p className="text-gray-800 mt-1">{currentTranslation.guarani_text}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-blue-700">Español:</span>
-                  <p className="text-gray-800 mt-1">{currentTranslation.spanish_text}</p>
-                </div>
+                {(() => {
+                  const dir = currentTranslation.direction || 'sp-gn';
+                  const leftIsOriginal = dir === 'sp-gn' ? 'spanish' : 'guarani';
+                  const rightIsTranslation = leftIsOriginal === 'spanish' ? 'guarani' : 'spanish';
+
+                  const leftText = leftIsOriginal === 'spanish' ? currentTranslation.spanish_text : currentTranslation.guarani_text;
+                  const rightText = rightIsTranslation === 'guarani' ? currentTranslation.guarani_text : currentTranslation.spanish_text;
+
+                  return (
+                    <>
+                      <div>
+                        <span className="font-medium text-gray-700">{leftIsOriginal === 'spanish' ? 'Español (original):' : 'Guaraní (original):'}</span>
+                        <p className="text-gray-800 mt-1">{leftText}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">{rightIsTranslation === 'guarani' ? 'Guaraní:' : 'Español:'}</span>
+                        <p className="text-gray-800 mt-1">{rightText}</p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Suggested Guarani */}
-            <div>
-              <label htmlFor="suggested_guarani" className="block text-sm font-medium text-gray-700 mb-1">
-                Sugerencia en guaraní
-              </label>
-              <textarea
-                id="suggested_guarani"
-                name="suggested_guarani"
-                value={formData.suggested_guarani}
-                onChange={handleChange}
-                placeholder="Introduce tu sugerencia en guaraní..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows="3"
-                disabled={isLoading}
-              />
-            </div>
+            {/* Suggested input: only for target language */}
+            {(() => {
+              const dir = currentTranslation?.direction || 'sp-gn';
+              const targetIsGuarani = dir === 'sp-gn';
 
-            {/* Suggested Spanish */}
-            <div>
-              <label htmlFor="suggested_spanish" className="block text-sm font-medium text-gray-700 mb-1">
-                Sugerencia en español
-              </label>
-              <textarea
-                id="suggested_spanish"
-                name="suggested_spanish"
-                value={formData.suggested_spanish}
-                onChange={handleChange}
-                placeholder="Introduce tu sugerencia en español..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                rows="3"
-                disabled={isLoading}
-              />
-            </div>
+              if (targetIsGuarani) {
+                  return (
+                    <div>
+                      <label htmlFor="suggested_guarani" className="block text-sm font-medium text-gray-700 mb-1">
+                        Sugerencia en guaraní
+                      </label>
+                      <textarea
+                        id="suggested_guarani"
+                        name="suggested_guarani"
+                        value={formData.suggested_guarani}
+                        onChange={handleChange}
+                        placeholder="Introduce tu sugerencia en guaraní..."
+                        className="w-full px-4 py-3 border-2 border-blue-100 bg-blue-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent resize-y shadow-sm"
+                        rows="4"
+                        disabled={isLoading}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Por favor sugiere la traducción objetivo (Guaraní).</p>
+                    </div>
+                  );
+                }
+
+              return (
+                <div>
+                  <label htmlFor="suggested_spanish" className="block text-sm font-medium text-gray-700 mb-1">
+                    Sugerencia en español
+                  </label>
+                  <textarea
+                      id="suggested_spanish"
+                      name="suggested_spanish"
+                      value={formData.suggested_spanish}
+                      onChange={handleChange}
+                      placeholder="Introduce tu sugerencia en español..."
+                      className="w-full px-4 py-3 border-2 border-green-100 bg-green-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent resize-y shadow-sm"
+                      rows="4"
+                      disabled={isLoading}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Por favor sugiere la traducción objetivo (Español).</p>
+                </div>
+              );
+            })()}
 
             {/* Reason */}
             <div>

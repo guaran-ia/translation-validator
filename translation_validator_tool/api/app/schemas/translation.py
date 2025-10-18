@@ -17,6 +17,7 @@ class TranslationResponse(TranslationBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    direction: str = "sp-gn"
     
     model_config = ConfigDict(from_attributes=True)
 
