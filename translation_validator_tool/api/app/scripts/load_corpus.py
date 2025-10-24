@@ -86,44 +86,141 @@ def load_corpus_from_csv(file_path: str):
             print("No valid rows to load after normalization.")
             return
 
-        # Find existing translations in DB in chunks to avoid huge IN lists
-        existing = set()
-        CHUNK = 1000
-        for i in range(0, total_pairs, CHUNK):
-            chunk_pairs = pairs[i:i+CHUNK]
-            q = db.query(Translation.guarani_text, Translation.spanish_text).filter(
-                tuple_(Translation.guarani_text, Translation.spanish_text).in_(chunk_pairs)
-            ).all()
-            for row_pair in q:
-                existing.add((row_pair[0], row_pair[1]))
-
-        # Prepare new translations (those not in existing)
-        to_add = []
-        for g, s, src, dirv in zip(dedupe_df['guarani'], dedupe_df['spanish'], dedupe_df['source'], dedupe_df['direction']):
-            if (g, s) not in existing:
-                # normalize direction value
-                dir_val = str(dirv).strip() if dirv is not None else 'sp-gn'
-                if dir_val not in ('sp-gn', 'gn-sp'):
-                    dir_val = 'sp-gn'
-                to_add.append(Translation(guarani_text=g, spanish_text=s, source=src, direction=dir_val))
-
-        # Bulk insert in chunks
+        # We'll create paired records: for each (guarani, spanish) create two translations
+        # (original: sp-gn) and (inverse: gn-sp) and link them via pair_id.
         added = 0
-        BATCH = 500
-        for i in range(0, len(to_add), BATCH):
-            batch = to_add[i:i+BATCH]
-            db.add_all(batch)
-            try:
+        for g, s, src, dirv in zip(dedupe_df['guarani'], dedupe_df['spanish'], dedupe_df['source'], dedupe_df['direction']):
+            # Determine inverse direction
+            inverse_dir = 'gn-sp' if dirv == 'sp-gn' else 'sp-gn'
+
+            # Check if records exist for the same text pair but with specific directions
+            exists_main = db.query(Translation).filter(
+                Translation.guarani_text == g,
+                Translation.spanish_text == s,
+                Translation.direction == dirv
+            ).first()
+            exists_inverse = db.query(Translation).filter(
+                Translation.guarani_text == g,
+                Translation.spanish_text == s,
+                Translation.direction == inverse_dir
+            ).first()
+
+            if exists_main and exists_inverse:
+                # Both sides exist; ensure pair_id set both ways if missing
+                if not exists_main.pair_id and exists_inverse.id:
+                    exists_main.pair_id = exists_inverse.id
+                if not exists_inverse.pair_id and exists_main.id:
+                    exists_inverse.pair_id = exists_main.id
+                db.add_all([exists_main, exists_inverse])
                 db.commit()
+                continue
+
+            if exists_main or exists_inverse:
+                # One side exists; create the missing counterpart and link
+                try:
+                    if exists_main:
+                        # First check if an incorrectly-swapped inverse exists (guarani_text==s and spanish_text==g)
+                        swapped_inverse = db.query(Translation).filter(
+                            Translation.guarani_text == s,
+                            Translation.spanish_text == g,
+                            Translation.direction == inverse_dir
+                        ).first()
+                        if swapped_inverse:
+                            # Repair swapped fields so both records store the same pair and set pair links
+                            swapped_inverse.guarani_text = g
+                            swapped_inverse.spanish_text = s
+                            swapped_inverse.pair_id = exists_main.id
+                            exists_main.pair_id = swapped_inverse.id
+                            db.add_all([swapped_inverse, exists_main])
+                            db.commit()
+                            added += 1
+                        else:
+                            # create inverse with same texts but inverse direction
+                            inv = Translation(
+                                guarani_text=g,
+                                spanish_text=s,
+                                source=src,
+                                direction=inverse_dir,
+                                is_original=False,
+                                pair_id=exists_main.id
+                            )
+                            db.add(inv)
+                            db.flush()
+                            exists_main.pair_id = inv.id
+                            db.add(exists_main)
+                            db.commit()
+                            added += 1
+                    else:
+                        # exists_inverse exists -> create main/original
+                        # But first check if an inverse was stored swapped (guarani_text==s and spanish_text==g) with dir==inverse_dir
+                        swapped_main = db.query(Translation).filter(
+                            Translation.guarani_text == s,
+                            Translation.spanish_text == g,
+                            Translation.direction == dirv
+                        ).first()
+                        if swapped_main:
+                            # Repair swapped_main to correct fields and link
+                            swapped_main.guarani_text = g
+                            swapped_main.spanish_text = s
+                            swapped_main.pair_id = exists_inverse.id
+                            exists_inverse.pair_id = swapped_main.id
+                            db.add_all([swapped_main, exists_inverse])
+                            db.commit()
+                            added += 1
+                        else:
+                            org = Translation(
+                                guarani_text=g,
+                                spanish_text=s,
+                                source=src,
+                                direction=dirv,
+                                is_original=True,
+                                pair_id=exists_inverse.id
+                            )
+                            db.add(org)
+                            db.flush()
+                            exists_inverse.pair_id = org.id
+                            db.add(exists_inverse)
+                            db.commit()
+                            added += 1
+                except Exception as e:
+                    print(f"❌ Error creating pair for ({g},{s}): {e}")
+                    db.rollback()
+                continue
+
+            # Neither side exists: create main (original) then inverse and link
+            try:
+                org = Translation(
+                    guarani_text=g,
+                    spanish_text=s,
+                    source=src,
+                    direction=dirv,
+                    is_original=True
+                )
+                db.add(org)
+                db.flush()  # get org.id
+
+                inv = Translation(
+                    guarani_text=g,
+                    spanish_text=s,
+                    source=src,
+                    direction=inverse_dir,
+                    is_original=False,
+                    pair_id=org.id
+                )
+                db.add(inv)
+                db.flush()  # get inv.id
+
+                org.pair_id = inv.id
+                db.add(org)
+
+                db.commit()
+                added += 2
             except Exception as e:
-                print(f"❌ Error committing batch: {e}")
+                print(f"❌ Error inserting pair ({g},{s}): {e}")
                 db.rollback()
                 raise
-            added += len(batch)
 
-        skipped = total_pairs - len(to_add)
-        print(f"✅ Successfully loaded {added} new translations")
-        print(f"📋 Skipped {skipped} duplicates or empty entries")
+        print(f"✅ Successfully created/updated {added} translations (pairs handled)")
         
     except Exception as e:
         print(f"❌ Error loading corpus: {e}")

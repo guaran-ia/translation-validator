@@ -260,7 +260,13 @@ const ValidatorPage = () => {
         )}
 
         {/* Tarjeta de traducción */}
-        <TranslationCard translation={currentTranslation} />
+        <TranslationCard translation={currentTranslation} onReplace={(t) => {
+          // When the card swaps to the paired translation, update parent state so navigation and form sync
+          setCurrentTranslation(t);
+          resetForm();
+          // refresh stats
+          translationsAPI.getStats().then(r => setStats(r.data)).catch(()=>{});
+        }} />
 
         {/* Formulario de validación (ahora siempre disponible). Si ya sugeriste, mostramos un aviso pero permitimos validar igualmente. */}
         <div className="card mt-6">

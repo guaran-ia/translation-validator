@@ -18,7 +18,8 @@ class TranslationResponse(TranslationBase):
     created_at: datetime
     updated_at: datetime
     direction: str = "sp-gn"
-    
+    pair_id: Optional[int] = None
+    is_original: bool = True
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -47,7 +47,8 @@ async def create_validation(
         correctness=validation_data.correctness,
         fluency_score=validation_data.fluency_score,
         accuracy_score=validation_data.accuracy_score,
-        notes=validation_data.notes
+        notes=validation_data.notes,
+        direction=translation.direction
     )
     
     try:

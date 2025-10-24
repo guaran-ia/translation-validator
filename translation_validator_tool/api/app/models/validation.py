@@ -15,6 +15,7 @@ class Validation(Base):
     fluency_score: Mapped[int] = mapped_column(Integer)  # 1-5
     accuracy_score: Mapped[int] = mapped_column(Integer)  # 1-5
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    direction: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     

@@ -33,6 +33,7 @@ class ValidationResponse(ValidationBase):
     id: int
     translation_id: int
     user_id: int
+    direction: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     

@@ -55,6 +55,8 @@ export const authAPI = {
 export const translationsAPI = {
   getById: (id) => 
     api.get(`/translations/${id}`),
+  getPair: (id) =>
+    api.get(`/translations/pair/${id}`),
   getNext: () => 
     api.get('/translations/next'),
   getNextFrom: (currentId) => 
@@ -71,6 +73,8 @@ export const translationsAPI = {
     api.get(`/translations/validated/my-history?skip=${skip}&limit=${limit}`),
   getMyPendingTranslations: (skip = 0, limit = 20) => 
     api.get(`/translations/pending/for-me?skip=${skip}&limit=${limit}`),
+  updateDirection: (translationId, direction) =>
+    api.patch(`/translations/${translationId}/direction`, { direction }),
 };
 
 // Validations API

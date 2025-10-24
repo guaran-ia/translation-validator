@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 const SuggestionModal = ({ 
   isOpen, 
@@ -12,6 +12,42 @@ const SuggestionModal = ({
     suggested_spanish: '',
     reason: ''
   });
+
+  // Refs to target textareas so we can manage caret position and insertion
+  const guaraniRef = useRef(null);
+  const spanishRef = useRef(null);
+
+  // Special characters toolbar for Guaraní
+  // Use objects when label differs from inserted character
+  const specialChars = [
+    'ã','ẽ','ĩ','õ','ũ','ỹ',
+    'á','é','í','ó','ú','ý',
+    'g̃','G̃','ñ','Ñ',
+    // Common word shortcut: show 'pusó' but insert apostrophe (glottal stop)
+    { label: 'pusó ( \' )', value: "'" }
+  ];
+
+  const insertCharInto = (ref, name, ch) => {
+    const el = ref.current;
+    if (!el) return;
+
+    // For controlled textarea, use selectionStart/End on DOM element
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    const before = el.value.slice(0, start);
+    const after = el.value.slice(end);
+    const newVal = before + ch + after;
+
+    // update controlled state
+    setFormData(prev => ({ ...prev, [name]: newVal }));
+
+    // update DOM value and caret position
+    // (React will sync value from state, but set immediately for responsive cursor)
+    el.value = newVal;
+    const pos = start + ch.length;
+    el.focus();
+    el.setSelectionRange(pos, pos);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -146,9 +182,29 @@ const SuggestionModal = ({
                       <label htmlFor="suggested_guarani" className="block text-sm font-medium text-gray-700 mb-1">
                         Sugerencia en guaraní
                       </label>
+                      {/* Special characters toolbar */}
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {specialChars.map((item) => {
+                          const isObj = typeof item === 'object' && item !== null;
+                          const label = isObj ? item.label : item;
+                          const value = isObj ? item.value : item;
+                          return (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => insertCharInto(guaraniRef, 'suggested_guarani', value)}
+                              className="text-xs px-2 py-1 bg-white border rounded shadow-sm hover:bg-gray-100"
+                              aria-label={`Insertar ${label}`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                       <textarea
                         id="suggested_guarani"
                         name="suggested_guarani"
+                        ref={guaraniRef}
                         value={formData.suggested_guarani}
                         onChange={handleChange}
                         placeholder="Introduce tu sugerencia en guaraní..."
@@ -166,9 +222,29 @@ const SuggestionModal = ({
                   <label htmlFor="suggested_spanish" className="block text-sm font-medium text-gray-700 mb-1">
                     Sugerencia en español
                   </label>
+                  {/* Toolbar for Spanish too in case special chars needed */}
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {specialChars.map((item) => {
+                      const isObj = typeof item === 'object' && item !== null;
+                      const label = isObj ? item.label : item;
+                      const value = isObj ? item.value : item;
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => insertCharInto(spanishRef, 'suggested_spanish', value)}
+                          className="text-xs px-2 py-1 bg-white border rounded shadow-sm hover:bg-gray-100"
+                          aria-label={`Insertar ${label}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <textarea
                       id="suggested_spanish"
                       name="suggested_spanish"
+                      ref={spanishRef}
                       value={formData.suggested_spanish}
                       onChange={handleChange}
                       placeholder="Introduce tu sugerencia en español..."

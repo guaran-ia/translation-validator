@@ -6,6 +6,7 @@ import logging
 import sys
 import os
 from pathlib import Path
+import subprocess
 
 # Add API directory to Python path to import models
 api_path = Path(__file__).parent.parent / "api"
@@ -84,8 +85,10 @@ def create_tables():
     """Create all database tables."""
     try:
         logger.info("🏗️  Creating database tables...")
+        # Prefer using Alembic migrations to create schema instead of create_all.
+        # This function is kept for manual use but will not be used in initialize_database
         Base.metadata.create_all(bind=engine)
-        logger.info("✅ Database tables created successfully")
+        logger.info("✅ Database tables created successfully (via metadata.create_all)")
     except Exception as e:
         logger.error(f"❌ Error creating tables: {e}")
         raise
@@ -144,6 +147,29 @@ def test_database_connection():
         return False
 
 
+def run_alembic_upgrade_head():
+    """Run `alembic upgrade head` in the db_schema directory."""
+    try:
+        alembic_dir = Path(__file__).parent
+        logger.info("🔼 Running Alembic migrations (upgrade head)")
+        # Try calling alembic directly
+        try:
+            subprocess.check_call(["alembic", "upgrade", "head"], cwd=str(alembic_dir))
+            logger.info("✅ Alembic upgrade completed (alembic CLI)")
+            return
+        except FileNotFoundError:
+            logger.warning("alembic CLI not found; trying python -m alembic")
+
+        # Fallback to python -m alembic using the same interpreter
+        python_exe = sys.executable
+        subprocess.check_call([python_exe, "-m", "alembic", "upgrade", "head"], cwd=str(alembic_dir))
+        logger.info("✅ Alembic upgrade completed (python -m alembic)")
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"❌ Alembic process failed: {e}")
+        raise
+
+
 def drop_all_tables():
     """Drop all tables (useful for testing)."""
     try:
@@ -176,8 +202,12 @@ def initialize_database():
         if not test_database_connection():
             raise Exception("Database connection failed")
         
-        # Step 3: Create tables
-        create_tables()
+        # Step 3: Run Alembic migrations to bring schema up-to-date
+        try:
+            run_alembic_upgrade_head()
+        except Exception as e:
+            logger.error(f"❌ Alembic upgrade failed: {e}")
+            raise
         
         # Step 4: Create default admin user
         create_default_admin()

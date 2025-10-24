@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Text, ForeignKey
+from sqlalchemy import Text, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -14,6 +14,7 @@ class TranslationSuggestion(Base):
     suggested_guarani: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     suggested_spanish: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    direction: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     
     # Relationships - using string names to avoid circular imports

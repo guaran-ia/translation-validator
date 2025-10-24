@@ -59,7 +59,8 @@ async def create_suggestion(
         user_id=current_user.id,
         suggested_guarani=suggestion_data.suggested_guarani,
         suggested_spanish=suggestion_data.suggested_spanish,
-        reason=suggestion_data.reason
+        reason=suggestion_data.reason,
+        direction=translation.direction
     )
     
     db.add(db_suggestion)
