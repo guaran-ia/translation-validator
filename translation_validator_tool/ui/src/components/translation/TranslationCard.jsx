@@ -7,6 +7,31 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
     setCurrent(translation);
   }, [translation]);
 
+  // Ensure we have the full TranslationWithStats when the card mounts or when
+  // the provided translation prop changes. Some parent callers pass a lightweight
+  // TranslationResponse without `pair_is_complete` / stats; fetch the full
+  // translation when those fields are missing so the banner can be shown.
+  useEffect(() => {
+    let mounted = true;
+    const ensureFull = async () => {
+      if (!translation) return;
+      // If the translation already includes pair_is_complete, no need to fetch
+      if (translation.pair_is_complete !== undefined) return;
+      try {
+        setIsSaving(true);
+        const res = await translationsAPI.getById(translation.id);
+        const full = res?.data || res;
+        if (mounted && full) setCurrent(full);
+      } catch (e) {
+        console.warn('Could not fetch full translation with stats', e);
+      } finally {
+        if (mounted) setIsSaving(false);
+      }
+    };
+    ensureFull();
+    return () => { mounted = false; };
+  }, [translation]);
+
   if (!current) {
     return (
       <div className="card animate-pulse">
@@ -42,15 +67,33 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
       const res = await translationsAPI.getPair(current.id);
       const paired = res?.data || res;
       if (paired) {
-        // Replace current with paired and notify parent if provided
-        setCurrent(paired);
-        const newDir = paired.direction || 'sp-gn';
-        setDirState(newDir);
-        if (onDirectionChange) onDirectionChange(newDir);
-        if (typeof onReplace === 'function') {
-          onReplace(paired);
+        // The /pair endpoint returns a TranslationResponse (without pair stats).
+        // Request the full TranslationWithStats for the paired id so the UI can show
+        // whether the paired translation already has 3+ validations (pair_is_complete).
+        try {
+          const full = await translationsAPI.getById(paired.id);
+          const pairedFull = full?.data || full;
+          // Replace current with the full paired translation and notify parent
+          setCurrent(pairedFull);
+          const newDir = pairedFull.direction || 'sp-gn';
+          setDirState(newDir);
+          if (onDirectionChange) onDirectionChange(newDir);
+          if (typeof onReplace === 'function') {
+            onReplace(pairedFull);
+          }
+          return;
+        } catch (errFull) {
+          // If fetching full stats fails, fall back to using the paired object
+          console.warn('Failed to fetch full paired translation with stats, using basic paired object', errFull);
+          setCurrent(paired);
+          const newDir = paired.direction || 'sp-gn';
+          setDirState(newDir);
+          if (onDirectionChange) onDirectionChange(newDir);
+          if (typeof onReplace === 'function') {
+            onReplace(paired);
+          }
+          return;
         }
-        return;
       }
     } catch (e) {
       console.error('Failed to fetch paired translation via /pair endpoint', e);
@@ -79,8 +122,16 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
     try {
       setIsSaving(true);
       await translationsAPI.updateDirection(current.id, newDir);
-      // update local current.direction too
-      setCurrent({ ...current, direction: newDir });
+      // update local current.direction and refresh full translation with stats
+      try {
+        const refreshed = await translationsAPI.getById(current.id);
+        const refreshedData = refreshed?.data || refreshed;
+        setCurrent(refreshedData);
+      } catch (errRef) {
+        // If refresh fails, at least update direction locally
+        console.warn('Failed to refresh translation after direction update', errRef);
+        setCurrent({ ...current, direction: newDir });
+      }
     } catch (e) {
       console.error('Failed to update direction', e);
       // revert on error
@@ -114,6 +165,13 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
         <p className="text-sm text-gray-600 mt-1">
           ID de traducción: {current.id}
         </p>
+        {/* Warning banner when the translation itself has reached the validation threshold */}
+        {current.validation_count >= 3 && (
+          <div className="mx-auto mt-3 max-w-2xl bg-yellow-50 border border-yellow-100 text-yellow-800 px-4 py-2 rounded-lg text-sm">
+            <strong className="font-semibold">Aviso:</strong>{' '}
+            Esta traducción ya tiene {current.validation_count} validaciones en su dirección, por lo tanto no se pueden añadir más validaciones.
+          </div>
+        )}
         <div className="mt-3 flex items-center justify-center gap-2">
           <button
             onClick={toggleDirection}

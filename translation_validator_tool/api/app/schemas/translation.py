@@ -29,3 +29,6 @@ class TranslationWithStats(TranslationResponse):
     # Suggestion-related info
     suggestion_count: int = 0
     user_has_suggested: bool = False
+    # Pair info: how many validations the paired translation has in its own direction
+    pair_same_direction_count: int = 0
+    pair_is_complete: bool = False

@@ -271,6 +271,15 @@ const ValidatorPage = () => {
         {/* Formulario de validación (ahora siempre disponible). Si ya sugeriste, mostramos un aviso pero permitimos validar igualmente. */}
         <div className="card mt-6">
           <div className="space-y-6">
+            {/* If the current translation already has 3+ validations, show a warning and disable submit */}
+            {currentTranslation.validation_count >= 3 && (
+              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100 text-yellow-800">
+                <h3 className="text-lg font-medium">No disponible para validar</h3>
+                <p className="text-sm text-yellow-800 mt-2">
+                  Esta traducción ya tiene {currentTranslation.validation_count} validaciones en su dirección. No se pueden añadir más validaciones.
+                </p>
+              </div>
+            )}
             {currentTranslation.user_has_suggested && (
               <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
                 <h3 className="text-lg font-medium">Has sugerido una traducción</h3>
@@ -322,7 +331,7 @@ const ValidatorPage = () => {
             <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
               <button
                 onClick={handleSubmitValidation}
-                disabled={!isFormValid() || submitting}
+                disabled={!isFormValid() || submitting || (currentTranslation.validation_count >= 3)}
                 className="btn btn-primary flex-1 min-w-[200px]"
               >
                 {submitting ? (

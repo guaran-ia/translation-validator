@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 
 from app.database import get_db
 from app.models.user import User
@@ -38,6 +39,25 @@ async def create_validation(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You have already validated this translation"
+        )
+    
+    # Prevent creating a validation if this translation already has >= 3 validations
+    # in its own direction (the pair may have reached the threshold).
+    same_dir_count = db.query(func.count(Validation.id)).filter(
+        Validation.translation_id == translation.id,
+        Validation.direction == translation.direction
+    ).scalar() or 0
+
+    if same_dir_count >= 3:
+        # Provide a clear message; if this is the inverse (is_original False) mention it
+        if getattr(translation, 'is_original', None) is False:
+            detail_msg = "La traducción inversa ya tiene 3 o más validaciones; no se pueden añadir más validaciones sobre la inversa."
+        else:
+            detail_msg = "Esta traducción ya tiene 3 o más validaciones en su dirección; no se pueden añadir más."
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=detail_msg
         )
     
     # Create validation
