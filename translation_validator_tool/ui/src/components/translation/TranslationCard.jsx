@@ -114,16 +114,60 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
         <p className="text-sm text-gray-600 mt-1">
           ID de traducción: {current.id}
         </p>
-        <div className="mt-2 flex items-center justify-center gap-3">
+        <div className="mt-3 flex items-center justify-center gap-2">
           <button
             onClick={toggleDirection}
-            className={`text-xs px-3 py-1 rounded-full border border-gray-200 ${isSaving ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200'}`}
             disabled={isSaving}
-            title="Cambiar dirección / ver par"
+            className={`
+              group relative inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-xs
+              transform transition-all duration-300 ease-out shadow-md hover:shadow-lg
+              ${isSaving 
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 hover:scale-102'
+              }
+            `}
+            title={`Cambiar a ${dirState === 'sp-gn' ? 'Guaraní → Español' : 'Español → Guaraní'}`}
           >
-            {dirState === 'sp-gn' ? 'Español → Guaraní' : 'Guaraní → Español'}
+            {/* Left flag/emoji */}
+            <span className="text-sm">
+              {dirState === 'sp-gn' ? '🇪🇸' : '🇵🇾'}
+            </span>
+            
+            {/* Swap icon */}
+            <div className={`relative ${!isSaving && 'group-hover:rotate-180'} transition-transform duration-500`}>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-4 w-4" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m0-4l4-4" />
+              </svg>
+            </div>
+            
+            {/* Right flag/emoji */}
+            <span className="text-sm">
+              {dirState === 'sp-gn' ? '🇵🇾' : '🇪🇸'}
+            </span>
+            
+            {/* Text label */}
+            <span className="text-xs font-semibold">
+              {dirState === 'sp-gn' ? 'ES → GN' : 'GN → ES'}
+            </span>
+
+            {/* Shimmer effect when not disabled */}
+            {!isSaving && (
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
+            )}
           </button>
-          {isSaving && <span className="text-xs text-gray-500">Guardando...</span>}
+          
+          {isSaving && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
+              <span>Cambiando...</span>
+            </div>
+          )}
         </div>
       </div>
 
