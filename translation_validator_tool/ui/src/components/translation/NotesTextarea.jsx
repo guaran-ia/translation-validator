@@ -38,14 +38,26 @@ const NotesTextarea = ({ notes, onNotesChange, disabled, maxLength = 500 }) => {
         </div>
       </div>
       
-      {/* Tips */}
+      {/* Tips (horizontal) */}
       <div className="text-xs text-gray-500">
         <p>💡 Incluye notas sobre:</p>
-        <ul className="ml-4 mt-1 space-y-1">
-          <li>• Errores gramaticales o de vocabulario</li>
-          <li>• Problemas de contexto cultural</li>
-          <li>• Traducciones alternativas</li>
-          <li>• Claridad o naturalidad</li>
+        <ul className="mt-2 flex flex-wrap items-center gap-4">
+          <li className="flex items-center gap-2">
+            <span className="text-gray-400">•</span>
+            <span>Errores gramaticales o de vocabulario</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="text-gray-400">•</span>
+            <span>Problemas de contexto cultural</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="text-gray-400">•</span>
+            <span>Traducciones alternativas</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <span className="text-gray-400">•</span>
+            <span>Claridad o naturalidad</span>
+          </li>
         </ul>
       </div>
     </div>

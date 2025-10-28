@@ -49,6 +49,11 @@ export const authAPI = {
     api.post('/auth/register', userData),
   getCurrentUser: () => 
     api.get('/auth/me'),
+  // Admin endpoints
+  getPendingRegistrations: () =>
+    api.get('/auth/pending'),
+  approveUser: (userId) =>
+    api.patch(`/auth/approve/${userId}`),
 };
 
 // Translations API

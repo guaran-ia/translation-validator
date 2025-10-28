@@ -4,7 +4,7 @@ import { translationsAPI, validationsAPI, suggestionsAPI } from '../services/api
 
 // Componentes
 import Navbar from '../components/common/Navbar';
-import StatsBar from '../components/common/StatsBar';
+// StatsBar removed per user request: statistics will not be shown
 import NavigationControls from '../components/common/NavigationControls';
 import TranslationCard from '../components/translation/TranslationCard';
 import CorrectnessButtons from '../components/translation/CorrectnessButtons';
@@ -18,7 +18,7 @@ const ValidatorPage = () => {
 
   // Estado
   const [currentTranslation, setCurrentTranslation] = useState(null);
-  const [stats, setStats] = useState(null);
+  // Stats removed - not used anymore
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
@@ -41,15 +41,11 @@ const ValidatorPage = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Cargar estadísticas y la siguiente traducción en paralelo
-      const [statsResponse, translationResponse] = await Promise.all([
-        user ? translationsAPI.getStats() : translationsAPI.getPublicStats(),
-        user ? translationsAPI.getNext() : translationsAPI.getRandom()
-      ]);
+      // Cargar la siguiente traducción (sin estadísticas)
+      const translationResponse = user ? await translationsAPI.getNext() : await translationsAPI.getRandom();
 
-      setStats(statsResponse.data);
       setCurrentTranslation(translationResponse.data);
-      
+
       // Reiniciar formulario
       resetForm();
     } catch (error) {
@@ -82,9 +78,7 @@ const ValidatorPage = () => {
       setCurrentTranslation(response.data);
       resetForm();
       
-      // Actualizar estadísticas
-      const statsResponse = await translationsAPI.getStats();
-      setStats(statsResponse.data);
+  // No statistics displayed per user request
     } catch (error) {
       console.error('Error loading next translation:', error);
       if (error.response?.status === 404) {
@@ -112,9 +106,7 @@ const ValidatorPage = () => {
       setCurrentTranslation(response.data);
       resetForm();
       
-      // Actualizar estadísticas
-      const statsResponse = await translationsAPI.getStats();
-      setStats(statsResponse.data);
+  // No statistics displayed per user request
     } catch (error) {
       console.error('Error loading previous translation:', error);
     } finally {
@@ -221,7 +213,7 @@ const ValidatorPage = () => {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="max-w-6xl mx-auto px-4 py-8">
-          <StatsBar stats={stats} />
+          {/* StatsBar removed */}
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🎉</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -247,7 +239,7 @@ const ValidatorPage = () => {
       <Navbar />
       
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <StatsBar stats={stats} />
+  {/* StatsBar removed */}
 
         {/* Controles de navegación */}
         {user && (
@@ -264,8 +256,7 @@ const ValidatorPage = () => {
           // When the card swaps to the paired translation, update parent state so navigation and form sync
           setCurrentTranslation(t);
           resetForm();
-          // refresh stats
-          translationsAPI.getStats().then(r => setStats(r.data)).catch(()=>{});
+          // stats are not fetched/displayed
         }} />
 
         {/* Formulario de validación (ahora siempre disponible). Si ya sugeriste, mostramos un aviso pero permitimos validar igualmente. */}

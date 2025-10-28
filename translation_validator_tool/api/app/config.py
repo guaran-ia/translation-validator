@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Translation Validator"
     VERSION: str = "1.0.0"
     CORS_ORIGINS: str = '["http://localhost:5173"]'
+    # Optional SMTP settings for admin notifications on new registrations
+    SMTP_HOST: str | None = None
+    SMTP_PORT: int | None = None
+    SMTP_USER: str | None = None
+    SMTP_PASSWORD: str | None = None
+    SMTP_FROM: str | None = None
+    SMTP_USE_TLS: bool = True
     
     @property
     def cors_origins_list(self) -> List[str]:

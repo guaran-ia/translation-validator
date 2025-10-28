@@ -162,9 +162,6 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
           <h2 className="text-xl font-semibold text-gray-800">
           Evalúa la siguiente traducción
         </h2>
-        <p className="text-sm text-gray-600 mt-1">
-          ID de traducción: {current.id}
-        </p>
         {/* Warning banner when the translation itself has reached the validation threshold */}
         {current.validation_count >= 3 && (
           <div className="mx-auto mt-3 max-w-2xl bg-yellow-50 border border-yellow-100 text-yellow-800 px-4 py-2 rounded-lg text-sm">

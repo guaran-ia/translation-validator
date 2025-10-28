@@ -5,6 +5,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import ValidatorPage from './pages/ValidatorPage';
 import HistoryPage from './pages/HistoryPage';
+import RegisterPage from './pages/RegisterPage';
+import AdminUsers from './pages/AdminUsers';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -21,6 +23,18 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  if (!user?.is_superuser) return <Navigate to="/validator" replace />;
+
+  return children;
+};
+
 // App Component
 const App = () => {
   return (
@@ -29,6 +43,7 @@ const App = () => {
         <div className="App">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             <Route 
               path="/validator" 
               element={
@@ -44,6 +59,14 @@ const App = () => {
                   <HistoryPage />
                 </ProtectedRoute>
               } 
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <AdminRoute>
+                  <AdminUsers />
+                </AdminRoute>
+              }
             />
             <Route path="/" element={<Navigate to="/validator" replace />} />
             <Route path="*" element={<Navigate to="/validator" replace />} />
