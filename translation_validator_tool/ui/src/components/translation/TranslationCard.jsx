@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { translationsAPI } from '../../services/api';
+import { translationsAPI, suggestionsAPI } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
+import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 
 const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
   const [current, setCurrent] = useState(translation);
@@ -29,8 +31,23 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
       }
     };
     ensureFull();
+    // Also load suggestions for this translation so they can be displayed above
+    const loadSuggestions = async () => {
+      if (!translation || !translation.id) return;
+      try {
+        const res = await suggestionsAPI.getByTranslation(translation.id);
+        const list = res?.data || [];
+        if (mounted) setSuggestions(list);
+      } catch (err) {
+        console.warn('Could not fetch suggestions for translation', err);
+        if (mounted) setSuggestions([]);
+      }
+    };
+    loadSuggestions();
     return () => { mounted = false; };
   }, [translation]);
+
+  const [suggestions, setSuggestions] = useState([]);
 
   if (!current) {
     return (
@@ -59,6 +76,7 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
 
   const [dirState, setDirState] = useState(current.direction || 'sp-gn');
   const [isSaving, setIsSaving] = useState(false);
+  const { user } = useAuth();
 
   const toggleDirection = async () => {
     // Try to fetch the paired translation (either direction). Backend provides /translations/pair/{id}
@@ -121,8 +139,8 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
     }
     try {
       setIsSaving(true);
-      await translationsAPI.updateDirection(current.id, newDir);
-      // update local current.direction and refresh full translation with stats
+        await translationsAPI.updateDirection(current.id, newDir);
+        // update local current.direction and refresh full translation with stats
       try {
         const refreshed = await translationsAPI.getById(current.id);
         const refreshedData = refreshed?.data || refreshed;
@@ -162,6 +180,26 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
           <h2 className="text-xl font-semibold text-gray-800">
           Evalúa la siguiente traducción
         </h2>
+        {/* If there are suggestions for this translation, show them above the card */}
+        {suggestions && suggestions.length > 0 && (
+          <div className="mx-auto mt-3 max-w-2xl bg-white border border-gray-100 px-4 py-3 rounded-lg text-sm text-gray-800">
+            <div className="font-medium mb-2">Sugerencias existentes</div>
+            <div className="space-y-2">
+              {suggestions.map((s) => (
+                <div key={s.id} className="p-2 bg-gray-50 border border-gray-100 rounded">
+                  {s.suggested_guarani && (
+                    <div className="text-sm text-gray-700"><strong>Guaraní:</strong> {s.suggested_guarani}</div>
+                  )}
+                  {s.suggested_spanish && (
+                    <div className="text-sm text-gray-700"><strong>Español:</strong> {s.suggested_spanish}</div>
+                  )}
+                  <div className="text-xs text-gray-500 mt-1">Por usuario #{s.user_id} • {new Date(s.created_at).toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Warning banner when the translation itself has reached the validation threshold */}
         {current.validation_count >= 3 && (
           <div className="mx-auto mt-3 max-w-2xl bg-yellow-50 border border-yellow-100 text-yellow-800 px-4 py-2 rounded-lg text-sm">
@@ -173,48 +211,22 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
           <button
             onClick={toggleDirection}
             disabled={isSaving}
-            className={`
-              group relative inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-xs
-              transform transition-all duration-300 ease-out shadow-md hover:shadow-lg
-              ${isSaving 
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 hover:scale-102'
-              }
-            `}
-            title={`Cambiar a ${dirState === 'sp-gn' ? 'Guaraní → Español' : 'Español → Guaraní'}`}
+            className={`px-2 py-1 rounded-sm text-[11px] border bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-200 ${isSaving ? 'opacity-60 cursor-not-allowed' : ''}`}
+            title={`Cambiar dirección`}
           >
-            {/* Left flag/emoji */}
-            <span className="text-sm">
-              {dirState === 'sp-gn' ? '🇪🇸' : '🇵🇾'}
-            </span>
-            
-            {/* Swap icon */}
-            <div className={`relative ${!isSaving && 'group-hover:rotate-180'} transition-transform duration-500`}>
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-4 w-4" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m0-4l4-4" />
-              </svg>
-            </div>
-            
-            {/* Right flag/emoji */}
-            <span className="text-sm">
-              {dirState === 'sp-gn' ? '🇵🇾' : '🇪🇸'}
-            </span>
-            
-            {/* Text label */}
-            <span className="text-xs font-semibold">
-              {dirState === 'sp-gn' ? 'ES → GN' : 'GN → ES'}
-            </span>
+            <div className="flex items-center gap-3 min-w-[140px]">
+              <div className="flex-1 text-right">
+                <span className="block text-[11px] font-medium text-gray-700">{dirState === 'sp-gn' ? 'ES' : 'GN'}</span>
+              </div>
 
-            {/* Shimmer effect when not disabled */}
-            {!isSaving && (
-              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
-            )}
+              <div className="flex-shrink-0 text-center">
+                <ArrowsRightLeftIcon className="h-5 w-5 text-gray-700" />
+              </div>
+
+              <div className="flex-1 text-left">
+                <span className="block text-[11px] font-medium text-gray-700">{dirState === 'sp-gn' ? 'GN' : 'ES'}</span>
+              </div>
+            </div>
           </button>
           
           {isSaving && (
@@ -230,8 +242,7 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
         {/* Left (original) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-700 flex items-center">
-              <span className="w-3 h-3 bg-blue-400 rounded-full mr-2 shadow-sm"></span>
+            <h3 className="text-lg font-semibold text-gray-800">
               {leftIsOriginal === 'spanish' ? 'Español (original)' : 'Guaraní (original)'}
             </h3>
             <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">Original</span>
@@ -244,8 +255,7 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
         {/* Right (translation) */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-700 flex items-center">
-              <span className="w-3 h-3 bg-green-400 rounded-full mr-2 shadow-sm"></span>
+            <h3 className="text-lg font-semibold text-gray-800">
               {rightIsTranslation === 'guarani' ? 'Guaraní' : 'Español'}
             </h3>
             <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-100">Traducción</span>
@@ -261,19 +271,20 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
         <div className="flex justify-between items-center text-sm text-gray-600">
           <span>Fuente: {current.source}</span>
           <div className="flex items-center gap-4">
-            {current.validation_count !== undefined && (
+            {/* Only show detailed stats to superusers (administrators). Validators should not see counts. */}
+            {user?.is_superuser && current.validation_count !== undefined && (
               <span>
                 Evaluaciones: {current.validation_count}
               </span>
             )}
 
-            {/* Suggestion info */}
-            {current.suggestion_count !== undefined && (
+            {user?.is_superuser && current.suggestion_count !== undefined && (
               <span className="text-sm text-gray-600">
                 Sugerencias: {current.suggestion_count}
               </span>
             )}
 
+            {/* The badge that indicates the current user has suggested should remain visible to that user */}
             {current.user_has_suggested && (
               <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
                 Has sugerido esto

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 const LoginForm = ({ onSuccess }) => {
@@ -108,6 +109,10 @@ const LoginForm = ({ onSuccess }) => {
             </button>
           </div>
         </form>
+
+        <div className="text-sm text-center text-gray-600">
+          ¿No tienes cuenta? <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-700">Crear cuenta</Link>
+        </div>
       </div>
     </div>
   );

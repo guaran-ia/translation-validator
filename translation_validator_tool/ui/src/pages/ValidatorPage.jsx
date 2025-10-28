@@ -22,6 +22,7 @@ const ValidatorPage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+  const [showContinueModal, setShowContinueModal] = useState(false);
   
   // Estado del formulario
   const [formData, setFormData] = useState({
@@ -41,13 +42,49 @@ const ValidatorPage = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Cargar la siguiente traducción (sin estadísticas)
-      const translationResponse = user ? await translationsAPI.getNext() : await translationsAPI.getRandom();
+      // Try to fetch a translation; if the current user already suggested for it,
+      // skip to the next one automatically. Limit attempts to avoid infinite loops.
+      let attempts = 10;
+      let response = null;
 
-      setCurrentTranslation(translationResponse.data);
+      if (!user) {
+        response = await translationsAPI.getRandom();
+        setCurrentTranslation(response.data);
+        resetForm();
+        return;
+      }
 
-      // Reiniciar formulario
-      resetForm();
+      // For authenticated users, start with getNext
+      response = await translationsAPI.getNext();
+
+      while (attempts > 0) {
+        const t = response.data;
+        // If user has already suggested for this translation, fetch the next one
+        if (t?.user_has_suggested) {
+          try {
+            response = await translationsAPI.getNextFrom(t.id);
+          } catch (errNext) {
+            // If no next available, stop and clear
+            if (errNext.response?.status === 404) {
+              setCurrentTranslation(null);
+              return;
+            }
+            throw errNext;
+          }
+          attempts -= 1;
+          continue;
+        }
+
+        // Found a translation the user hasn't suggested for
+        setCurrentTranslation(t);
+        resetForm();
+        break;
+      }
+
+      if (attempts <= 0) {
+        // Too many attempts, give up
+        setCurrentTranslation(null);
+      }
     } catch (error) {
       console.error('Error al cargar los datos:', error);
       if (error.response?.status === 404) {
@@ -163,25 +200,19 @@ const ValidatorPage = () => {
     }
   };
 
-  // Saltar traducción (cargar la siguiente sin validar)
-  const handleSkip = async () => {
-    await loadData();
-  };
+  // Nota: la acción de sugerir/continuar y la navegación se manejan desde los controles de navegación.
 
   // Enviar sugerencia
   const handleSubmitSuggestion = async (suggestionData) => {
     try {
       const response = await suggestionsAPI.create(suggestionData);
-      
+
       // Mostrar mensaje de éxito
       alert('¡Sugerencia enviada con éxito! Tu propuesta ayudará a mejorar la calidad de las traducciones.');
-      
-      // Opcional: Cargar la siguiente traducción automáticamente
-      const userWantsNext = confirm('¿Quieres continuar con la siguiente traducción?');
-      if (userWantsNext) {
-        await handleNextTranslation();
-      }
-      
+
+      // Después de sugerir, cargar directamente la siguiente traducción
+      await loadData();
+
     } catch (error) {
       console.error('Error al enviar la sugerencia:', error);
       
@@ -247,6 +278,7 @@ const ValidatorPage = () => {
             currentTranslation={currentTranslation}
             onNext={handleNextTranslation}
             onPrevious={handlePreviousTranslation}
+            onSuggest={() => setShowSuggestionModal(true)}
             loading={loading}
           />
         )}
@@ -335,21 +367,7 @@ const ValidatorPage = () => {
                 )}
               </button>
 
-              <button
-                onClick={() => setShowSuggestionModal(true)}
-                disabled={submitting}
-                className="btn btn-secondary"
-              >
-                🔄 Sugerir nueva traducción
-              </button>
-
-              <button
-                onClick={handleSkip}
-                disabled={submitting}
-                className="btn btn-secondary"
-              >
-                Omitir →
-              </button>
+              {/* Suggestion handled in the navigation controls now; removed inline "Omitir" button per request */}
             </div>
           </div>
         </div>
@@ -363,6 +381,31 @@ const ValidatorPage = () => {
         currentTranslation={currentTranslation}
         isLoading={submitting}
       />
+
+      {/* Modal: continuar después de enviar sugerencia */}
+      {showContinueModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={() => setShowContinueModal(false)} />
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 z-50">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-2">Continuar</h3>
+              <p className="text-sm text-gray-700 mb-4">¿Quieres continuar con la siguiente traducción?</p>
+              <div className="flex justify-end space-x-3">
+                <button onClick={() => setShowContinueModal(false)} className="px-4 py-2 rounded-md border">No</button>
+                <button
+                  onClick={async () => {
+                    setShowContinueModal(false);
+                    await handleNextTranslation();
+                  }}
+                  className="px-4 py-2 rounded-md bg-blue-600 text-white"
+                >
+                  Sí, continuar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

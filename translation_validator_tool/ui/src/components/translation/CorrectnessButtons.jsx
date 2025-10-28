@@ -46,13 +46,16 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
       <div className="flex flex-wrap gap-3">
         {options.map((option) => {
           const isSelected = selectedCorrectness === option.value;
+          const isDimmed = selectedCorrectness && !isSelected;
           const buttonClasses = `
             flex-1 min-w-[140px] px-5 py-3 border-2 rounded-lg font-semibold text-white text-sm
             transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2
             ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
             ${isSelected 
               ? `${option.selectedBg} ${option.selectedBorder} shadow-md scale-105` 
-              : `${option.bgColor} ${option.borderColor} hover:shadow-sm`}
+              : isDimmed
+                ? `bg-gray-100 text-gray-500 border-gray-200 filter grayscale opacity-80 transform scale-100`
+                : `${option.bgColor} ${option.borderColor} hover:shadow-sm`}
           `.replace(/\s+/g, ' ').trim();
 
           return (

@@ -3,9 +3,12 @@ import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 const NavigationControls = ({ 
   onPrevious, 
   onNext, 
+  onSuggest,
   currentTranslation, 
   loading = false 
 }) => {
+  
+
   return (
     <div className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border">
       <button
@@ -17,17 +20,18 @@ const NavigationControls = ({
         <span>Anterior</span>
       </button>
 
-      <div className="flex items-center space-x-4 text-sm text-gray-600">
+      <div className="flex flex-col items-center space-y-2 text-sm text-gray-600">
         {currentTranslation && (
           <>
-            <span>ID: {currentTranslation.id}</span>
-            <div className="flex items-center space-x-1">
-              <span className={`inline-block w-2 h-2 rounded-full ${
-                currentTranslation.user_has_validated ? 'bg-green-500' : 'bg-orange-500'
-              }`}></span>
-              <span>
-                {currentTranslation.user_has_validated ? 'Evaluado' : 'Pendiente'}
-              </span>
+            {/* Suggest button lives here now; parent can supply onSuggest to open the suggestion modal */}
+            <div>
+              <button
+                onClick={onSuggest}
+                disabled={loading || !currentTranslation}
+                className="mt-1 px-3 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-sm hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                🔄 Sugerir traducción
+              </button>
             </div>
           </>
         )}

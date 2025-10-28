@@ -130,6 +130,20 @@ async def get_next_translation(
     
     pair_count, pair_complete = _get_pair_stats(db, translation)
 
+    # Hide sensitive stats for non-superusers (validators)
+    is_super = getattr(current_user, 'is_superuser', False)
+    if not is_super:
+        # do not expose validation/suggestion/pair stats or user-specific flags
+        return TranslationWithStats(
+            **translation.__dict__,
+            validation_count=0,
+            user_has_validated=False,
+            suggestion_count=0,
+            user_has_suggested=False,
+            pair_same_direction_count=0,
+            pair_is_complete=False
+        )
+
     return TranslationWithStats(
         **translation.__dict__,
         validation_count=validation_count or 0,
@@ -220,6 +234,18 @@ async def get_translation(
 
     pair_count, pair_complete = _get_pair_stats(db, translation)
 
+    is_super = getattr(current_user, 'is_superuser', False)
+    if not is_super:
+        return TranslationWithStats(
+            **translation.__dict__,
+            validation_count=0,
+            user_has_validated=False,
+            suggestion_count=0,
+            user_has_suggested=False,
+            pair_same_direction_count=0,
+            pair_is_complete=False
+        )
+
     return TranslationWithStats(
         **translation.__dict__,
         validation_count=validation_count or 0,
@@ -303,6 +329,18 @@ async def get_next_translation_from_id(
     
     pair_count, pair_complete = _get_pair_stats(db, translation)
 
+    is_super = getattr(current_user, 'is_superuser', False)
+    if not is_super:
+        return TranslationWithStats(
+            **translation.__dict__,
+            validation_count=0,
+            user_has_validated=False,
+            suggestion_count=0,
+            user_has_suggested=False,
+            pair_same_direction_count=0,
+            pair_is_complete=False
+        )
+
     return TranslationWithStats(
         **translation.__dict__,
         validation_count=validation_count or 0,
@@ -381,6 +419,18 @@ async def get_previous_translation_from_id(
     ).first() is not None
     
     pair_count, pair_complete = _get_pair_stats(db, translation)
+
+    is_super = getattr(current_user, 'is_superuser', False)
+    if not is_super:
+        return TranslationWithStats(
+            **translation.__dict__,
+            validation_count=0,
+            user_has_validated=False,
+            suggestion_count=0,
+            user_has_suggested=False,
+            pair_same_direction_count=0,
+            pair_is_complete=False
+        )
 
     return TranslationWithStats(
         **translation.__dict__,
