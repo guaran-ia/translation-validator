@@ -300,7 +300,7 @@ const ValidatorPage = () => {
         }} onValidateSuggestion={(s) => {
           // When a suggestion is selected for validation, set it in state and show a small banner
           setSelectedSuggestion(s);
-        }} />
+        }} selectedSuggestion={selectedSuggestion} />
 
         {/* Formulario de validación (ahora siempre disponible). Si ya sugeriste, mostramos un aviso pero permitimos validar igualmente. */}
         <div className="card mt-6">

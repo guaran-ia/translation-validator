@@ -3,7 +3,7 @@ import { translationsAPI, suggestionsAPI } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 
-const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
+const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidateSuggestion, selectedSuggestion }) => {
   const [current, setCurrent] = useState(translation);
   useEffect(() => {
     setCurrent(translation);
@@ -77,6 +77,21 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
   const [dirState, setDirState] = useState(current.direction || 'sp-gn');
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
+
+  // If a suggestion has been selected for validation, overlay its text onto the card
+  let displayLeftText = leftText;
+  let displayRightText = rightText;
+  if (selectedSuggestion && selectedSuggestion.translation_id === current.id) {
+    // If direction is Spanish -> Guarani
+    if (dirState === 'sp-gn') {
+      if (selectedSuggestion.suggested_spanish) displayLeftText = selectedSuggestion.suggested_spanish;
+      if (selectedSuggestion.suggested_guarani) displayRightText = selectedSuggestion.suggested_guarani;
+    } else {
+      // gn-sp
+      if (selectedSuggestion.suggested_guarani) displayLeftText = selectedSuggestion.suggested_guarani;
+      if (selectedSuggestion.suggested_spanish) displayRightText = selectedSuggestion.suggested_spanish;
+    }
+  }
 
   const toggleDirection = async () => {
     // Try to fetch the paired translation (either direction). Backend provides /translations/pair/{id}
@@ -185,8 +200,10 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
           <div className="mx-auto mt-3 max-w-2xl bg-white border border-gray-100 px-4 py-3 rounded-lg text-sm text-gray-800">
             <div className="font-medium mb-2">Sugerencias existentes</div>
             <div className="space-y-2">
-              {suggestions.map((s) => (
-                <div key={s.id} className="p-2 bg-gray-50 border border-gray-100 rounded flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+              {suggestions.map((s) => {
+                const isSelected = selectedSuggestion && selectedSuggestion.id === s.id;
+                return (
+                <div key={s.id} className={`p-2 ${isSelected ? 'bg-white border-blue-300 shadow-md ring-2 ring-blue-200' : 'bg-gray-50 border-gray-100'} rounded flex flex-col md:flex-row md:items-start md:justify-between gap-2`}>
                   <div>
                     {s.suggested_guarani && (
                       <div className="text-sm text-gray-700"><strong>Guaraní:</strong> {s.suggested_guarani}</div>
@@ -217,7 +234,8 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
                     )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

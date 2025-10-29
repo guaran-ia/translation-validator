@@ -36,13 +36,10 @@ async def create_suggestion(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="At least one suggested translation (Guarani or Spanish) must be provided"
         )
-    # Do not allow creating suggestions on translations that are not original
-    # (suggestions must reference an original translation)
-    if getattr(translation, 'is_original', True) is False:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot create a suggestion for a non-original translation"
-        )
+    # Allow creating suggestions for any translation (original or inverse).
+    # Previously suggestions were restricted to originals; that restriction
+    # has been removed so validators can propose improvements on inverse
+    # translations as well.
     
     # Check if user already has a suggestion for this translation
     existing_suggestion = db.query(TranslationSuggestion).filter(
