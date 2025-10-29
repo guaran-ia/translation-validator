@@ -23,6 +23,7 @@ const ValidatorPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [showContinueModal, setShowContinueModal] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   
   // Estado del formulario
   const [formData, setFormData] = useState({
@@ -180,12 +181,19 @@ const ValidatorPage = () => {
 
     setSubmitting(true);
     try {
-      await validationsAPI.create({
+      const payload = {
         translation_id: currentTranslation.id,
         ...formData
-      });
+      };
+      if (selectedSuggestion && selectedSuggestion.id) {
+        payload.suggestion_id = selectedSuggestion.id;
+      }
+
+      await validationsAPI.create(payload);
 
       // Cargar la siguiente traducción
+      // Clear selected suggestion after submitting
+      setSelectedSuggestion(null);
       await loadData();
     } catch (error) {
       console.error('Error al enviar la validación:', error);
@@ -289,6 +297,9 @@ const ValidatorPage = () => {
           setCurrentTranslation(t);
           resetForm();
           // stats are not fetched/displayed
+        }} onValidateSuggestion={(s) => {
+          // When a suggestion is selected for validation, set it in state and show a small banner
+          setSelectedSuggestion(s);
         }} />
 
         {/* Formulario de validación (ahora siempre disponible). Si ya sugeriste, mostramos un aviso pero permitimos validar igualmente. */}
@@ -316,6 +327,24 @@ const ValidatorPage = () => {
                   >
                     ✏️ Editar sugerencia
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* If a suggestion is selected for validation, show a small banner */}
+            {selectedSuggestion && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium">Validando sugerencia</h4>
+                    <div className="text-sm text-gray-700 mt-1">
+                      {selectedSuggestion.suggested_guarani && <div><strong>Guaraní:</strong> {selectedSuggestion.suggested_guarani}</div>}
+                      {selectedSuggestion.suggested_spanish && <div><strong>Español:</strong> {selectedSuggestion.suggested_spanish}</div>}
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <button onClick={() => setSelectedSuggestion(null)} className="px-3 py-1 bg-white border rounded">Cancelar</button>
+                  </div>
                 </div>
               </div>
             )}

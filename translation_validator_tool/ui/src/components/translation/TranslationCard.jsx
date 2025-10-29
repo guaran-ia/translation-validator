@@ -186,14 +186,36 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace }) => {
             <div className="font-medium mb-2">Sugerencias existentes</div>
             <div className="space-y-2">
               {suggestions.map((s) => (
-                <div key={s.id} className="p-2 bg-gray-50 border border-gray-100 rounded">
-                  {s.suggested_guarani && (
-                    <div className="text-sm text-gray-700"><strong>Guaraní:</strong> {s.suggested_guarani}</div>
-                  )}
-                  {s.suggested_spanish && (
-                    <div className="text-sm text-gray-700"><strong>Español:</strong> {s.suggested_spanish}</div>
-                  )}
-                  <div className="text-xs text-gray-500 mt-1">Por usuario #{s.user_id} • {new Date(s.created_at).toLocaleString()}</div>
+                <div key={s.id} className="p-2 bg-gray-50 border border-gray-100 rounded flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                  <div>
+                    {s.suggested_guarani && (
+                      <div className="text-sm text-gray-700"><strong>Guaraní:</strong> {s.suggested_guarani}</div>
+                    )}
+                    {s.suggested_spanish && (
+                      <div className="text-sm text-gray-700"><strong>Español:</strong> {s.suggested_spanish}</div>
+                    )}
+                    <div className="text-xs text-gray-500 mt-1">Por usuario #{s.user_id} • {new Date(s.created_at).toLocaleString()}</div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-xs text-gray-600">Validaciones: <strong>{s.validation_count ?? 0}</strong></div>
+                    {/* If user is present, allow them to validate this suggestion (unless they authored it) */}
+                    {user && s.user_id !== user.id && typeof onValidateSuggestion === 'function' && (
+                      <button
+                        onClick={() => onValidateSuggestion(s)}
+                        className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-60"
+                        disabled={s.user_has_validated}
+                        title={s.user_has_validated ? 'Ya validaste esta sugerencia' : 'Validar sugerencia'}
+                      >
+                        {s.user_has_validated ? 'Validada' : 'Validar sugerencia'}
+                      </button>
+                    )}
+
+                    {/* If the user is the author, show a small badge */}
+                    {user && s.user_id === user.id && (
+                      <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Tu sugerencia</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
