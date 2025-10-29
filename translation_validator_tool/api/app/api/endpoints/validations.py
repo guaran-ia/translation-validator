@@ -10,6 +10,7 @@ from app.models.validation import Validation
 from app.models.translation import Translation
 from app.schemas.validation import ValidationCreate, ValidationUpdate, ValidationResponse
 from app.api.deps import get_current_active_user
+from app.models.suggestion import TranslationSuggestion
 
 router = APIRouter()
 
@@ -42,22 +43,38 @@ async def create_validation(
         )
 
     # Prevent users from validating a translation they have suggested for
-    from app.models.suggestion import TranslationSuggestion
-    user_suggestion = db.query(TranslationSuggestion).filter(
-        TranslationSuggestion.translation_id == translation.id,
-        TranslationSuggestion.user_id == current_user.id
-    ).first()
-    if user_suggestion:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot validate a translation for which you have submitted a suggestion"
-        )
+    # If validating a suggestion (suggestion_id provided), ensure the suggestion exists
+    suggestion_id = getattr(validation_data, 'suggestion_id', None)
+    suggestion_obj = None
+    if suggestion_id:
+        suggestion_obj = db.query(TranslationSuggestion).filter(TranslationSuggestion.id == suggestion_id).first()
+        if not suggestion_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Suggestion not found")
+        # Ensure the suggestion belongs to the same translation
+        if suggestion_obj.translation_id != translation.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Suggestion does not belong to the specified translation")
+        # Prevent suggestion author from validating their own suggestion
+        if suggestion_obj.user_id == current_user.id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot validate your own suggestion")
+    else:
+        # For plain translation validations, prevent users from validating a translation they have suggested for
+        user_suggestion = db.query(TranslationSuggestion).filter(
+            TranslationSuggestion.translation_id == translation.id,
+            TranslationSuggestion.user_id == current_user.id
+        ).first()
+        if user_suggestion:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot validate a translation for which you have submitted a suggestion"
+            )
     
     # Prevent creating a validation if this translation already has >= 3 validations
     # in its own direction (the pair may have reached the threshold).
+    # When counting validations that close a translation, only consider validations that are NOT for suggestions
     same_dir_count = db.query(func.count(Validation.id)).filter(
         Validation.translation_id == translation.id,
-        Validation.direction == translation.direction
+        Validation.direction == translation.direction,
+        Validation.suggestion_id == None
     ).scalar() or 0
 
     if same_dir_count >= 3:
@@ -81,6 +98,8 @@ async def create_validation(
         accuracy_score=validation_data.accuracy_score,
         notes=validation_data.notes,
         direction=translation.direction
+        ,
+        suggestion_id=suggestion_id
     )
     
     try:

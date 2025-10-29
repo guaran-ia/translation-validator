@@ -17,6 +17,10 @@ class SuggestionResponse(SuggestionBase):
     id: int
     translation_id: int
     user_id: int
+    # Number of validations this suggestion has received (separate from translation validations)
+    validation_count: int = 0
+    # Whether the current user has validated this suggestion (when returned in a user context)
+    user_has_validated: Optional[bool] = False
     direction: Optional[str] = None
     created_at: datetime
     

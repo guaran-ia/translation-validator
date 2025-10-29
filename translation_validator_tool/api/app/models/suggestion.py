@@ -20,3 +20,5 @@ class TranslationSuggestion(Base):
     # Relationships - using string names to avoid circular imports
     translation = relationship("Translation", back_populates="suggestions")
     user = relationship("User", back_populates="suggestions")
+    # Validations that refer to this suggestion
+    validations = relationship("Validation", back_populates="suggestion")

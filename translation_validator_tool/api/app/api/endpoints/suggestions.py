@@ -9,6 +9,8 @@ from app.models.translation import Translation
 from app.models.suggestion import TranslationSuggestion
 from app.schemas.suggestion import SuggestionCreate, SuggestionResponse
 from app.api.deps import get_current_active_user
+from sqlalchemy import func
+from app.models.validation import Validation
 
 router = APIRouter()
 
@@ -95,8 +97,19 @@ async def get_suggestions(
     suggestions = db.query(TranslationSuggestion).filter(
         TranslationSuggestion.translation_id == translation_id
     ).order_by(TranslationSuggestion.created_at.desc()).all()
-    
-    return [SuggestionResponse.model_validate(s) for s in suggestions]
+    # Augment suggestions with per-suggestion validation counts and whether current user validated them
+    result = []
+    for s in suggestions:
+        vcount = db.query(func.count(Validation.id)).filter(Validation.suggestion_id == s.id).scalar() or 0
+        user_has_validated = db.query(Validation).filter(Validation.suggestion_id == s.id, Validation.user_id == current_user.id).first() is not None
+        # Build a response-compatible object
+        obj = SuggestionResponse.model_validate(s)
+        # Attach computed fields
+        obj.validation_count = vcount
+        obj.user_has_validated = bool(user_has_validated)
+        result.append(obj)
+
+    return result
 
 
 @router.get("/my-suggestions", response_model=List[SuggestionResponse])

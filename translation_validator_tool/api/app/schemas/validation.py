@@ -20,6 +20,8 @@ class ValidationBase(BaseModel):
 
 class ValidationCreate(ValidationBase):
     translation_id: int
+    # Optional: reference to a suggestion being validated
+    suggestion_id: Optional[int] = None
 
 
 class ValidationUpdate(BaseModel):
@@ -32,6 +34,7 @@ class ValidationUpdate(BaseModel):
 class ValidationResponse(ValidationBase):
     id: int
     translation_id: int
+    suggestion_id: Optional[int] = None
     user_id: int
     direction: Optional[str] = None
     created_at: datetime

@@ -29,7 +29,8 @@ def _get_pair_stats(db: Session, translation: Translation):
 
     pair_same_direction_count = db.query(func.count(Validation.id)).filter(
         Validation.translation_id == pair.id,
-        Validation.direction == pair.direction
+        Validation.direction == pair.direction,
+        Validation.suggestion_id == None
     ).scalar() or 0
 
     return pair_same_direction_count, (pair_same_direction_count >= 3)
@@ -60,11 +61,12 @@ async def get_translation_stats(
     
     # Count validated translations by current user
     user_validated = db.query(func.count(Validation.id)).filter(
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).scalar()
     
     # Count unique translations with at least one validation
-    validated_translations = db.query(func.count(func.distinct(Validation.translation_id))).scalar()
+    validated_translations = db.query(func.count(func.distinct(Validation.translation_id))).filter(Validation.suggestion_id == None).scalar()
     
     return {
         "total": total_translations or 0,
@@ -88,7 +90,7 @@ async def get_next_translation(
     ).subquery()
 
     # Exclude translations that already have 3 or more validations FOR THE SAME DIRECTION
-    validated_three = db.query(Validation.translation_id).group_by(Validation.translation_id).having(
+    validated_three = db.query(Validation.translation_id).filter(Validation.suggestion_id == None).group_by(Validation.translation_id).having(
         func.count(func.nullif(Validation.direction != Translation.direction, True)) >= 3
     ).subquery()
 
@@ -117,7 +119,8 @@ async def get_next_translation(
     # Validation count for this translation and direction
     validation_count = db.query(func.count(Validation.id)).filter(
         Validation.translation_id == translation.id,
-        Validation.direction == translation.direction
+        Validation.direction == translation.direction,
+        Validation.suggestion_id == None
     ).scalar()
     # Get suggestion count and whether current user suggested
     suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
@@ -177,7 +180,8 @@ async def get_random_translation(
     # Get validation count for this translation
     validation_count = db.query(func.count(Validation.id)).filter(
         Validation.translation_id == translation.id,
-        Validation.direction == translation.direction
+        Validation.direction == translation.direction,
+        Validation.suggestion_id == None
     ).scalar()
     # Suggestion info (no user context -> only count)
     suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
@@ -214,7 +218,8 @@ async def get_translation(
     # Validation count for this translation in its own direction
     validation_count = db.query(func.count(Validation.id)).filter(
         Validation.translation_id == translation.id,
-        Validation.direction == translation.direction
+        Validation.direction == translation.direction,
+        Validation.suggestion_id == None
     ).scalar()
 
     # Whether current user has validated this translation
@@ -404,6 +409,7 @@ async def get_previous_translation_from_id(
     # Get validation count and user validation status
     validation_count = db.query(func.count(Validation.id)).filter(
         Validation.translation_id == translation.id
+        , Validation.suggestion_id == None
     ).scalar()
     
     user_has_validated = db.query(Validation).filter(
@@ -463,6 +469,7 @@ async def get_my_validated_translations(
         if translation:
             validation_count = db.query(func.count(Validation.id)).filter(
                 Validation.translation_id == translation.id
+                , Validation.suggestion_id == None
             ).scalar()
             pair_count, pair_complete = _get_pair_stats(db, translation)
 
@@ -512,7 +519,7 @@ async def get_my_pending_translations(
     ).subquery()
 
     # Exclude translations that already have 3 or more validations
-    validated_three = db.query(Validation.translation_id).group_by(Validation.translation_id).having(func.count(Validation.id) >= 3).subquery()
+    validated_three = db.query(Validation.translation_id).filter(Validation.suggestion_id == None).group_by(Validation.translation_id).having(func.count(Validation.id) >= 3).subquery()
 
     translations = db.query(Translation).filter(
         ~Translation.id.in_(subquery), ~Translation.id.in_(validated_three)
@@ -522,6 +529,7 @@ async def get_my_pending_translations(
     for translation in translations:
         validation_count = db.query(func.count(Validation.id)).filter(
             Validation.translation_id == translation.id
+            , Validation.suggestion_id == None
         ).scalar()
         # Suggestion info (user context)
         suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
