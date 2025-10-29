@@ -52,6 +52,7 @@ const ValidatorPage = () => {
         response = await translationsAPI.getRandom();
         setCurrentTranslation(response.data);
         resetForm();
+        setSelectedSuggestion(null);
         return;
       }
 
@@ -68,6 +69,7 @@ const ValidatorPage = () => {
             // If no next available, stop and clear
             if (errNext.response?.status === 404) {
               setCurrentTranslation(null);
+              setSelectedSuggestion(null);
               return;
             }
             throw errNext;
@@ -79,18 +81,21 @@ const ValidatorPage = () => {
         // Found a translation the user hasn't suggested for
         setCurrentTranslation(t);
         resetForm();
+        setSelectedSuggestion(null);
         break;
       }
 
       if (attempts <= 0) {
         // Too many attempts, give up
         setCurrentTranslation(null);
+        setSelectedSuggestion(null);
       }
     } catch (error) {
       console.error('Error al cargar los datos:', error);
       if (error.response?.status === 404) {
         // No hay más traducciones
         setCurrentTranslation(null);
+        setSelectedSuggestion(null);
       }
     } finally {
       setLoading(false);
@@ -115,6 +120,7 @@ const ValidatorPage = () => {
       const response = await translationsAPI.getNextFrom(currentTranslation.id);
       setCurrentTranslation(response.data);
       resetForm();
+      setSelectedSuggestion(null);
       
   // No statistics displayed per user request
     } catch (error) {
@@ -125,6 +131,7 @@ const ValidatorPage = () => {
           const response = await translationsAPI.getNext();
           setCurrentTranslation(response.data);
           resetForm();
+          setSelectedSuggestion(null);
         } catch (nextError) {
           console.error('No more translations available:', nextError);
           setCurrentTranslation(null);
@@ -143,6 +150,7 @@ const ValidatorPage = () => {
       const response = await translationsAPI.getPrevious(currentTranslation.id);
       setCurrentTranslation(response.data);
       resetForm();
+      setSelectedSuggestion(null);
       
   // No statistics displayed per user request
     } catch (error) {
@@ -292,15 +300,44 @@ const ValidatorPage = () => {
         )}
 
         {/* Tarjeta de traducción */}
-        <TranslationCard translation={currentTranslation} onReplace={(t) => {
-          // When the card swaps to the paired translation, update parent state so navigation and form sync
-          setCurrentTranslation(t);
-          resetForm();
-          // stats are not fetched/displayed
-        }} onValidateSuggestion={(s) => {
-          // When a suggestion is selected for validation, set it in state and show a small banner
-          setSelectedSuggestion(s);
-        }} selectedSuggestion={selectedSuggestion} />
+        <TranslationCard
+          translation={currentTranslation}
+          onReplace={(t) => {
+            // When the card swaps to the paired translation, update parent state so navigation and form sync
+            setCurrentTranslation(t);
+            resetForm();
+            setSelectedSuggestion(null);
+            // stats are not fetched/displayed
+          }}
+          onValidateSuggestion={(s) => {
+            // When a suggestion is selected for validation, set it in state and show a small banner
+            setSelectedSuggestion(s);
+          }}
+          onClearSelection={() => setSelectedSuggestion(null)}
+          selectedSuggestion={selectedSuggestion}
+        />
+
+        {/* Banner que muestra la sugerencia seleccionada (si la hay) */}
+        {selectedSuggestion && (
+          <div className="mt-4 mb-2 p-3 rounded-md bg-blue-50 border border-blue-100 text-sm text-blue-800 flex items-center justify-between">
+            <div className="text-sm">
+              <strong className="mr-2">Sugerencia seleccionada</strong>
+              <span className="text-gray-700">por usuario #{selectedSuggestion.user_id}</span>
+              <span className="mx-2 text-gray-400">•</span>
+              <span className="text-gray-600">{new Date(selectedSuggestion.created_at).toLocaleString()}</span>
+              <span className="mx-2 text-gray-400">•</span>
+              <span className="text-gray-500">sugerencia #{selectedSuggestion.id}</span>
+            </div>
+            <div>
+              <button
+                onClick={() => setSelectedSuggestion(null)}
+                className="text-xs px-2 py-1 bg-white border rounded text-blue-700 hover:bg-blue-50"
+              >
+                Quitar selección
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Formulario de validación (ahora siempre disponible). Si ya sugeriste, mostramos un aviso pero permitimos validar igualmente. */}
         <div className="card mt-6">
@@ -327,24 +364,6 @@ const ValidatorPage = () => {
                   >
                     ✏️ Editar sugerencia
                   </button>
-                </div>
-              </div>
-            )}
-
-            {/* If a suggestion is selected for validation, show a small banner */}
-            {selectedSuggestion && (
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium">Validando sugerencia</h4>
-                    <div className="text-sm text-gray-700 mt-1">
-                      {selectedSuggestion.suggested_guarani && <div><strong>Guaraní:</strong> {selectedSuggestion.suggested_guarani}</div>}
-                      {selectedSuggestion.suggested_spanish && <div><strong>Español:</strong> {selectedSuggestion.suggested_spanish}</div>}
-                    </div>
-                  </div>
-                  <div className="ml-4">
-                    <button onClick={() => setSelectedSuggestion(null)} className="px-3 py-1 bg-white border rounded">Cancelar</button>
-                  </div>
                 </div>
               </div>
             )}
