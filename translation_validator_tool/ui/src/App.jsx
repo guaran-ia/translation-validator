@@ -7,6 +7,7 @@ import ValidatorPage from './pages/ValidatorPage';
 import HistoryPage from './pages/HistoryPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminUsers from './pages/AdminUsers';
+import AdminTranslations from './pages/AdminTranslations';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -65,6 +66,14 @@ const App = () => {
               element={
                 <AdminRoute>
                   <AdminUsers />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/translations"
+              element={
+                <AdminRoute>
+                  <AdminTranslations />
                 </AdminRoute>
               }
             />

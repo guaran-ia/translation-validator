@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/common/Navbar';
 
 const AdminUsers = () => {
   const { user } = useAuth();
@@ -38,8 +39,6 @@ const AdminUsers = () => {
       await authAPI.approveUser(confirmUser.id);
       setPending(prev => prev.filter(p => p.id !== confirmUser.id));
       setConfirmUser(null);
-      // small success UI
-      alert('Usuario aprobado');
     } catch (e) {
       console.error('Approve failed', e);
       alert('No se pudo aprobar el usuario');
@@ -47,11 +46,18 @@ const AdminUsers = () => {
   };
 
   if (!user || !user.is_superuser) {
-    return <div className="p-6">No autorizado</div>;
+    return (
+      <div>
+        <Navbar />
+        <div className="p-6">No autorizado</div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div>
+      <Navbar />
+      <div className="max-w-4xl mx-auto p-6">
       <h2 className="text-xl font-semibold mb-4">Registros pendientes</h2>
           {loading ? (
         <div>Loading...</div>
@@ -90,6 +96,7 @@ const AdminUsers = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

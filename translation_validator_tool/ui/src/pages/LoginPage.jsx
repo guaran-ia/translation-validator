@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import LoginForm from '../components/auth/LoginForm';
 
@@ -17,8 +17,19 @@ const LoginPage = () => {
     navigate('/validator');
   };
 
+  // Show optional notice passed from registration redirect
+  const location = useLocation();
+  const notice = location.state?.notice;
+
   return (
-    <LoginForm onSuccess={handleLoginSuccess} />
+    <div>
+      {notice && (
+        <div className="max-w-md mx-auto mt-6 bg-green-50 border border-green-100 text-green-800 px-4 py-3 rounded">
+          {notice}
+        </div>
+      )}
+      <LoginForm onSuccess={handleLoginSuccess} />
+    </div>
   );
 };
 

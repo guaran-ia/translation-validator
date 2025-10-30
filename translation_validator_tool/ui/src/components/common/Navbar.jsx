@@ -24,7 +24,10 @@ const Navbar = () => {
                 <a href="/" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Validar</a>
                 <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
                 {user.is_superuser && (
-                  <a href="/admin/users" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Admin</a>
+                  <>
+                    <a href="/admin/users" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Admin</a>
+                    <a href="/admin/translations" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Admin (Traducciones)</a>
+                  </>
                 )}
               </>
             ) : (

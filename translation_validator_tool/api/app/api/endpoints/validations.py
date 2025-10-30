@@ -56,6 +56,16 @@ async def create_validation(
         # Prevent suggestion author from validating their own suggestion
         if suggestion_obj.user_id == current_user.id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot validate your own suggestion")
+        # Prevent adding more than 3 validations to a single suggestion
+        suggestion_validation_count = db.query(func.count(Validation.id)).filter(
+            Validation.suggestion_id == suggestion_id
+        ).scalar() or 0
+
+        if suggestion_validation_count >= 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Esta sugerencia ya tiene 3 validaciones; no se pueden añadir más validaciones a esta sugerencia."
+            )
     else:
         # For plain translation validations, prevent users from validating a translation they have suggested for
         user_suggestion = db.query(TranslationSuggestion).filter(

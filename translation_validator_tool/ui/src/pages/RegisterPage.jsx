@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const RegisterPage = () => {
   const { register, error, clearError } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -19,7 +21,11 @@ const RegisterPage = () => {
     setSuccessMsg(null);
     const res = await register(formData);
     if (res.success) {
-      setSuccessMsg('Registro creado. Esperando aprobación del administrador.');
+      // After successful registration show the message and navigate back to login
+      // so the user can see the notice and attempt to login later after approval.
+      // Navigate to login and pass a notice so the login page can show feedback.
+      navigate('/login', { state: { notice: 'Registro creado. Esperando aprobación del administrador.' } });
+      return;
     }
     setLoading(false);
   };
@@ -49,12 +55,16 @@ const RegisterPage = () => {
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">{error}</div>}
-          {successMsg && <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{successMsg}</div>}
 
-          <div>
-            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
-              {loading ? 'Creando cuenta...' : 'Crear cuenta'}
-            </button>
+          <div className="flex flex-col gap-3">
+            <div>
+              <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50">
+                {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+              </button>
+            </div>
+            <div className="text-center">
+              <Link to="/login" className="text-sm text-indigo-600 hover:text-indigo-700">Volver al login</Link>
+            </div>
           </div>
         </form>
       </div>

@@ -20,6 +20,13 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
     setForceOriginal(false);
   }, [translation]);
 
+  // Keep direction state in sync with the provided translation when it changes
+  useEffect(() => {
+    if (translation && translation.direction) {
+      setDirState(translation.direction);
+    }
+  }, [translation?.id]);
+
   useEffect(() => {
     // If parent clears selectedSuggestion, ensure we respect it; any change to
     // selectedSuggestion means user or parent intentionally selected something.
@@ -71,8 +78,30 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
 
   const toggleDirection = () => {
     const next = dirState === 'sp-gn' ? 'gn-sp' : 'sp-gn';
-    setDirState(next);
-    if (typeof onDirectionChange === 'function') onDirectionChange(next);
+
+    // Try to fetch the paired translation from the API and ask parent to replace
+    const doSwap = async () => {
+      setIsSaving(true);
+      try {
+        const res = await translationsAPI.getPair(current.id);
+        const pair = res?.data || res;
+        // Inform parent to replace the current translation with its pair
+        if (pair && typeof onReplace === 'function') {
+          onReplace(pair);
+        }
+        // Update local direction state so the UI arrow/text updates immediately
+        setDirState(next);
+        // Clear any local selection when switching directions
+        setSelectedLocal(null);
+        setForceOriginal(false);
+      } catch (err) {
+        console.warn('Could not fetch pair translation', err);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    doSwap();
   };
 
   const leftIsOriginal = dirState === 'sp-gn' ? 'spanish' : 'guarani';
@@ -196,19 +225,29 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                             )}
 
                             {user && s.user_id !== user.id && (
-                              <button
-                                onClick={() => {
-                                  // locally select and also notify parent
-                                  setSelectedLocal(s);
-                                  setForceOriginal(false);
-                                  if (typeof onValidateSuggestion === 'function') onValidateSuggestion(s);
-                                }}
-                                className={`text-xs px-3 py-1 rounded-md text-white ${s.user_has_validated ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                                disabled={s.user_has_validated}
-                                title={s.user_has_validated ? 'Ya validaste esta sugerencia' : 'Validar sugerencia'}
-                              >
-                                {s.user_has_validated ? 'Validada' : 'Validar'}
-                              </button>
+                              (() => {
+                                const reachedLimit = (s.validation_count ?? 0) >= 3;
+                                const alreadyValidated = !!s.user_has_validated;
+                                const disabled = alreadyValidated || reachedLimit;
+                                const btnClass = disabled ? 'bg-gray-300 cursor-not-allowed text-gray-700' : 'bg-blue-600 hover:bg-blue-700 text-white';
+                                const title = alreadyValidated ? 'Ya validaste esta sugerencia' : (reachedLimit ? 'Esta sugerencia ya alcanzó el límite de 3 validaciones' : 'Validar sugerencia');
+
+                                return (
+                                  <button
+                                    onClick={() => {
+                                      // locally select and also notify parent
+                                      setSelectedLocal(s);
+                                      setForceOriginal(false);
+                                      if (typeof onValidateSuggestion === 'function') onValidateSuggestion(s);
+                                    }}
+                                    className={`text-xs px-3 py-1 rounded-md ${btnClass}`}
+                                    disabled={disabled}
+                                    title={title}
+                                  >
+                                    {alreadyValidated ? 'Validada' : (reachedLimit ? 'Límite alcanzado' : 'Validar')}
+                                  </button>
+                                );
+                              })()
                             )}
                           </div>
                         </div>
@@ -252,11 +291,11 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
         <div className="flex justify-between items-center text-sm text-gray-600">
           <span>Fuente: {current.source}</span>
           <div className="flex items-center gap-4">
-            {user?.is_superuser && current.validation_count !== undefined && (
+            {current.validation_count !== undefined && (
               <span>Evaluaciones: {current.validation_count}</span>
             )}
 
-            {user?.is_superuser && current.suggestion_count !== undefined && (
+            {current.suggestion_count !== undefined && (
               <span className="text-sm text-gray-600">Sugerencias: {current.suggestion_count}</span>
             )}
 

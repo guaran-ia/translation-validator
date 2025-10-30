@@ -89,9 +89,22 @@ async def get_next_translation(
         Validation.user_id == current_user.id
     ).subquery()
 
+    # translations the user already suggested (exclude these as well)
+    suggested_subquery = db.query(TranslationSuggestion.translation_id).filter(
+        TranslationSuggestion.user_id == current_user.id
+    ).subquery()
+
     # Exclude translations that already have 3 or more validations FOR THE SAME DIRECTION
-    validated_three = db.query(Validation.translation_id).filter(Validation.suggestion_id == None).group_by(Validation.translation_id).having(
-        func.count(func.nullif(Validation.direction != Translation.direction, True)) >= 3
+    # Only count validations that are NOT suggestion validations (suggestion_id is NULL)
+    validated_three = db.query(Validation.translation_id).filter(
+        Validation.suggestion_id == None
+    ).group_by(Validation.translation_id).having(
+        func.count(Validation.id) >= 3
+    ).subquery()
+
+    # Exclude translations that already have 3 or more suggestions
+    suggestions_three = db.query(TranslationSuggestion.translation_id).group_by(TranslationSuggestion.translation_id).having(
+        func.count(TranslationSuggestion.id) >= 3
     ).subquery()
 
     # Exclude originals whose pair the user already validated
@@ -102,12 +115,15 @@ async def get_next_translation(
         Translation.pair_id.isnot(None)
     ).subquery()
 
+    # Ensure deterministic ordering by id so 'next' returns the smallest available original id
     translation = db.query(Translation).filter(
         ~Translation.id.in_(subquery),
+        ~Translation.id.in_(suggested_subquery),
         ~Translation.id.in_(validated_three),
+        ~Translation.id.in_(suggestions_three),
         ~Translation.id.in_(validated_pairs_subquery),
         Translation.is_original == True
-    ).first()
+    ).order_by(Translation.id).first()
 
     if not translation:
         raise HTTPException(
@@ -153,6 +169,97 @@ async def get_next_translation(
         user_has_validated=False,
         suggestion_count=suggestion_count or 0,
         user_has_suggested=user_has_suggested,
+        pair_same_direction_count=pair_count or 0,
+        pair_is_complete=bool(pair_complete)
+    )
+
+
+@router.get("/next/suitable", response_model=TranslationWithStats)
+async def get_next_suitable_translation(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get the next translation suitable for the current validator.
+    Applies the same filters as the client expects: skip translations the user
+    already suggested/validated and skip translations whose direction already
+    has >= 3 validations. Returns translation metadata including counts so the
+    frontend can decide whether to show/hide validation UI.
+    """
+    # translations the user already validated
+    subquery = db.query(Validation.translation_id).filter(
+        Validation.user_id == current_user.id
+    ).subquery()
+
+    # translations the user already suggested (exclude these as well)
+    suggested_subquery = db.query(TranslationSuggestion.translation_id).filter(
+        TranslationSuggestion.user_id == current_user.id
+    ).subquery()
+
+    # Exclude translations that already have 3 or more validations for the same direction
+    # Only count validations that are NOT suggestion validations (suggestion_id is NULL)
+    validated_three = db.query(Validation.translation_id).filter(
+        Validation.suggestion_id == None
+    ).group_by(Validation.translation_id).having(
+        func.count(Validation.id) >= 3
+    ).subquery()
+
+    # Exclude translations that already have 3 or more suggestions
+    suggestions_three = db.query(TranslationSuggestion.translation_id).group_by(TranslationSuggestion.translation_id).having(
+        func.count(TranslationSuggestion.id) >= 3
+    ).subquery()
+
+    # Exclude originals whose pair the user already validated
+    validated_pairs_subquery = db.query(Translation.pair_id).join(
+        Validation, Translation.id == Validation.translation_id
+    ).filter(
+        Validation.user_id == current_user.id,
+        Translation.pair_id.isnot(None)
+    ).subquery()
+
+    # Select the next original translation not excluded by the above rules
+    translation = db.query(Translation).filter(
+        ~Translation.id.in_(subquery),
+        ~Translation.id.in_(suggested_subquery),
+        ~Translation.id.in_(validated_three),
+        ~Translation.id.in_(suggestions_three),
+        ~Translation.id.in_(validated_pairs_subquery),
+        Translation.is_original == True
+    ).order_by(Translation.id).first()
+
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No more translations to validate"
+        )
+
+    # Counts and flags
+    validation_count = db.query(func.count(Validation.id)).filter(
+        Validation.translation_id == translation.id,
+        Validation.direction == translation.direction,
+        Validation.suggestion_id == None
+    ).scalar()
+
+    user_has_validated = db.query(Validation).filter(
+        Validation.translation_id == translation.id,
+        Validation.user_id == current_user.id
+    ).first() is not None
+
+    suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+        TranslationSuggestion.translation_id == translation.id
+    ).scalar()
+    user_has_suggested = db.query(TranslationSuggestion).filter(
+        TranslationSuggestion.translation_id == translation.id,
+        TranslationSuggestion.user_id == current_user.id
+    ).first() is not None
+
+    pair_count, pair_complete = _get_pair_stats(db, translation)
+
+    return TranslationWithStats(
+        **translation.__dict__,
+        validation_count=validation_count or 0,
+        user_has_validated=bool(user_has_validated),
+        suggestion_count=suggestion_count or 0,
+        user_has_suggested=bool(user_has_suggested),
         pair_same_direction_count=pair_count or 0,
         pair_is_complete=bool(pair_complete)
     )
@@ -276,9 +383,22 @@ async def get_next_translation_from_id(
         Validation.user_id == current_user.id
     ).subquery()
 
+    # translations the user already suggested (exclude these as well)
+    suggested_subquery = db.query(TranslationSuggestion.translation_id).filter(
+        TranslationSuggestion.user_id == current_user.id
+    ).subquery()
+
     # Exclude translations that already have 3 or more validations for the same direction
-    validated_three = db.query(Validation.translation_id).group_by(Validation.translation_id).having(
-        func.count(func.nullif(Validation.direction != Translation.direction, True)) >= 3
+    # Only count validations that are NOT suggestion validations (suggestion_id is NULL)
+    validated_three = db.query(Validation.translation_id).filter(
+        Validation.suggestion_id == None
+    ).group_by(Validation.translation_id).having(
+        func.count(Validation.id) >= 3
+    ).subquery()
+
+    # Exclude translations that already have 3 or more suggestions
+    suggestions_three = db.query(TranslationSuggestion.translation_id).group_by(TranslationSuggestion.translation_id).having(
+        func.count(TranslationSuggestion.id) >= 3
     ).subquery()
 
     # Exclude originals whose pair the user already validated
@@ -293,7 +413,9 @@ async def get_next_translation_from_id(
         and_(
             Translation.id > current_id,
             ~Translation.id.in_(subquery),
+            ~Translation.id.in_(suggested_subquery),
             ~Translation.id.in_(validated_three),
+            ~Translation.id.in_(suggestions_three),
             ~Translation.id.in_(validated_pairs_subquery),
             Translation.is_original == True
         )
@@ -303,7 +425,9 @@ async def get_next_translation_from_id(
         # If no next translation found, get the first available original translation
         translation = db.query(Translation).filter(
             ~Translation.id.in_(subquery),
+            ~Translation.id.in_(suggested_subquery),
             ~Translation.id.in_(validated_three),
+            ~Translation.id.in_(suggestions_three),
             ~Translation.id.in_(validated_pairs_subquery),
             Translation.is_original == True
         ).order_by(Translation.id).first()
@@ -371,9 +495,22 @@ async def get_previous_translation_from_id(
         Validation.user_id == current_user.id
     ).subquery()
 
+    # translations the user already suggested (exclude these as well)
+    suggested_subquery = db.query(TranslationSuggestion.translation_id).filter(
+        TranslationSuggestion.user_id == current_user.id
+    ).subquery()
+
     # Exclude translations that already have 3 or more validations for the same direction
-    validated_three = db.query(Validation.translation_id).group_by(Validation.translation_id).having(
-        func.count(func.nullif(Validation.direction != Translation.direction, True)) >= 3
+    # Only count validations that are NOT suggestion validations (suggestion_id is NULL)
+    validated_three = db.query(Validation.translation_id).filter(
+        Validation.suggestion_id == None
+    ).group_by(Validation.translation_id).having(
+        func.count(Validation.id) >= 3
+    ).subquery()
+
+    # Exclude translations that already have 3 or more suggestions
+    suggestions_three = db.query(TranslationSuggestion.translation_id).group_by(TranslationSuggestion.translation_id).having(
+        func.count(TranslationSuggestion.id) >= 3
     ).subquery()
 
     # Exclude originals whose pair the user already validated
@@ -387,7 +524,9 @@ async def get_previous_translation_from_id(
     translation = db.query(Translation).filter(
         Translation.id < current_id,
         ~Translation.id.in_(subquery),
+        ~Translation.id.in_(suggested_subquery),
         ~Translation.id.in_(validated_three),
+        ~Translation.id.in_(suggestions_three),
         ~Translation.id.in_(validated_pairs_subquery),
         Translation.is_original == True
     ).order_by(Translation.id.desc()).first()
@@ -396,6 +535,9 @@ async def get_previous_translation_from_id(
         # If no previous translation found, get the last original translation
         translation = db.query(Translation).filter(
             ~Translation.id.in_(subquery),
+            ~Translation.id.in_(suggested_subquery),
+            ~Translation.id.in_(validated_three),
+            ~Translation.id.in_(suggestions_three),
             ~Translation.id.in_(validated_pairs_subquery),
             Translation.is_original == True
         ).order_by(Translation.id.desc()).first()
@@ -518,11 +660,19 @@ async def get_my_pending_translations(
         Validation.user_id == current_user.id
     ).subquery()
 
-    # Exclude translations that already have 3 or more validations
+    # translations the user already suggested (exclude these as well)
+    suggested_subquery = db.query(TranslationSuggestion.translation_id).filter(
+        TranslationSuggestion.user_id == current_user.id
+    ).subquery()
+
+    # Exclude translations that already have 3 or more validations (non-suggestion validations only)
     validated_three = db.query(Validation.translation_id).filter(Validation.suggestion_id == None).group_by(Validation.translation_id).having(func.count(Validation.id) >= 3).subquery()
 
+    # Exclude translations that already have 3 or more suggestions
+    suggestions_three = db.query(TranslationSuggestion.translation_id).group_by(TranslationSuggestion.translation_id).having(func.count(TranslationSuggestion.id) >= 3).subquery()
+
     translations = db.query(Translation).filter(
-        ~Translation.id.in_(subquery), ~Translation.id.in_(validated_three)
+        ~Translation.id.in_(subquery), ~Translation.id.in_(validated_three), ~Translation.id.in_(suggestions_three), ~Translation.id.in_(suggested_subquery)
     ).order_by(Translation.id).offset(skip).limit(limit).all()
     
     result = []
@@ -567,6 +717,80 @@ async def get_my_pending_translations(
 
 
 
+@router.get('/admin/list')
+async def get_admin_translations(
+    skip: int = 0,
+    limit: int = 20,
+    q: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Admin endpoint: paginated list of all translations with stats.
+    Supports optional search query `q` (matches id or text fields).
+    Only accessible to superusers.
+    """
+    is_super = getattr(current_user, 'is_superuser', False)
+    if not is_super:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+    query = db.query(Translation)
+    if q:
+        # if q looks like an integer, allow id search
+        try:
+            qid = int(q)
+        except Exception:
+            qid = None
+
+        like = f"%{q}%"
+        if qid is not None:
+            query = query.filter(
+                (Translation.id == qid) |
+                (Translation.guarani_text.ilike(like)) |
+                (Translation.spanish_text.ilike(like))
+            )
+        else:
+            query = query.filter(
+                (Translation.guarani_text.ilike(like)) |
+                (Translation.spanish_text.ilike(like))
+            )
+
+    total = query.count()
+    translations = query.order_by(Translation.id).offset(skip).limit(limit).all()
+
+    items = []
+    for translation in translations:
+        validation_count = db.query(func.count(Validation.id)).filter(
+            Validation.translation_id == translation.id,
+            Validation.direction == translation.direction,
+            Validation.suggestion_id == None
+        ).scalar() or 0
+
+        suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+            TranslationSuggestion.translation_id == translation.id
+        ).scalar() or 0
+
+        pair_count, pair_complete = _get_pair_stats(db, translation)
+
+        items.append(TranslationWithStats(
+            **translation.__dict__,
+            validation_count=validation_count,
+            user_has_validated=False,
+            suggestion_count=suggestion_count,
+            user_has_suggested=False,
+            pair_same_direction_count=pair_count,
+            pair_is_complete=bool(pair_complete)
+        ))
+
+    return {
+        'items': items,
+        'total': total or 0,
+        'skip': skip,
+        'limit': limit,
+        'has_next': (skip + limit) < (total or 0)
+    }
+
+
+
 @router.patch("/{translation_id}/direction", response_model=TranslationResponse)
 async def update_translation_direction(
     translation_id: int,
@@ -601,27 +825,60 @@ async def update_translation_direction(
 
 
 
-@router.get("/pair/{translation_id}", response_model=TranslationResponse)
+@router.get("/pair/{translation_id}", response_model=TranslationWithStats)
 async def get_paired_translation(
     translation_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """Return the paired translation for a given translation id.
+    """Return the paired translation for a given translation id, including basic stats for the paired record.
     If the translation has pair_id, return that row. Otherwise try to find a row whose pair_id == translation_id.
+    This endpoint returns validation counts and simple flags so the UI can display whether the paired
+    translation is already completed (>=3 validations) and prevent validating it.
     """
     translation = db.query(Translation).filter(Translation.id == translation_id).first()
     if not translation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Translation not found")
 
     # Prefer the explicit pair_id
+    paired = None
     if translation.pair_id:
         paired = db.query(Translation).filter(Translation.id == translation.pair_id).first()
-        if paired:
-            return TranslationResponse.model_validate(paired)
+    else:
+        paired = db.query(Translation).filter(Translation.pair_id == translation.id).first()
 
-    # Otherwise try to find the record that references this one as pair
-    paired = db.query(Translation).filter(Translation.pair_id == translation.id).first()
-    if paired:
-        return TranslationResponse.model_validate(paired)
+    if not paired:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paired translation not found")
 
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paired translation not found")
+    # Validation count for paired translation in its own direction (excluding suggestion validations)
+    validation_count = db.query(func.count(Validation.id)).filter(
+        Validation.translation_id == paired.id,
+        Validation.direction == paired.direction,
+        Validation.suggestion_id == None
+    ).scalar()
+
+    user_has_validated = db.query(Validation).filter(
+        Validation.translation_id == paired.id,
+        Validation.user_id == current_user.id
+    ).first() is not None
+
+    # Suggestion info for paired translation
+    suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
+        TranslationSuggestion.translation_id == paired.id
+    ).scalar()
+    user_has_suggested = db.query(TranslationSuggestion).filter(
+        TranslationSuggestion.translation_id == paired.id,
+        TranslationSuggestion.user_id == current_user.id
+    ).first() is not None
+
+    pair_count, pair_complete = _get_pair_stats(db, paired)
+
+    return TranslationWithStats(
+        **paired.__dict__,
+        validation_count=validation_count or 0,
+        user_has_validated=user_has_validated,
+        suggestion_count=suggestion_count or 0,
+        user_has_suggested=user_has_suggested,
+        pair_same_direction_count=pair_count or 0,
+        pair_is_complete=bool(pair_complete)
+    )

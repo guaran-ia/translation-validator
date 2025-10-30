@@ -39,7 +39,10 @@ export const authAPI = {
     const formData = new FormData();
     formData.append('username', username);
     formData.append('password', password);
-    return api.post('/auth/login', formData, {
+    // Use plain axios to avoid the global 401 interceptor which would force a full-page
+    // redirect to /login on unauthorized responses. We want the login form to handle
+    // invalid credentials inline without reloading.
+    return axios.post(`${API_URL}/auth/login`, formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -64,6 +67,8 @@ export const translationsAPI = {
     api.get(`/translations/pair/${id}`),
   getNext: () => 
     api.get('/translations/next'),
+  getNextSuitable: () =>
+    api.get('/translations/next/suitable'),
   getNextFrom: (currentId) => 
     api.get(`/translations/navigation/next/${currentId}`),
   getPrevious: (currentId) => 
@@ -78,6 +83,8 @@ export const translationsAPI = {
     api.get(`/translations/validated/my-history?skip=${skip}&limit=${limit}`),
   getMyPendingTranslations: (skip = 0, limit = 20) => 
     api.get(`/translations/pending/for-me?skip=${skip}&limit=${limit}`),
+  getAdminList: (skip = 0, limit = 20, q = '') =>
+    api.get(`/translations/admin/list?skip=${skip}&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`),
   updateDirection: (translationId, direction) =>
     api.patch(`/translations/${translationId}/direction`, { direction }),
 };
