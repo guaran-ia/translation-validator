@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 const Navbar = () => {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   return (
     <nav className="bg-white shadow-lg">
@@ -23,11 +24,28 @@ const Navbar = () => {
               <>
                 <a href="/" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Validar</a>
                 <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
+
                 {user.is_superuser && (
-                  <>
-                    <a href="/admin/users" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Admin</a>
-                    <a href="/admin/translations" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Admin (Traducciones)</a>
-                  </>
+                  // Compact admin menu: one label that reveals two explicit admin links
+                  <div className="relative">
+                    <button
+                      onClick={() => setAdminOpen(!adminOpen)}
+                      className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium flex items-center"
+                      aria-expanded={adminOpen}
+                    >
+                      Admin
+                      <svg className="ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={adminOpen ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+                      </svg>
+                    </button>
+
+                    {adminOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg z-20">
+                        <a href="/admin/users" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Usuarios</a>
+                        <a href="/admin/translations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Traducciones</a>
+                      </div>
+                    )}
+                  </div>
                 )}
               </>
             ) : (
@@ -77,25 +95,30 @@ const Navbar = () => {
         <div className="md:hidden bg-white border-t border-gray-100">
           <div className="px-4 pt-4 pb-3 space-y-2">
             <a href="/" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Validar</a>
-            {user ? (
-              <>
-                <a href="/history" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Historial</a>
-                {user.is_superuser && (
-                  <a href="/admin/users" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Admin</a>
+                {user ? (
+                  <>
+                    <a href="/history" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Historial</a>
+                    {user.is_superuser && (
+                      <div className="pt-2">
+                        <div className="text-sm font-medium text-gray-700">Admin</div>
+                        <a href="/admin/users" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Usuarios</a>
+                        <a href="/admin/translations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducciones</a>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-gray-100">
+                      <div className="text-sm text-gray-700">Bienvenido, <span className="font-medium">{user.username}</span></div>
+                      <div className="mt-2">
+                        <button onClick={logout} className="w-full text-left btn btn-secondary">Cerrar sesión</button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <a href="/register" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Registro</a>
+                    <a href="/login" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Iniciar sesión</a>
+                  </>
                 )}
-                <div className="pt-2 border-t border-gray-100">
-                  <div className="text-sm text-gray-700">Bienvenido, <span className="font-medium">{user.username}</span></div>
-                  <div className="mt-2">
-                    <button onClick={logout} className="w-full text-left btn btn-secondary">Cerrar sesión</button>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
-                <a href="/register" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Registro</a>
-                <a href="/login" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Iniciar sesión</a>
-              </>
-            )}
           </div>
         </div>
       )}
