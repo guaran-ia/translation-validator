@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Pages
 import LoginPage from './pages/LoginPage';
@@ -42,6 +44,7 @@ const App = () => {
     <AuthProvider>
       <Router>
         <div className="App">
+          <ToastContainer position="top-right" autoClose={5000} />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

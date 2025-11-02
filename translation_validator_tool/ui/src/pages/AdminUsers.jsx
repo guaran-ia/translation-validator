@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/common/Navbar';
+import { toast } from 'react-toastify';
 
 const AdminUsers = () => {
   const { user } = useAuth();
@@ -41,7 +42,7 @@ const AdminUsers = () => {
       setConfirmUser(null);
     } catch (e) {
       console.error('Approve failed', e);
-      alert('No se pudo aprobar el usuario');
+      toast.error('No se pudo aprobar el usuario');
     }
   };
 

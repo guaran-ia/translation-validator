@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { toast } from 'react-toastify';
 
 const SuggestionModal = ({ 
   isOpen, 
@@ -69,12 +70,12 @@ const SuggestionModal = ({
     // Validate that suggestion for target language is provided
     if (targetIsGuarani) {
       if (!formData.suggested_guarani.trim()) {
-        alert('Por favor proporciona una sugerencia en Guaraní.');
+        toast.error('Por favor proporciona una sugerencia en Guaraní.');
         return;
       }
     } else {
       if (!formData.suggested_spanish.trim()) {
-        alert('Por favor proporciona una sugerencia en Español.');
+        toast.error('Por favor proporciona una sugerencia en Español.');
         return;
       }
     }

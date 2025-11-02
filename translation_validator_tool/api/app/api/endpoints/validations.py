@@ -39,7 +39,7 @@ async def create_validation(
     if existing_validation:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You have already validated this translation"
+            detail="Ya has validado esta traducción"
         )
 
     # Prevent users from validating a translation they have suggested for

@@ -52,10 +52,6 @@ const NotesTextarea = ({ notes, onNotesChange, disabled, maxLength = 500 }) => {
           </li>
           <li className="flex items-center gap-2">
             <span className="text-gray-400">•</span>
-            <span>Traducciones alternativas</span>
-          </li>
-          <li className="flex items-center gap-2">
-            <span className="text-gray-400">•</span>
             <span>Claridad o naturalidad</span>
           </li>
         </ul>

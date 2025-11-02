@@ -86,7 +86,8 @@ async def get_next_translation(
     """
     # Find translations not validated by current user
     subquery = db.query(Validation.translation_id).filter(
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).subquery()
 
     # translations the user already suggested (exclude these as well)
@@ -112,6 +113,7 @@ async def get_next_translation(
         Validation, Translation.id == Validation.translation_id
     ).filter(
         Validation.user_id == current_user.id,
+        Validation.suggestion_id == None,
         Translation.pair_id.isnot(None)
     ).subquery()
 
@@ -187,7 +189,8 @@ async def get_next_suitable_translation(
     """
     # translations the user already validated
     subquery = db.query(Validation.translation_id).filter(
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).subquery()
 
     # translations the user already suggested (exclude these as well)
@@ -213,6 +216,7 @@ async def get_next_suitable_translation(
         Validation, Translation.id == Validation.translation_id
     ).filter(
         Validation.user_id == current_user.id,
+        Validation.suggestion_id == None,
         Translation.pair_id.isnot(None)
     ).subquery()
 
@@ -241,7 +245,8 @@ async def get_next_suitable_translation(
 
     user_has_validated = db.query(Validation).filter(
         Validation.translation_id == translation.id,
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).first() is not None
 
     suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
@@ -332,7 +337,8 @@ async def get_translation(
     # Whether current user has validated this translation
     user_has_validated = db.query(Validation).filter(
         Validation.translation_id == translation.id,
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).first() is not None
 
     # Suggestion info
@@ -380,7 +386,8 @@ async def get_next_translation_from_id(
     """
     # Find translations not validated by current user with ID greater than current_id
     subquery = db.query(Validation.translation_id).filter(
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).subquery()
 
     # translations the user already suggested (exclude these as well)
@@ -406,6 +413,7 @@ async def get_next_translation_from_id(
         Validation, Translation.id == Validation.translation_id
     ).filter(
         Validation.user_id == current_user.id,
+        Validation.suggestion_id == None,
         Translation.pair_id.isnot(None)
     ).subquery()
 
@@ -441,11 +449,15 @@ async def get_next_translation_from_id(
     # Get validation count and user validation status
     validation_count = db.query(func.count(Validation.id)).filter(
         Validation.translation_id == translation.id,
-        Validation.direction == translation.direction
+        Validation.direction == translation.direction,
+        Validation.suggestion_id == None
     ).scalar()
-    
     user_has_validated = db.query(Validation).filter(
-        and_(Validation.translation_id == translation.id, Validation.user_id == current_user.id)
+        and_(
+            Validation.translation_id == translation.id,
+            Validation.user_id == current_user.id,
+            Validation.suggestion_id == None
+        )
     ).first() is not None
     # Suggestion info
     suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
@@ -492,7 +504,8 @@ async def get_previous_translation_from_id(
     """
     # Find translations not validated by current user
     subquery = db.query(Validation.translation_id).filter(
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).subquery()
 
     # translations the user already suggested (exclude these as well)
@@ -518,6 +531,7 @@ async def get_previous_translation_from_id(
         Validation, Translation.id == Validation.translation_id
     ).filter(
         Validation.user_id == current_user.id,
+        Validation.suggestion_id == None,
         Translation.pair_id.isnot(None)
     ).subquery()
 
@@ -555,7 +569,11 @@ async def get_previous_translation_from_id(
     ).scalar()
     
     user_has_validated = db.query(Validation).filter(
-        and_(Validation.translation_id == translation.id, Validation.user_id == current_user.id)
+        and_(
+            Validation.translation_id == translation.id,
+            Validation.user_id == current_user.id,
+            Validation.suggestion_id == None
+        )
     ).first() is not None
     # Suggestion info
     suggestion_count = db.query(func.count(TranslationSuggestion.id)).filter(
@@ -657,7 +675,8 @@ async def get_my_pending_translations(
     """Get paginated list of translations pending validation by the current user."""
     # Find translations not validated by current user
     subquery = db.query(Validation.translation_id).filter(
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).subquery()
 
     # translations the user already suggested (exclude these as well)
@@ -859,7 +878,8 @@ async def get_paired_translation(
 
     user_has_validated = db.query(Validation).filter(
         Validation.translation_id == paired.id,
-        Validation.user_id == current_user.id
+        Validation.user_id == current_user.id,
+        Validation.suggestion_id == None
     ).first() is not None
 
     # Suggestion info for paired translation

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { translationsAPI, validationsAPI, suggestionsAPI } from '../services/api';
+import { toast } from 'react-toastify';
 
 // Componentes
 import Navbar from '../components/common/Navbar';
@@ -162,7 +163,7 @@ const ValidatorPage = () => {
       const res = await translationsAPI.getById(currentTranslation.id);
       const fresh = res?.data || res;
       if (fresh && fresh.validation_count !== undefined && fresh.validation_count >= 3) {
-        alert('No es posible validar: esta traducción ya tiene 3 o más validaciones en su dirección.');
+        toast.error('No es posible validar: esta traducción ya tiene 3 o más validaciones en su dirección.');
         setCurrentTranslation(fresh);
         setSelectedSuggestion(null);
         return;
@@ -183,10 +184,10 @@ const ValidatorPage = () => {
       console.error('Error al enviar la validación:', error);
       if (error.response?.status === 400) {
         const msg = error.response?.data?.detail || 'Ya has validado esta traducción.';
-        alert(msg);
+        toast.error(msg);
         await loadData();
       } else {
-        alert('Error al enviar la validación. Inténtalo de nuevo.');
+        toast.error('Error al enviar la validación. Inténtalo de nuevo.');
       }
     } finally {
       setSubmitting(false);
@@ -196,16 +197,16 @@ const ValidatorPage = () => {
   const handleSubmitSuggestion = async (suggestionData) => {
     try {
       await suggestionsAPI.create(suggestionData);
-      alert('¡Sugerencia enviada con éxito! Tu propuesta ayudará a mejorar la calidad de las traducciones.');
+      toast.success('¡Sugerencia enviada con éxito! Tu propuesta ayudará a mejorar la calidad de las traducciones.');
       await loadData();
     } catch (error) {
       console.error('Error al enviar la sugerencia:', error);
       if (error.response?.status === 400) {
-        alert('Error en los datos de la sugerencia. Verifica que has proporcionado al menos una traducción.');
+        toast.error('Error en los datos de la sugerencia. Verifica que has proporcionado al menos una traducción.');
       } else if (error.response?.status === 404) {
-        alert('La traducción no fue encontrada.');
+        toast.error('La traducción no fue encontrada.');
       } else {
-        alert('Error al enviar la sugerencia. Inténtalo de nuevo.');
+        toast.error('Error al enviar la sugerencia. Inténtalo de nuevo.');
       }
     }
   };
