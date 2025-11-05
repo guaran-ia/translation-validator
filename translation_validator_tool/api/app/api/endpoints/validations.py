@@ -30,6 +30,19 @@ async def create_validation(
             detail="Translation not found"
         )
     
+    # Validate category requirement for gn-sp direction
+    if translation.direction == "gn-sp" and translation.is_original:
+        if not validation_data.category:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Category is required for Guarani original sentences (gn-sp direction)"
+            )
+        if validation_data.category not in ["guarani_puro", "jopara", "jehea"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid category. Must be: guarani_puro, jopara, or jehea"
+            )
+    
     # Check if user already validated this translation
     existing_validation = db.query(Validation).filter(
         Validation.translation_id == validation_data.translation_id,
@@ -107,9 +120,9 @@ async def create_validation(
         fluency_score=validation_data.fluency_score,
         accuracy_score=validation_data.accuracy_score,
         notes=validation_data.notes,
-        direction=translation.direction
-        ,
-        suggestion_id=suggestion_id
+        direction=translation.direction,
+        suggestion_id=suggestion_id,
+        category=validation_data.category  # Include category from validation data
     )
     
     try:

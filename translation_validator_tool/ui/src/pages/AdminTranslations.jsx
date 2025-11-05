@@ -23,6 +23,17 @@ const AdminTranslations = () => {
   const [query, setQuery] = useState('');
   const [tableLoading, setTableLoading] = useState(false);
 
+  // Form states for creating new translations
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    guarani_text: '',
+    spanish_text: '',
+    source: 'admin',
+    direction: 'gn-sp',
+    is_original: true
+  });
+
   useEffect(() => {
     if (user && user.is_superuser) loadTable(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,6 +86,50 @@ const AdminTranslations = () => {
     }
   };
 
+  const handleCreateTranslation = async (e) => {
+    e.preventDefault();
+    if (!formData.guarani_text.trim()) {
+      setError('El texto en guaraní es obligatorio');
+      return;
+    }
+    
+    setCreateLoading(true);
+    setError(null);
+    
+    try {
+      // Prepare data, remove empty spanish_text to make it null
+      const dataToSend = {
+        ...formData,
+        spanish_text: formData.spanish_text.trim() || null
+      };
+      
+      const res = await translationsAPI.adminCreate(dataToSend);
+      const newTranslation = res?.data || res;
+      
+      // Reset form and close modal
+      setFormData({
+        guarani_text: '',
+        spanish_text: '',
+        source: 'admin',
+        direction: 'gn-sp',
+        is_original: true
+      });
+      setShowCreateForm(false);
+      
+      // Reload table to show new translation
+      loadTable(0);
+      
+      // Show success message
+      alert(`Traducción creada exitosamente con ID: ${newTranslation.id}`);
+      
+    } catch (err) {
+      console.error('Create failed', err);
+      setError(err.response?.data?.detail || 'Error al crear la traducción');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   if (!user || !user.is_superuser) return (
     <div>
       <Navbar />
@@ -92,6 +147,12 @@ const AdminTranslations = () => {
             <h1 className="text-2xl font-bold">Administración de traducciones</h1>
             <p className="text-sm text-gray-600">Busca, filtra y explora todas las traducciones con sus estadísticas.</p>
           </div>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+          >
+            + Agregar Traducción
+          </button>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
@@ -108,6 +169,7 @@ const AdminTranslations = () => {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">ID</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Dirección</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Texto (truncado)</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Categoría</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Validaciones</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Sugerencias</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Acciones</th>
@@ -180,6 +242,100 @@ const AdminTranslations = () => {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Create Translation Modal */}
+        {showCreateForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Agregar Nueva Traducción</h3>
+                <button
+                  onClick={() => {
+                    setShowCreateForm(false);
+                    setError(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateTranslation} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Texto en Guaraní *
+                  </label>
+                  <textarea
+                    value={formData.guarani_text}
+                    onChange={(e) => setFormData({...formData, guarani_text: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    required
+                    placeholder="Ingresa el texto original en guaraní..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Texto en Español (opcional)
+                  </label>
+                  <textarea
+                    value={formData.spanish_text}
+                    onChange={(e) => setFormData({...formData, spanish_text: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Si no tiene traducción, dejar en blanco para que sea sugerida..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Si se deja vacío, los usuarios podrán sugerir traducciones para esta oración
+                  </p>
+                </div>
+
+
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Fuente
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.source}
+                    onChange={(e) => setFormData({...formData, source: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Fuente del texto (ej: admin, corpus, etc.)"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateForm(false);
+                      setError(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    disabled={createLoading}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                    disabled={createLoading}
+                  >
+                    {createLoading ? 'Creando...' : 'Crear Traducción'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

@@ -5,12 +5,22 @@ from pydantic import BaseModel, ConfigDict
 
 class TranslationBase(BaseModel):
     guarani_text: str
-    spanish_text: str
+    spanish_text: Optional[str] = None  # Allow null for sentences without translation
     source: str = "jojajovai"
 
 
 class TranslationCreate(TranslationBase):
-    pass
+    direction: str = "sp-gn"
+    is_original: bool = True
+
+
+class TranslationAdminCreate(BaseModel):
+    """Schema for admin to create translations (allows sentences without spanish translation)"""
+    guarani_text: str
+    spanish_text: Optional[str] = None  # Optional for sentences without translation
+    source: str = "admin"
+    direction: str = "gn-sp"  # Default for guarani sentences
+    is_original: bool = True
 
 
 class TranslationResponse(TranslationBase):

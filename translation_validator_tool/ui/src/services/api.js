@@ -87,6 +87,8 @@ export const translationsAPI = {
     api.get(`/translations/admin/list?skip=${skip}&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`),
   updateDirection: (translationId, direction) =>
     api.patch(`/translations/${translationId}/direction`, { direction }),
+  adminCreate: (data) =>
+    api.post('/translations/admin/create', data),
 };
 
 // Validations API

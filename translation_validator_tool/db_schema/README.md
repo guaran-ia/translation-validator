@@ -1,13 +1,14 @@
 # 🗄️ Database schema and initialization
 
-Este directorio contiene las herramientas y la documentación para gestionar la base de datos PostgreSQL del proyecto.
+Herramientas y documentación para gestionar la base de datos PostgreSQL del
+proyecto. Incluye scripts para inicializar, resetear y aplicar migraciones.
 
-**Resumen rápido:**
-- Las migraciones de esquema están en `db_schema/alembic/`.
-- El helper principal para creación/inicialización es `init_database.py` (usa `init_db.py`).
-- La configuración de la aplicación (incluyendo `DATABASE_URL`) está en `api/.env`.
+Resumen rápido
+- Migraciones: `db_schema/alembic/` (Alembic)
+- Helper de inicialización: `init_database.py` (usa `init_db.py`)
+- Configuración: `translation_validator_tool/api/.env` contiene `DATABASE_URL` y claves
 
-## Estructura importante
+Estructura importante
 
 ```
 db_schema/
@@ -18,57 +19,71 @@ db_schema/
 └── README.md               # Esta documentación
 ```
 
-## Objetivo de los scripts
+Objetivo de los scripts
 
-- `init_database.py init` — crea la base de datos (si no existe), crea tablas y agrega un admin por defecto.
-- `init_database.py reset` — elimina tablas y las vuelve a crear (útil en dev).
-- `init_database.py drop` — elimina todas las tablas (cuidado: borra datos).
+- `init_database.py init` — crea la base de datos (si no existe), crea tablas y
+	agrega un admin por defecto (útil en desarrollo).
+- `init_database.py reset` — elimina tablas y las vuelve a crear (dev).
+- `init_database.py drop` — elimina todas las tablas (peligroso, borra datos).
 - `init_database.py test` — prueba la conexión a la base de datos.
 
-> Nota: estos scripts importan módulos del backend (`app.*`), por lo que deben ejecutarse usando el Python del venv del `api` o con el venv activado. Ver sección 'Uso' abajo.
+Nota: los scripts importan módulos del backend (`app.*`), por lo que deben
+ejecutarse usando el Python del venv del `api` o con el venv activado.
 
-## Uso (resumen)
+Uso (ejemplos Windows / Linux)
 
-- Asegúrate de tener el entorno virtual del backend (`api/venv`) con las dependencias instaladas.
-- El archivo `.env` que contiene `DATABASE_URL` y `SECRET_KEY` está en `translation_validator_tool/api/.env`.
-- Recomendamos usar el helper `init_database.py init` para crear la BD + tablas + admin en desarrollo.
-
-## Migraciones (Alembic)
-
-- Las migraciones se gestionan con Alembic y están en `db_schema/alembic/`.
-- Ejecuta Alembic desde `db_schema` (para que `alembic.ini` se resuelva correctamente). En entornos Windows, es conveniente invocar el python del venv del backend.
-
-Ejemplo (usar python del venv del backend):
-
+Windows (PowerShell):
+```powershell
+cd translation_validator_tool/db_schema
+..\api\venv\Scripts\python.exe init_database.py init
 ```
+
+Linux / macOS (bash):
+```bash
+cd translation_validator_tool/db_schema
+../api/venv/bin/python init_database.py init
+```
+
+Migraciones (Alembic)
+
+Ejecuta Alembic desde `db_schema` para que `alembic.ini` se resuelva correctamente.
+
+Windows (PowerShell):
+```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe -m alembic upgrade head
 ```
 
-## Recomendaciones y notas
-
-- No existen en este repo archivos `init.sql`, `seed.sql`, `migrate.bat` o `migrate.sh`. Si ves referencias a ellos en documentación antigua, ignóralas: la funcionalidad relevante está en `init_database.py` y Alembic.
-- Si recibes `No module named 'app'`, asegúrate de ejecutar desde `db_schema` y de usar el Python del venv del `api` (o activar el venv antes).
-- El helper `init_database.py` utiliza la URL en `api/.env` para crear la BD. Si la DB debe crearse manualmente (por ejemplo en entornos controlados), puedes usar `psql`/`createdb` y luego aplicar migraciones con Alembic.
-
-## Backup & restore (comandos genéricos)
-
-Puedes usar `pg_dump` y `psql` para backup y restore (ajusta host/puerto/usuario):
-
+Linux / macOS (bash):
+```bash
+cd translation_validator_tool/db_schema
+../api/venv/bin/python -m alembic upgrade head
 ```
+
+Recomendaciones y notas
+
+- No existen archivos `init.sql`, `seed.sql`, `migrate.bat` ni `migrate.sh`.
+	La funcionalidad está en `init_database.py` y Alembic.
+- Si ves `No module named 'app'`, ejecuta desde `db_schema` y usa el Python del
+	venv del backend.
+- Si prefieres crear la BD manualmente (entornos controlados), crea la BD con
+	`psql`/`createdb` y luego aplica las migraciones con Alembic.
+
+Backup & restore (ejemplos genéricos)
+
+```bash
 pg_dump -h localhost -p 5432 -U postgres -d translation_validator -f backup.sql
 psql -h localhost -p 5432 -U postgres -d translation_validator -f backup.sql
 ```
 
-## Solución de problemas rápidos
+Solución de problemas rápidos
 
-- Error al crear la base de datos (CREATE DATABASE dentro de transacción): usa `init_database.py init` (ya maneja autocommit) o crea la BD manualmente con `psql`.
-- Error de variables de entorno: comprueba `translation_validator_tool/api/.env` y que `DATABASE_URL` y `SECRET_KEY` estén presentes.
-- Problemas con codificación al importar CSV: asegúrate de que el CSV esté en UTF-8.
+- `CREATE DATABASE` dentro de transacción: usa `init_database.py init` o crea la
+	BD manualmente con `psql`.
+- Variables de entorno: revisa `translation_validator_tool/api/.env`.
+- Encoding CSV: asegúrate que los CSV estén en UTF-8.
 
-## Referencias
+Referencias
 
-- Scripts de carga y utilidades del backend: `translation_validator_tool/api/app/scripts/`
-- Migraciones y env para Alembic: `translation_validator_tool/db_schema/alembic/`
-
-Si quieres, puedo limpiar más el README (por ejemplo, añadir ejemplos de uso con `init_database.py` usando el python del venv, o añadir un pequeño script `scripts/init_all.ps1` para Windows). Dime si lo deseas.
+- Scripts y utilidades: `translation_validator_tool/api/app/scripts/`
+- Migraciones: `translation_validator_tool/db_schema/alembic/`

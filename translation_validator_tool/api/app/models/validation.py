@@ -18,6 +18,8 @@ class Validation(Base):
     direction: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     # If non-null, this validation is validating a suggestion rather than the translation itself
     suggestion_id: Mapped[Optional[int]] = mapped_column(ForeignKey("translation_suggestions.id"), nullable=True)
+    # Category for Guarani sentences classification (guarani_puro, jopara, jehea) - only for gn-sp direction
+    category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     

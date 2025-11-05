@@ -29,6 +29,8 @@ const ValidatorPage = () => {
     accuracy_score: null,
     notes: ''
   });
+  
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
     if (user) loadData();
@@ -77,6 +79,7 @@ const ValidatorPage = () => {
 
   const resetForm = () => {
     setFormData({ correctness: '', fluency_score: null, accuracy_score: null, notes: '' });
+    setSelectedCategory(null);
   };
 
   // loadData: fetch next translation that the user hasn't suggested/validated and
@@ -147,13 +150,21 @@ const ValidatorPage = () => {
   };
 
   const isFormValid = () => {
-    return formData.correctness && formData.fluency_score && formData.accuracy_score;
+    const baseValid = formData.correctness && formData.fluency_score && formData.accuracy_score;
+    
+    // If it's a gn-sp original translation, category is required
+    if (currentTranslation?.direction === 'gn-sp' && currentTranslation?.is_original) {
+      return baseValid && selectedCategory;
+    }
+    
+    return baseValid;
   };
 
   const handleCorrectnessSelect = (correctness) => setFormData(prev => ({ ...prev, correctness }));
   const handleFluencySelect = (score) => setFormData(prev => ({ ...prev, fluency_score: score }));
   const handleAccuracySelect = (score) => setFormData(prev => ({ ...prev, accuracy_score: score }));
   const handleNotesChange = (notes) => setFormData(prev => ({ ...prev, notes }));
+  const handleCategoryChange = (category) => setSelectedCategory(category);
 
   const handleSubmitValidation = async () => {
     if (!isFormValid() || !currentTranslation) return;
@@ -176,6 +187,11 @@ const ValidatorPage = () => {
     try {
       const payload = { translation_id: currentTranslation.id, ...formData };
       if (selectedSuggestion && selectedSuggestion.id) payload.suggestion_id = selectedSuggestion.id;
+      
+      // Include category if selected (required for gn-sp original translations)
+      if (selectedCategory) {
+        payload.category = selectedCategory;
+      }
 
       await validationsAPI.create(payload);
       setSelectedSuggestion(null);
@@ -236,6 +252,11 @@ const ValidatorPage = () => {
     </div>
   );
 
+  // Check if this is a Guarani sentence without Spanish translation
+  const isGuaraniWithoutTranslation = currentTranslation?.direction === 'gn-sp' && 
+                                       currentTranslation?.is_original && 
+                                       !currentTranslation?.spanish_text;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -255,6 +276,7 @@ const ValidatorPage = () => {
           onReplace={(t) => { setCurrentTranslation(t); resetForm(); setSelectedSuggestion(null); }}
           onValidateSuggestion={(s) => setSelectedSuggestion(s)}
           onClearSelection={() => setSelectedSuggestion(null)}
+          onCategoryChange={handleCategoryChange}
           selectedSuggestion={selectedSuggestion}
         />
 
@@ -284,7 +306,27 @@ const ValidatorPage = () => {
           </div>
         )}
 
-        {!(currentTranslation.validation_count !== undefined && currentTranslation.validation_count >= 3) && (
+        {/* Show message for Guarani sentences without translation */}
+        {isGuaraniWithoutTranslation ? (
+          <div className="card mt-6">
+            <div className="text-center py-8 space-y-4">
+              <div className="text-5xl mb-4">📝</div>
+              <h3 className="text-xl font-semibold text-gray-800">Esta oración aún no tiene traducción al español</h3>
+              <p className="text-gray-600 max-w-lg mx-auto">
+                Para poder validar esta traducción, primero necesitamos una traducción al español.
+                Por favor, sugiere una traducción haciendo clic en el botón de abajo.
+              </p>
+              <div className="pt-4">
+                <button 
+                  onClick={() => setShowSuggestionModal(true)} 
+                  className="btn btn-primary text-lg px-6 py-3"
+                >
+                  💡 Sugerir traducción al español
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : !(currentTranslation.validation_count !== undefined && currentTranslation.validation_count >= 3) && (
           <div className="card mt-6">
             <div className="space-y-6">
               {currentTranslation.user_has_suggested && (
@@ -305,6 +347,13 @@ const ValidatorPage = () => {
               </div>
 
               <NotesTextarea notes={formData.notes} onNotesChange={handleNotesChange} disabled={submitting} />
+
+              {/* Category requirement message for gn-sp */}
+              {currentTranslation?.direction === 'gn-sp' && currentTranslation?.is_original && !selectedCategory && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+                  <strong>📋 Clasificación requerida:</strong> Para oraciones originales en Guaraní, debes seleccionar una categoría (Guaraní Puro, Jopara, o Jehe'a) antes de enviar la validación.
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
                 <button onClick={handleSubmitValidation} disabled={!isFormValid() || submitting} className="btn btn-primary flex-1 min-w-[200px]">

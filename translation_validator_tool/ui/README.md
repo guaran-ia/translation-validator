@@ -1,53 +1,53 @@
-# Frontend README
+# Frontend — Translation Validator (README)
 
-## Translation Validator Frontend
+React + Vite frontend para la aplicación Translation Validator.
 
-React + Vite frontend for the Translation Validator application.
+### Quick Start (Windows / Linux)
 
-### Quick Start
+Windows (PowerShell):
+```powershell
+cd translation_validator_tool/ui
+npm install
+copy .env.example .env
+# Edita .env y configura VITE_API_URL (ej: http://localhost:8000/api)
+npm run dev
+```
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+Linux / macOS (bash):
+```bash
+cd translation_validator_tool/ui
+npm install
+cp .env.example .env
+# Edita .env y configura VITE_API_URL (ej: http://localhost:8000/api)
+npm run dev
+```
 
-2. **Configure Environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your API URL
-   ```
+### Build / Preview
 
-3. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
+Windows (PowerShell):
+```powershell
+npm run build
+npm run preview
+```
 
-4. **Build for Production**
-   ```bash
-   npm run build
-   ```
+Linux / macOS (bash):
+```bash
+npm run build
+npm run preview
+```
 
-### Available Scripts
+### Environment variables
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
+- `VITE_API_URL` — Backend API URL (por ejemplo: `http://localhost:8000/api`)
 
-### Environment Variables
+### Scripts disponibles
 
-- `VITE_API_URL` - Backend API URL (default: http://localhost:8000/api)
+- `npm run dev` — iniciar servidor de desarrollo
+- `npm run build` — generar build de producción
+- `npm run preview` — previsualizar build de producción
+- `npm run lint` — ejecutar ESLint (si está configurado)
 
-### Features
-
-- ✅ JWT Authentication
-- ✅ Translation validation interface
-- ✅ Progress tracking
-- ✅ Suggestion system
-- ✅ Responsive design
-- ✅ Real-time error handling
-
-### Component Structure
+### Estructura de componentes (resumen)
 
 ```
 src/

@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 
-const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidateSuggestion, selectedSuggestion, onClearSelection }) => {
+const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidateSuggestion, selectedSuggestion, onClearSelection, onCategoryChange }) => {
   const { user } = useAuth();
   const [current, setCurrent] = useState(translation || null);
   const [suggestions, setSuggestions] = useState([]);
@@ -12,8 +12,12 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
   const [dirState, setDirState] = useState('sp-gn');
   const [selectedLocal, setSelectedLocal] = useState(null);
   const [forceOriginal, setForceOriginal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
-  useEffect(() => setCurrent(translation), [translation]);
+  useEffect(() => {
+    setCurrent(translation);
+    setSelectedCategory(translation?.category || null);
+  }, [translation]);
   useEffect(() => {
     // Clear any local selection when the translation changes
     setSelectedLocal(null);
@@ -102,6 +106,14 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
     };
 
     doSwap();
+  };
+
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+    // Notify parent component about category selection
+    if (typeof onCategoryChange === 'function') {
+      onCategoryChange(category);
+    }
   };
 
   const leftIsOriginal = dirState === 'sp-gn' ? 'spanish' : 'guarani';
@@ -279,12 +291,89 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
             <h3 className="text-lg font-semibold text-gray-800">{rightIsTranslation === 'guarani' ? 'Guaraní' : 'Español'}</h3>
             <span className="text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-100">Traducción</span>
           </div>
-          <div className="bg-white border border-green-100 rounded-lg p-4 min-h-[120px] shadow-sm">
-            <p className="text-gray-900 leading-relaxed">{displayRightText}</p>
+          <div className={`bg-white rounded-lg p-4 min-h-[120px] shadow-sm ${!displayRightText ? 'border-2 border-dashed border-orange-300 bg-orange-50' : 'border border-green-100'}`}>
+            {!displayRightText ? (
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <span className="text-3xl mb-2">❓</span>
+                <p className="text-orange-700 font-medium">Traducción pendiente</p>
+                <p className="text-xs text-orange-600 mt-1">Se necesita una traducción al español</p>
+              </div>
+            ) : (
+              <p className="text-gray-900 leading-relaxed">{displayRightText}</p>
+            )}
           </div>
         </div>
         
       </div>
+
+      {/* Category classification for Guarani sentences - only for gn-sp direction */}
+      {dirState === 'gn-sp' && (
+        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h4 className="text-md font-semibold text-gray-800 mb-3">
+            Clasificación de la oración original en Guaraní
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button 
+              onClick={() => handleCategorySelect('guarani_puro')}
+              className={`p-3 border-2 rounded-lg transition-colors ${
+                selectedCategory === 'guarani_puro'
+                  ? 'border-indigo-400 bg-indigo-100 ring-2 ring-indigo-200'
+                  : 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300'
+              }`}
+              title="Guaraní puro (o académico): Esta es la forma más tradicional y 'académica' del guaraní, que se busca enseñar en las instituciones educativas. Se caracteriza por seguir una estructura lingüística más cercana a sus orígenes, y se utiliza en contextos formales."
+            >
+              <div className="text-sm font-semibold text-indigo-800">Guaraní Puro</div>
+              <div className="text-xs text-indigo-600 mt-1">Académico/Tradicional</div>
+              {selectedCategory === 'guarani_puro' && (
+                <div className="mt-2 text-indigo-700">
+                  <CheckIcon className="h-4 w-4 mx-auto" />
+                </div>
+              )}
+            </button>
+            
+            <button 
+              onClick={() => handleCategorySelect('jopara')}
+              className={`p-3 border-2 rounded-lg transition-colors ${
+                selectedCategory === 'jopara'
+                  ? 'border-green-400 bg-green-100 ring-2 ring-green-200'
+                  : 'border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-300'
+              }`}
+              title="Jopara: Es una mezcla o 'préstamo léxico' entre el guaraní y el español, donde se pueden combinar palabras o estructuras de ambas lenguas, incluso dentro de la misma frase. Un ejemplo es 'venina na', donde 'venina' es español y 'na' es una partícula guaraní."
+            >
+              <div className="text-sm font-semibold text-green-800">Jopara</div>
+              <div className="text-xs text-green-600 mt-1">Mezcla léxica</div>
+              {selectedCategory === 'jopara' && (
+                <div className="mt-2 text-green-700">
+                  <CheckIcon className="h-4 w-4 mx-auto" />
+                </div>
+              )}
+            </button>
+            
+            <button 
+              onClick={() => handleCategorySelect('jehea')}
+              className={`p-3 border-2 rounded-lg transition-colors ${
+                selectedCategory === 'jehea'
+                  ? 'border-orange-400 bg-orange-100 ring-2 ring-orange-200'
+                  : 'border-orange-200 bg-orange-50 hover:bg-orange-100 hover:border-orange-300'
+              }`}
+              title="Jehe'a: Es la forma de hablar más común y cotidiana en Paraguay, a menudo referida como 'guaraní paraguayo'. Se puede entender como el resultado de un proceso de hispanización que no ha destruido la estructura original del guaraní. Incluye tanto la mezcla entre guaraní y español (similar a jopara), como el uso de palabras del guaraní incorporadas al español. En este caso, el préstamo de palabras del guaraní al español se convierte en parte del corpus lexical del español paraguayo."
+            >
+              <div className="text-sm font-semibold text-orange-800">Jehe'a</div>
+              <div className="text-xs text-orange-600 mt-1">Guaraní paraguayo</div>
+              {selectedCategory === 'jehea' && (
+                <div className="mt-2 text-orange-700">
+                  <CheckIcon className="h-4 w-4 mx-auto" />
+                </div>
+              )}
+            </button>
+          </div>
+          {selectedCategory && (
+            <div className="mt-3 text-sm text-gray-600">
+              Categoría seleccionada: <span className="font-semibold">{selectedCategory}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Additional info */}
       <div className="mt-4 pt-4 border-t border-gray-200">

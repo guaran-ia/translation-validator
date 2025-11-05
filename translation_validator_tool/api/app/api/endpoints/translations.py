@@ -7,7 +7,7 @@ from app.models.user import User
 from app.models.translation import Translation
 from app.models.validation import Validation
 from app.models.suggestion import TranslationSuggestion
-from app.schemas.translation import TranslationResponse, TranslationWithStats
+from app.schemas.translation import TranslationResponse, TranslationWithStats, TranslationAdminCreate
 from app.api.deps import get_current_active_user
 
 router = APIRouter()
@@ -902,3 +902,43 @@ async def get_paired_translation(
         pair_same_direction_count=pair_count or 0,
         pair_is_complete=bool(pair_complete)
     )
+
+
+@router.post("/admin/create", response_model=TranslationResponse)
+async def admin_create_translation(
+    translation_data: TranslationAdminCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Admin endpoint to create new translations.
+    Allows creating Guaraní sentences without Spanish translation (spanish_text can be null).
+    Only accessible to superusers.
+    """
+    # Check if user is superuser
+    is_super = getattr(current_user, 'is_superuser', False)
+    if not is_super:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Only admins can create translations"
+        )
+    
+    # Create translation
+    db_translation = Translation(
+        guarani_text=translation_data.guarani_text,
+        spanish_text=translation_data.spanish_text,  # Can be None
+        source=translation_data.source,
+        direction=translation_data.direction,
+        is_original=translation_data.is_original
+    )
+    
+    try:
+        db.add(db_translation)
+        db.commit()
+        db.refresh(db_translation)
+        return TranslationResponse.model_validate(db_translation)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not create translation: {str(e)}"
+        )

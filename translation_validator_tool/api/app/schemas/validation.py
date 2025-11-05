@@ -16,6 +16,8 @@ class ValidationBase(BaseModel):
     fluency_score: int = Field(ge=1, le=5, description="Fluency score from 1 to 5")
     accuracy_score: int = Field(ge=1, le=5, description="Accuracy score from 1 to 5")
     notes: Optional[str] = None
+    # Category for Guarani sentences classification (required for gn-sp direction)
+    category: Optional[str] = Field(None, description="guarani_puro, jopara, or jehea - required for gn-sp direction")
 
 
 class ValidationCreate(ValidationBase):
@@ -29,6 +31,7 @@ class ValidationUpdate(BaseModel):
     fluency_score: Optional[int] = Field(None, ge=1, le=5)
     accuracy_score: Optional[int] = Field(None, ge=1, le=5)
     notes: Optional[str] = None
+    category: Optional[str] = Field(None, description="guarani_puro, jopara, or jehea")
 
 
 class ValidationResponse(ValidationBase):
