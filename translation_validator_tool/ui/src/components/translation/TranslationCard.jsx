@@ -325,7 +325,6 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                     ? 'border-indigo-500 bg-indigo-50 shadow-md'
                     : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm'
                 }`}
-                title="Guaraní puro (o académico): Esta es la forma más tradicional y 'académica' del guaraní, que se busca enseñar en las instituciones educativas. Se caracteriza por seguir una estructura lingüística más cercana a sus orígenes, y se utiliza en contextos formales."
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
@@ -347,6 +346,15 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                 <div className={`text-xs leading-relaxed ${selectedCategory === 'guarani_puro' ? 'text-indigo-600' : 'text-gray-500'}`}>
                   Forma tradicional y académica del guaraní
                 </div>
+                
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-72 z-10">
+                  <div className="font-semibold mb-1">Guaraní puro (o académico)</div>
+                  <div className="text-gray-200">Esta es la forma más tradicional y 'académica' del guaraní, que se busca enseñar en las instituciones educativas. Se caracteriza por seguir una estructura lingüística más cercana a sus orígenes, y se utiliza en contextos formales.</div>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                    <div className="border-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
               </button>
               
               <button 
@@ -356,7 +364,6 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                     ? 'border-green-500 bg-green-50 shadow-md'
                     : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50 hover:shadow-sm'
                 }`}
-                title="Jopara: Es una mezcla o 'préstamo léxico' entre el guaraní y el español, donde se pueden combinar palabras o estructuras de ambas lenguas, incluso dentro de la misma frase. Un ejemplo es 'venina na', donde 'venina' es español y 'na' es una partícula guaraní."
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
@@ -378,6 +385,16 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                 <div className={`text-xs leading-relaxed ${selectedCategory === 'jopara' ? 'text-green-600' : 'text-gray-500'}`}>
                   Combinación de guaraní y español
                 </div>
+                
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-72 z-10">
+                  <div className="font-semibold mb-1">Jopara</div>
+                  <div className="text-gray-200 mb-2">Es una mezcla o 'préstamo léxico' entre el guaraní y el español, donde se pueden combinar palabras o estructuras de ambas lenguas, incluso dentro de la misma frase.</div>
+                  <div className="text-gray-300 italic text-[10px]">Ejemplo: "venina na" (venina = español, na = guaraní)</div>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                    <div className="border-4 border-transparent border-t-gray-900"></div>
+                  </div>
+                </div>
               </button>
               
               <button 
@@ -387,7 +404,6 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                     ? 'border-orange-500 bg-orange-50 shadow-md'
                     : 'border-gray-200 bg-white hover:border-orange-300 hover:bg-orange-50 hover:shadow-sm'
                 }`}
-                title="Jehe'a: Es la forma de hablar más común y cotidiana en Paraguay, a menudo referida como 'guaraní paraguayo'. Se puede entender como el resultado de un proceso de hispanización que no ha destruido la estructura original del guaraní. Incluye tanto la mezcla entre guaraní y español (similar a jopara), como el uso de palabras del guaraní incorporadas al español. En este caso, el préstamo de palabras del guaraní al español se convierte en parte del corpus lexical del español paraguayo."
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
@@ -408,6 +424,16 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                 </div>
                 <div className={`text-xs leading-relaxed ${selectedCategory === 'jehea' ? 'text-orange-600' : 'text-gray-500'}`}>
                   Forma cotidiana hablada en Paraguay
+                </div>
+                
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-72 z-10">
+                  <div className="font-semibold mb-1">Jehe'a (Guaraní paraguayo)</div>
+                  <div className="text-gray-200 mb-2">Es la forma de hablar más común y cotidiana en Paraguay. Se puede entender como el resultado de un proceso de hispanización que no ha destruido la estructura original del guaraní.</div>
+                  <div className="text-gray-300 text-[10px]">Incluye tanto la mezcla entre guaraní y español (similar a jopara), como el uso de palabras del guaraní incorporadas al español paraguayo.</div>
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                    <div className="border-4 border-transparent border-t-gray-900"></div>
+                  </div>
                 </div>
               </button>
             </div>
