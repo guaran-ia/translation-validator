@@ -308,70 +308,125 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
 
       {/* Category classification for Guarani sentences - only for gn-sp direction */}
       {dirState === 'gn-sp' && (
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h4 className="text-md font-semibold text-gray-800 mb-3">
-            Clasificación de la oración original en Guaraní
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <button 
-              onClick={() => handleCategorySelect('guarani_puro')}
-              className={`p-3 border-2 rounded-lg transition-colors ${
-                selectedCategory === 'guarani_puro'
-                  ? 'border-indigo-400 bg-indigo-100 ring-2 ring-indigo-200'
-                  : 'border-indigo-200 bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300'
-              }`}
-              title="Guaraní puro (o académico): Esta es la forma más tradicional y 'académica' del guaraní, que se busca enseñar en las instituciones educativas. Se caracteriza por seguir una estructura lingüística más cercana a sus orígenes, y se utiliza en contextos formales."
-            >
-              <div className="text-sm font-semibold text-indigo-800">Guaraní Puro</div>
-              <div className="text-xs text-indigo-600 mt-1">Académico/Tradicional</div>
-              {selectedCategory === 'guarani_puro' && (
-                <div className="mt-2 text-indigo-700">
-                  <CheckIcon className="h-4 w-4 mx-auto" />
-                </div>
-              )}
-            </button>
-            
-            <button 
-              onClick={() => handleCategorySelect('jopara')}
-              className={`p-3 border-2 rounded-lg transition-colors ${
-                selectedCategory === 'jopara'
-                  ? 'border-green-400 bg-green-100 ring-2 ring-green-200'
-                  : 'border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-300'
-              }`}
-              title="Jopara: Es una mezcla o 'préstamo léxico' entre el guaraní y el español, donde se pueden combinar palabras o estructuras de ambas lenguas, incluso dentro de la misma frase. Un ejemplo es 'venina na', donde 'venina' es español y 'na' es una partícula guaraní."
-            >
-              <div className="text-sm font-semibold text-green-800">Jopara</div>
-              <div className="text-xs text-green-600 mt-1">Mezcla léxica</div>
-              {selectedCategory === 'jopara' && (
-                <div className="mt-2 text-green-700">
-                  <CheckIcon className="h-4 w-4 mx-auto" />
-                </div>
-              )}
-            </button>
-            
-            <button 
-              onClick={() => handleCategorySelect('jehea')}
-              className={`p-3 border-2 rounded-lg transition-colors ${
-                selectedCategory === 'jehea'
-                  ? 'border-orange-400 bg-orange-100 ring-2 ring-orange-200'
-                  : 'border-orange-200 bg-orange-50 hover:bg-orange-100 hover:border-orange-300'
-              }`}
-              title="Jehe'a: Es la forma de hablar más común y cotidiana en Paraguay, a menudo referida como 'guaraní paraguayo'. Se puede entender como el resultado de un proceso de hispanización que no ha destruido la estructura original del guaraní. Incluye tanto la mezcla entre guaraní y español (similar a jopara), como el uso de palabras del guaraní incorporadas al español. En este caso, el préstamo de palabras del guaraní al español se convierte en parte del corpus lexical del español paraguayo."
-            >
-              <div className="text-sm font-semibold text-orange-800">Jehe'a</div>
-              <div className="text-xs text-orange-600 mt-1">Guaraní paraguayo</div>
-              {selectedCategory === 'jehea' && (
-                <div className="mt-2 text-orange-700">
-                  <CheckIcon className="h-4 w-4 mx-auto" />
-                </div>
-              )}
-            </button>
+        <div className="mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <h4 className="text-base font-semibold text-gray-800">
+              Clasificación de la oración en Guaraní
+            </h4>
+            <p className="text-xs text-gray-600 mt-1">Selecciona la categoría que mejor describe esta oración</p>
           </div>
-          {selectedCategory && (
-            <div className="mt-3 text-sm text-gray-600">
-              Categoría seleccionada: <span className="font-semibold">{selectedCategory}</span>
+          
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button 
+                onClick={() => handleCategorySelect('guarani_puro')}
+                className={`group relative p-4 border-2 rounded-lg transition-all duration-200 ${
+                  selectedCategory === 'guarani_puro'
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-sm'
+                }`}
+                title="Guaraní puro (o académico): Esta es la forma más tradicional y 'académica' del guaraní, que se busca enseñar en las instituciones educativas. Se caracteriza por seguir una estructura lingüística más cercana a sus orígenes, y se utiliza en contextos formales."
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className={`text-sm font-semibold mb-1 ${selectedCategory === 'guarani_puro' ? 'text-indigo-900' : 'text-gray-800'}`}>
+                      Guaraní Puro
+                    </div>
+                    <div className={`text-xs ${selectedCategory === 'guarani_puro' ? 'text-indigo-700' : 'text-gray-600'}`}>
+                      Académico / Tradicional
+                    </div>
+                  </div>
+                  {selectedCategory === 'guarani_puro' && (
+                    <div className="flex-shrink-0 ml-2">
+                      <div className="w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center">
+                        <CheckIcon className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className={`text-xs leading-relaxed ${selectedCategory === 'guarani_puro' ? 'text-indigo-600' : 'text-gray-500'}`}>
+                  Forma tradicional y académica del guaraní
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => handleCategorySelect('jopara')}
+                className={`group relative p-4 border-2 rounded-lg transition-all duration-200 ${
+                  selectedCategory === 'jopara'
+                    ? 'border-green-500 bg-green-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-green-300 hover:bg-green-50 hover:shadow-sm'
+                }`}
+                title="Jopara: Es una mezcla o 'préstamo léxico' entre el guaraní y el español, donde se pueden combinar palabras o estructuras de ambas lenguas, incluso dentro de la misma frase. Un ejemplo es 'venina na', donde 'venina' es español y 'na' es una partícula guaraní."
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className={`text-sm font-semibold mb-1 ${selectedCategory === 'jopara' ? 'text-green-900' : 'text-gray-800'}`}>
+                      Jopara
+                    </div>
+                    <div className={`text-xs ${selectedCategory === 'jopara' ? 'text-green-700' : 'text-gray-600'}`}>
+                      Mezcla léxica GN-ES
+                    </div>
+                  </div>
+                  {selectedCategory === 'jopara' && (
+                    <div className="flex-shrink-0 ml-2">
+                      <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                        <CheckIcon className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className={`text-xs leading-relaxed ${selectedCategory === 'jopara' ? 'text-green-600' : 'text-gray-500'}`}>
+                  Combinación de guaraní y español
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => handleCategorySelect('jehea')}
+                className={`group relative p-4 border-2 rounded-lg transition-all duration-200 ${
+                  selectedCategory === 'jehea'
+                    ? 'border-orange-500 bg-orange-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-orange-300 hover:bg-orange-50 hover:shadow-sm'
+                }`}
+                title="Jehe'a: Es la forma de hablar más común y cotidiana en Paraguay, a menudo referida como 'guaraní paraguayo'. Se puede entender como el resultado de un proceso de hispanización que no ha destruido la estructura original del guaraní. Incluye tanto la mezcla entre guaraní y español (similar a jopara), como el uso de palabras del guaraní incorporadas al español. En este caso, el préstamo de palabras del guaraní al español se convierte en parte del corpus lexical del español paraguayo."
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className={`text-sm font-semibold mb-1 ${selectedCategory === 'jehea' ? 'text-orange-900' : 'text-gray-800'}`}>
+                      Jehe'a
+                    </div>
+                    <div className={`text-xs ${selectedCategory === 'jehea' ? 'text-orange-700' : 'text-gray-600'}`}>
+                      Guaraní paraguayo
+                    </div>
+                  </div>
+                  {selectedCategory === 'jehea' && (
+                    <div className="flex-shrink-0 ml-2">
+                      <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center">
+                        <CheckIcon className="h-4 w-4 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className={`text-xs leading-relaxed ${selectedCategory === 'jehea' ? 'text-orange-600' : 'text-gray-500'}`}>
+                  Forma cotidiana hablada en Paraguay
+                </div>
+              </button>
             </div>
-          )}
+            
+            {selectedCategory && (
+              <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckIcon className="h-4 w-4 text-green-600 flex-shrink-0" />
+                  <span className="text-gray-700">
+                    Categoría seleccionada: <span className="font-semibold text-gray-900">{
+                      selectedCategory === 'guarani_puro' ? 'Guaraní Puro' :
+                      selectedCategory === 'jopara' ? 'Jopara' :
+                      'Jehe\'a'
+                    }</span>
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
