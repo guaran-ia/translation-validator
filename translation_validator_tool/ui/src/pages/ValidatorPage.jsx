@@ -252,10 +252,11 @@ const ValidatorPage = () => {
     </div>
   );
 
-  // Check if this is a Guarani sentence without Spanish translation
+  // Check if this is a Guarani sentence without Spanish translation AND no suggestion selected
   const isGuaraniWithoutTranslation = currentTranslation?.direction === 'gn-sp' && 
                                        currentTranslation?.is_original && 
-                                       !currentTranslation?.spanish_text;
+                                       !currentTranslation?.spanish_text &&
+                                       !selectedSuggestion; // Allow validation if suggestion is selected
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -306,22 +307,26 @@ const ValidatorPage = () => {
           </div>
         )}
 
-        {/* Show message for Guarani sentences without translation */}
+        {/* Show message for Guarani sentences without translation and no suggestion selected */}
         {isGuaraniWithoutTranslation ? (
           <div className="card mt-6">
             <div className="text-center py-8 space-y-4">
+              <div className="text-5xl mb-4">📝</div>
               <h3 className="text-xl font-semibold text-gray-800">Esta oración aún no tiene traducción al español</h3>
               <p className="text-gray-600 max-w-lg mx-auto">
-                Para poder validar esta traducción, primero necesitamos una traducción al español.
-                Por favor, sugiere una traducción haciendo clic en el botón de abajo.
+                Esta oración en Guaraní aún no tiene una traducción oficial al español. 
+                Puedes <strong>sugerir una traducción</strong> o <strong>validar una sugerencia existente</strong> haciendo clic en "Validar" en las sugerencias arriba.
               </p>
-              <div className="pt-4">
+              <div className="pt-4 flex flex-col items-center gap-3">
                 <button 
                   onClick={() => setShowSuggestionModal(true)} 
                   className="btn btn-primary text-lg px-6 py-3"
                 >
-                  💡 Sugerir traducción al español
+                  Sugerir traducción al español
                 </button>
+                <p className="text-sm text-gray-500">
+                  💡 Tip: Si hay sugerencias arriba, puedes hacer clic en "Validar" para evaluarlas
+                </p>
               </div>
             </div>
           </div>
