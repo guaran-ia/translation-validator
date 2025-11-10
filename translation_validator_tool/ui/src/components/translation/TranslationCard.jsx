@@ -3,6 +3,7 @@ import { translationsAPI, suggestionsAPI } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
+import guaraniTooltips from '../../config/guaraniTooltips';
 
 const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidateSuggestion, selectedSuggestion, onClearSelection, onCategoryChange }) => {
   const { user } = useAuth();
@@ -347,10 +348,13 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                   Forma tradicional y académica del guaraní
                 </div>
                 
-                {/* Tooltip */}
+                {/* Tooltip (configurable) */}
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-72 z-10">
-                  <div className="font-semibold mb-1">Guaraní puro (o académico)</div>
-                  <div className="text-gray-200">Esta es la forma más tradicional y 'académica' del guaraní, que se busca enseñar en las instituciones educativas. Se caracteriza por seguir una estructura lingüística más cercana a sus orígenes, y se utiliza en contextos formales.</div>
+                  <div className="font-semibold mb-1">{guaraniTooltips.guarani_puro.title}</div>
+                  <div className="text-gray-200">{guaraniTooltips.guarani_puro.desc}</div>
+                  {guaraniTooltips.guarani_puro.example && (
+                    <div className="text-gray-300 italic text-[10px] mt-1">{guaraniTooltips.guarani_puro.example}</div>
+                  )}
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
                     <div className="border-4 border-transparent border-t-gray-900"></div>
                   </div>
@@ -386,11 +390,13 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                   Combinación de guaraní y español
                 </div>
                 
-                {/* Tooltip */}
+                {/* Tooltip (configurable) */}
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-72 z-10">
-                  <div className="font-semibold mb-1">Jopara</div>
-                  <div className="text-gray-200 mb-2">Es una mezcla o 'préstamo léxico' entre el guaraní y el español, donde se pueden combinar palabras o estructuras de ambas lenguas, incluso dentro de la misma frase.</div>
-                  <div className="text-gray-300 italic text-[10px]">Ejemplo: "venina na" (venina = español, na = guaraní)</div>
+                  <div className="font-semibold mb-1">{guaraniTooltips.jopara.title}</div>
+                  <div className="text-gray-200 mb-2">{guaraniTooltips.jopara.desc}</div>
+                  {guaraniTooltips.jopara.example && (
+                    <div className="text-gray-300 italic text-[10px]">{guaraniTooltips.jopara.example}</div>
+                  )}
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
                     <div className="border-4 border-transparent border-t-gray-900"></div>
                   </div>
@@ -426,11 +432,13 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                   Forma cotidiana hablada en Paraguay
                 </div>
                 
-                {/* Tooltip */}
+                {/* Tooltip (configurable) */}
                 <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 w-72 z-10">
-                  <div className="font-semibold mb-1">Jehe'a (Guaraní paraguayo)</div>
-                  <div className="text-gray-200 mb-2">Es la forma de hablar más común y cotidiana en Paraguay. Se puede entender como el resultado de un proceso de hispanización que no ha destruido la estructura original del guaraní.</div>
-                  <div className="text-gray-300 text-[10px]">Incluye tanto la mezcla entre guaraní y español (similar a jopara), como el uso de palabras del guaraní incorporadas al español paraguayo.</div>
+                  <div className="font-semibold mb-1">{guaraniTooltips.jehea.title}</div>
+                  <div className="text-gray-200 mb-2">{guaraniTooltips.jehea.desc}</div>
+                  {guaraniTooltips.jehea.example && (
+                    <div className="text-gray-300 text-[10px]">{guaraniTooltips.jehea.example}</div>
+                  )}
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
                     <div className="border-4 border-transparent border-t-gray-900"></div>
                   </div>

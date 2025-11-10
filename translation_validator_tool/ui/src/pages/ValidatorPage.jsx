@@ -311,7 +311,6 @@ const ValidatorPage = () => {
         {isGuaraniWithoutTranslation ? (
           <div className="card mt-6">
             <div className="text-center py-8 space-y-4">
-              <div className="text-5xl mb-4">📝</div>
               <h3 className="text-xl font-semibold text-gray-800">Esta oración aún no tiene traducción al español</h3>
               <p className="text-gray-600 max-w-lg mx-auto">
                 Esta oración en Guaraní aún no tiene una traducción oficial al español. 
