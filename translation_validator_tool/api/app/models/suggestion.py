@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import Text, ForeignKey, String
+from sqlalchemy import Text, ForeignKey, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -16,6 +16,8 @@ class TranslationSuggestion(Base):
     reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     direction: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    # Borrado lógico: marca si esta sugerencia fue auto-promovida a traducción oficial
+    is_promoted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Relationships - using string names to avoid circular imports
     translation = relationship("Translation", back_populates="suggestions")

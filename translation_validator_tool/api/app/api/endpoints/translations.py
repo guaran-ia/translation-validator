@@ -911,7 +911,8 @@ async def admin_create_translation(
     current_user: User = Depends(get_current_active_user)
 ):
     """Admin endpoint to create new translations.
-    Allows creating Guaraní sentences without Spanish translation (spanish_text can be null).
+    - If both guarani_text and spanish_text are provided: creates 2 paired entries (sp-gn and gn-sp)
+    - If only guarani_text is provided: creates single entry (gn-sp), pair will be created later when spanish_text is added
     Only accessible to superusers.
     """
     # Check if user is superuser
@@ -922,20 +923,59 @@ async def admin_create_translation(
             detail="Only admins can create translations"
         )
     
-    # Create translation
-    db_translation = Translation(
-        guarani_text=translation_data.guarani_text,
-        spanish_text=translation_data.spanish_text,  # Can be None
-        source=translation_data.source,
-        direction=translation_data.direction,
-        is_original=translation_data.is_original
-    )
-    
     try:
-        db.add(db_translation)
-        db.commit()
-        db.refresh(db_translation)
-        return TranslationResponse.model_validate(db_translation)
+        # Case 1: Both texts provided - create paired entries
+        if translation_data.guarani_text and translation_data.spanish_text:
+            # Create original translation (direction from form)
+            original_translation = Translation(
+                guarani_text=translation_data.guarani_text,
+                spanish_text=translation_data.spanish_text,
+                source=translation_data.source,
+                direction=translation_data.direction,  # sp-gn or gn-sp as selected
+                is_original=True
+            )
+            
+            db.add(original_translation)
+            db.flush()  # Get the ID without committing
+            
+            # Create inverse translation
+            inverse_direction = "gn-sp" if translation_data.direction == "sp-gn" else "sp-gn"
+            inverse_translation = Translation(
+                guarani_text=translation_data.guarani_text,
+                spanish_text=translation_data.spanish_text,
+                source=translation_data.source,
+                direction=inverse_direction,
+                is_original=False,
+                pair_id=original_translation.id
+            )
+            
+            db.add(inverse_translation)
+            db.flush()
+            
+            # Set pair_id for original
+            original_translation.pair_id = inverse_translation.id
+            
+            db.commit()
+            db.refresh(original_translation)
+            
+            return TranslationResponse.model_validate(original_translation)
+            
+        # Case 2: Only guarani_text provided - create single entry (gn-sp)
+        else:
+            db_translation = Translation(
+                guarani_text=translation_data.guarani_text,
+                spanish_text=None,
+                source=translation_data.source,
+                direction="gn-sp",  # Force gn-sp for Guaraní-only entries
+                is_original=True
+            )
+            
+            db.add(db_translation)
+            db.commit()
+            db.refresh(db_translation)
+            
+            return TranslationResponse.model_validate(db_translation)
+            
     except Exception as e:
         db.rollback()
         raise HTTPException(

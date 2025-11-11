@@ -30,7 +30,7 @@ const AdminTranslations = () => {
     guarani_text: '',
     spanish_text: '',
     source: 'admin',
-    direction: 'gn-sp',
+    direction: 'sp-gn', // Por defecto español->guaraní (español original)
     is_original: true
   });
 
@@ -111,7 +111,7 @@ const AdminTranslations = () => {
         guarani_text: '',
         spanish_text: '',
         source: 'admin',
-        direction: 'gn-sp',
+        direction: 'sp-gn',
         is_original: true
       });
       setShowCreateForm(false);
@@ -296,11 +296,56 @@ const AdminTranslations = () => {
                     placeholder="Si no tiene traducción, dejar en blanco para que sea sugerida..."
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Si se deja vacío, los usuarios podrán sugerir traducciones para esta oración
+                    Si se deja vacío, los usuarios podrán sugerir traducciones para esta oración. 
+                    {!formData.spanish_text.trim() && formData.guarani_text.trim() && 
+                      " Se creará solo una entrada (gn-sp) hasta que se agregue la primera traducción."
+                    }
                   </p>
                 </div>
 
 
+
+                {/* Dirección de traducción - solo si ambos textos están presentes */}
+                {formData.guarani_text.trim() && formData.spanish_text.trim() && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Dirección de traducción
+                    </label>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <input
+                          type="radio"
+                          id="direction_sp_gn"
+                          name="direction"
+                          value="sp-gn"
+                          checked={formData.direction === 'sp-gn'}
+                          onChange={(e) => setFormData({...formData, direction: e.target.value})}
+                          className="mr-2"
+                        />
+                        <label htmlFor="direction_sp_gn" className="text-sm">
+                          <span className="font-medium">Español → Guaraní</span> (español es el original)
+                        </label>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="radio"
+                          id="direction_gn_sp"
+                          name="direction"
+                          value="gn-sp"
+                          checked={formData.direction === 'gn-sp'}
+                          onChange={(e) => setFormData({...formData, direction: e.target.value})}
+                          className="mr-2"
+                        />
+                        <label htmlFor="direction_gn_sp" className="text-sm">
+                          <span className="font-medium">Guaraní → Español</span> (guaraní es el original)
+                        </label>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Se crearán automáticamente ambas direcciones en la base de datos
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -321,6 +366,13 @@ const AdminTranslations = () => {
                     onClick={() => {
                       setShowCreateForm(false);
                       setError(null);
+                      setFormData({
+                        guarani_text: '',
+                        spanish_text: '',
+                        source: 'admin',
+                        direction: 'sp-gn',
+                        is_original: true
+                      });
                     }}
                     className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
                     disabled={createLoading}

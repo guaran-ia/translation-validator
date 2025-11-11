@@ -41,10 +41,11 @@ async def create_suggestion(
     # has been removed so validators can propose improvements on inverse
     # translations as well.
     
-    # Check if user already has a suggestion for this translation
+    # Check if user already has a non-promoted suggestion for this translation
     existing_suggestion = db.query(TranslationSuggestion).filter(
         TranslationSuggestion.translation_id == suggestion_data.translation_id,
-        TranslationSuggestion.user_id == current_user.id
+        TranslationSuggestion.user_id == current_user.id,
+        TranslationSuggestion.is_promoted == False  # Solo considerar sugerencias no promovidas
     ).first()
     
     if existing_suggestion:
@@ -53,6 +54,58 @@ async def create_suggestion(
         existing_suggestion.suggested_spanish = suggestion_data.suggested_spanish
         existing_suggestion.reason = suggestion_data.reason
         existing_suggestion.created_at = datetime.utcnow()
+        
+        # If this is the only suggestion and translation still missing spanish_text, 
+        # promote the updated suggestion
+        if (translation.spanish_text is None and 
+            suggestion_data.suggested_spanish and 
+            translation.direction == 'gn-sp'):
+            
+            # Count other non-promoted suggestions for this translation (excluding current one)
+            other_count = db.query(func.count(TranslationSuggestion.id)).filter(
+                TranslationSuggestion.translation_id == suggestion_data.translation_id,
+                TranslationSuggestion.id != existing_suggestion.id,
+                TranslationSuggestion.is_promoted == False
+            ).scalar() or 0
+            
+            # If this is the only suggestion, update translation
+            if other_count == 0:
+                translation.spanish_text = suggestion_data.suggested_spanish
+                db.add(translation)
+                
+                # Create the paired inverse translation (sp-gn) now that we have both texts
+                inverse_translation = Translation(
+                    guarani_text=translation.guarani_text,
+                    spanish_text=suggestion_data.suggested_spanish,
+                    source=translation.source,
+                    direction="sp-gn",  # Inverse direction
+                    is_original=False,
+                    pair_id=translation.id
+                )
+                
+                db.add(inverse_translation)
+                db.flush()  # Get the ID
+                
+                # Update original translation with pair_id
+                translation.pair_id = inverse_translation.id
+                db.add(translation)
+                
+                # IMPORTANT: Mark the auto-promoted suggestion as promoted (logical deletion)
+                # Since it's now the official translation, we don't want users to validate it as a "suggestion"
+                existing_suggestion.is_promoted = True
+                db.add(existing_suggestion)
+                
+                # Commit all changes for auto-promotion
+                db.commit()
+                db.refresh(existing_suggestion)
+                
+                # Return response indicating the suggestion was auto-promoted and removed
+                return SuggestionResponse.model_validate({
+                    **existing_suggestion.__dict__,
+                    "id": existing_suggestion.id,
+                    "validation_count": 0,
+                    "user_has_validated": False
+                })
         
         db.commit()
         db.refresh(existing_suggestion)
@@ -70,6 +123,59 @@ async def create_suggestion(
     )
     
     db.add(db_suggestion)
+    db.flush()  # Flush to get the ID and persist the suggestion
+    
+    # Check if this is the first suggestion and translation is missing spanish_text
+    # If so, automatically promote the suggestion to become the official translation
+    if (translation.spanish_text is None and 
+        suggestion_data.suggested_spanish and 
+        translation.direction == 'gn-sp'):
+        
+        # Count existing non-promoted suggestions for this translation (including the current one)
+        existing_count = db.query(func.count(TranslationSuggestion.id)).filter(
+            TranslationSuggestion.translation_id == suggestion_data.translation_id,
+            TranslationSuggestion.is_promoted == False
+        ).scalar() or 0
+        
+        # If this is the first suggestion (count should be 1 with current one), auto-promote it
+        if existing_count == 1:
+            translation.spanish_text = suggestion_data.suggested_spanish
+            db.add(translation)
+            
+            # Create the paired inverse translation (sp-gn) now that we have both texts
+            inverse_translation = Translation(
+                guarani_text=translation.guarani_text,
+                spanish_text=suggestion_data.suggested_spanish,
+                source=translation.source,
+                direction="sp-gn",  # Inverse direction
+                is_original=False,
+                pair_id=translation.id
+            )
+            
+            db.add(inverse_translation)
+            db.flush()  # Get the ID
+            
+            # Update original translation with pair_id
+            translation.pair_id = inverse_translation.id
+            db.add(translation)
+            
+            # IMPORTANT: Mark the auto-promoted suggestion as promoted (logical deletion)
+            # Since it's now the official translation, we don't want users to validate it as a "suggestion"
+            db_suggestion.is_promoted = True
+            db.add(db_suggestion)
+            
+            # Commit all changes for auto-promotion
+            db.commit()
+            db.refresh(db_suggestion)
+            
+            # Return response indicating the suggestion was auto-promoted and removed
+            return SuggestionResponse.model_validate({
+                **db_suggestion.__dict__,
+                "id": db_suggestion.id,
+                "validation_count": 0,
+                "user_has_validated": False
+            })
+    
     db.commit()
     db.refresh(db_suggestion)
     
@@ -92,7 +198,8 @@ async def get_suggestions(
         )
     
     suggestions = db.query(TranslationSuggestion).filter(
-        TranslationSuggestion.translation_id == translation_id
+        TranslationSuggestion.translation_id == translation_id,
+        TranslationSuggestion.is_promoted == False  # Solo mostrar sugerencias no promovidas
     ).order_by(TranslationSuggestion.created_at.desc()).all()
     # Augment suggestions with per-suggestion validation counts and whether current user validated them
     result = []
@@ -118,7 +225,8 @@ async def get_user_suggestions(
 ):
     """Get suggestions created by current user."""
     suggestions = db.query(TranslationSuggestion).filter(
-        TranslationSuggestion.user_id == current_user.id
+        TranslationSuggestion.user_id == current_user.id,
+        TranslationSuggestion.is_promoted == False  # Solo mostrar sugerencias no promovidas
     ).order_by(TranslationSuggestion.created_at.desc()).offset(skip).limit(limit).all()
     
     return [SuggestionResponse.model_validate(s) for s in suggestions]
@@ -132,16 +240,21 @@ async def get_suggestion_stats(
     """Get statistics about suggestions."""
     from sqlalchemy import func
     
-    # Total suggestions by current user
+    # Total non-promoted suggestions by current user
     user_suggestions = db.query(func.count(TranslationSuggestion.id)).filter(
-        TranslationSuggestion.user_id == current_user.id
+        TranslationSuggestion.user_id == current_user.id,
+        TranslationSuggestion.is_promoted == False
     ).scalar()
     
-    # Total suggestions in system
-    total_suggestions = db.query(func.count(TranslationSuggestion.id)).scalar()
+    # Total non-promoted suggestions in system
+    total_suggestions = db.query(func.count(TranslationSuggestion.id)).filter(
+        TranslationSuggestion.is_promoted == False
+    ).scalar()
     
-    # Translations with suggestions
-    translations_with_suggestions = db.query(func.count(func.distinct(TranslationSuggestion.translation_id))).scalar()
+    # Translations with non-promoted suggestions
+    translations_with_suggestions = db.query(func.count(func.distinct(TranslationSuggestion.translation_id))).filter(
+        TranslationSuggestion.is_promoted == False
+    ).scalar()
     
     return {
         "user_suggestions": user_suggestions or 0,
@@ -159,16 +272,19 @@ async def delete_suggestion(
     """Delete a suggestion (only the author can delete)."""
     suggestion = db.query(TranslationSuggestion).filter(
         TranslationSuggestion.id == suggestion_id,
-        TranslationSuggestion.user_id == current_user.id
+        TranslationSuggestion.user_id == current_user.id,
+        TranslationSuggestion.is_promoted == False  # Solo permitir eliminar sugerencias no promovidas
     ).first()
     
     if not suggestion:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Suggestion not found or not authorized"
+            detail="Suggestion not found, not authorized, or already promoted"
         )
     
-    db.delete(suggestion)
+    # Usar borrado lógico marcando como promovida
+    suggestion.is_promoted = True
+    db.add(suggestion)
     db.commit()
     
     return {"message": "Suggestion deleted successfully"}
