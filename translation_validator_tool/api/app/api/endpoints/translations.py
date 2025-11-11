@@ -220,7 +220,8 @@ async def get_next_suitable_translation(
         Translation.pair_id.isnot(None)
     ).subquery()
 
-    # Select the next original translation not excluded by the above rules
+    # Select a random original translation not excluded by the above rules
+    # Using ORDER BY RANDOM() to distribute load and avoid concurrency on first translations
     translation = db.query(Translation).filter(
         ~Translation.id.in_(subquery),
         ~Translation.id.in_(suggested_subquery),
@@ -228,7 +229,7 @@ async def get_next_suitable_translation(
         ~Translation.id.in_(suggestions_three),
         ~Translation.id.in_(validated_pairs_subquery),
         Translation.is_original == True
-    ).order_by(Translation.id).first()
+    ).order_by(func.random()).first()
 
     if not translation:
         raise HTTPException(

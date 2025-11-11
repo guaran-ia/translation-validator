@@ -150,13 +150,14 @@ const ValidatorPage = () => {
   };
 
   const isFormValid = () => {
-    const baseValid = formData.correctness && formData.fluency_score && formData.accuracy_score;
-    
+    // Use explicit checks to avoid falsy/truthy pitfalls (e.g. score=0)
+    const baseValid = !!formData.correctness && formData.fluency_score !== null && formData.accuracy_score !== null;
+
     // If it's a gn-sp original translation, category is required
     if (currentTranslation?.direction === 'gn-sp' && currentTranslation?.is_original) {
-      return baseValid && selectedCategory;
+      return baseValid && !!selectedCategory;
     }
-    
+
     return baseValid;
   };
 
@@ -359,7 +360,12 @@ const ValidatorPage = () => {
               )}
 
               <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                <button onClick={handleSubmitValidation} disabled={!isFormValid() || submitting} className="btn btn-primary flex-1 min-w-[200px]">
+                <button
+                  onClick={handleSubmitValidation}
+                  disabled={!isFormValid() || submitting}
+                  aria-disabled={!isFormValid() || submitting}
+                  className="btn btn-primary flex-1 min-w-[200px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-blue-400"
+                >
                   {submitting ? (
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -367,6 +373,11 @@ const ValidatorPage = () => {
                     </div>
                   ) : 'Enviar validación'}
                 </button>
+                {(!isFormValid() && !submitting) && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Completa la clasificación (tipo de guaraní si aplica), la corrección (Correcta/Incorrecta) y las puntuaciones de fluidez y precisión para habilitar el botón.
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -40,6 +40,8 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
 
   useEffect(() => {
     let mounted = true;
+    let abortController = new AbortController();
+    
     const ensureFull = async () => {
       if (!translation) return;
       if (translation.pair_is_complete !== undefined) return;
@@ -49,7 +51,9 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
         const full = res?.data || res;
         if (mounted && full) setCurrent(full);
       } catch (e) {
-        console.warn('Could not fetch full translation with stats', e);
+        if (!abortController.signal.aborted) {
+          console.warn('Could not fetch full translation with stats', e);
+        }
       } finally {
         if (mounted) setIsSaving(false);
       }
@@ -60,17 +64,26 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
       try {
         const res = await suggestionsAPI.getByTranslation(translation.id);
         const list = res?.data || [];
-        if (mounted) setSuggestions(list);
+        if (mounted && !abortController.signal.aborted) setSuggestions(list);
       } catch (err) {
-        console.warn('Could not fetch suggestions for translation', err);
-        if (mounted) setSuggestions([]);
+        if (!abortController.signal.aborted) {
+          console.warn('Could not fetch suggestions for translation', err);
+          if (mounted) setSuggestions([]);
+        }
       }
     };
 
-    ensureFull();
-    loadSuggestions();
-    return () => { mounted = false; };
-  }, [translation]);
+    // Only run if we have a translation and it's different from current
+    if (translation && (!current || current.id !== translation.id)) {
+      ensureFull();
+      loadSuggestions();
+    }
+    
+    return () => { 
+      mounted = false; 
+      abortController.abort();
+    };
+  }, [translation?.id]); // Only depend on translation.id to avoid unnecessary re-runs
 
   if (!current) {
     return (

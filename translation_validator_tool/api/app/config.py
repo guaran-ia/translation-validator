@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     PROJECT_NAME: str = "Translation Validator"
     VERSION: str = "1.0.0"
-    CORS_ORIGINS: str = '["http://localhost:5173"]'
+    CORS_ORIGINS: str = '["http://localhost:5173","http://192.168.20.242:5173"]'
     # Optional SMTP settings for admin notifications on new registrations
     SMTP_HOST: str | None = None
     SMTP_PORT: int | None = None
