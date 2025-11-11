@@ -169,7 +169,7 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
 
       <div className="mb-4 text-center">
         <h2 className="text-xl font-semibold text-gray-800">Evalúa la siguiente traducción</h2>
-        <div className="text-xs text-gray-500 mt-1">ID: {current.id}</div>
+        {/*<div className="text-xs text-gray-500 mt-1">ID: {current.id}</div>*/}
       </div>
 
       <div className="mt-3 flex items-center justify-center gap-2">
@@ -482,13 +482,13 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
         <div className="flex justify-between items-center text-sm text-gray-600">
           <span>Fuente: {current.source}</span>
           <div className="flex items-center gap-4">
-            {current.validation_count !== undefined && (
+            {/*current.validation_count !== undefined && (
               <span>Evaluaciones: {current.validation_count}</span>
-            )}
+            )*/}
 
-            {current.suggestion_count !== undefined && (
+            {/*current.suggestion_count !== undefined && (
               <span className="text-sm text-gray-600">Sugerencias: {current.suggestion_count}</span>
-            )}
+            )*/}
 
             {current.user_has_suggested && (
               <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Has sugerido esto</span>
