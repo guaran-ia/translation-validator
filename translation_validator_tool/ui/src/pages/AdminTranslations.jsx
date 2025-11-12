@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { translationsAPI, validationsAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import TranslationCard from '../components/translation/TranslationCard';
@@ -9,6 +10,7 @@ const truncate = (s, n = 80) => (s && s.length > n ? s.slice(0, n) + '…' : s);
 
 const AdminTranslations = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [idInput, setIdInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [translation, setTranslation] = useState(null);
@@ -177,10 +179,10 @@ const AdminTranslations = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {tableLoading ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center">Cargando...</td></tr>
-              ) : items.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center">No hay traducciones.</td></tr>
-              ) : (
+                  <tr><td colSpan={7} className="px-4 py-6 text-center">Cargando...</td></tr>
+                ) : items.length === 0 ? (
+                  <tr><td colSpan={7} className="px-4 py-6 text-center">No hay traducciones.</td></tr>
+                ) : (
                 items.map(t => (
                   <tr key={t.id}>
                     <td className="px-4 py-3 text-sm text-gray-700">{t.id}</td>
@@ -189,21 +191,24 @@ const AdminTranslations = () => {
                     <td className="px-4 py-3 text-sm text-gray-700">{t.validation_count}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{t.suggestion_count}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      <button onClick={async () => {
-                        try {
-                          const res = await translationsAPI.getById(t.id);
-                          setTranslation(res.data || res);
-                          // load validations for this translation for admin inspector
+                      <div className="flex gap-2">
+                        <button onClick={async () => {
                           try {
-                            const vres = await validationsAPI.getByTranslation(t.id);
-                            setValidations(vres?.data ? [vres.data] : []);
+                            const res = await translationsAPI.getById(t.id);
+                            setTranslation(res.data || res);
+                            // load validations for this translation for admin inspector
+                            try {
+                              const vres = await validationsAPI.getByTranslation(t.id);
+                              setValidations(vres?.data ? [vres.data] : []);
+                            } catch (e) {
+                              setValidations([]);
+                            }
                           } catch (e) {
-                            setValidations([]);
+                            console.error('Failed to load translation', e);
                           }
-                        } catch (e) {
-                          console.error('Failed to load translation', e);
-                        }
-                      }} className="text-sm text-indigo-600 hover:underline">Ver</button>
+                        }} className="text-sm text-indigo-600 hover:underline">Ver</button>
+                        <button onClick={() => navigate(`/validator?translation=${t.id}`)} className="text-sm text-green-600 hover:underline font-medium">Validar</button>
+                      </div>
                     </td>
                   </tr>
                 ))

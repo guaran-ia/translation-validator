@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { translationsAPI, validationsAPI, suggestionsAPI } from '../services/api';
 import { toast } from 'react-toastify';
@@ -22,6 +23,10 @@ const ValidatorPage = () => {
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [showContinueModal, setShowContinueModal] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
+  // Admin-specific search state: allow admin to load a translation by ID
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminSelectedTranslation, setAdminSelectedTranslation] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
     correctness: '',
@@ -33,8 +38,20 @@ const ValidatorPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
-    if (user) loadData();
-    else {
+    const translationIdParam = searchParams.get('translation');
+
+    if (translationIdParam && user) {
+      // Admin (or authorized user) requested a specific translation via query param
+      const tid = parseInt(translationIdParam, 10);
+      if (!isNaN(tid)) {
+        loadTranslationById(tid);
+        return;
+      }
+    }
+
+    if (user) {
+      loadData();
+    } else {
       // If no user, still load a random translation for anonymous flow
       (async () => {
         setLoading(true);
@@ -52,7 +69,7 @@ const ValidatorPage = () => {
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, searchParams]);
 
   // Whenever the current translation changes, refresh full data if needed
   useEffect(() => {
@@ -96,6 +113,18 @@ const ValidatorPage = () => {
       }
 
       // Use server-side endpoint that returns a suitable translation for the current validator
+      // Do not override an admin-selected translation (adminSelectedTranslation flag)
+      if (adminSelectedTranslation) {
+        // admin has selected a specific translation: just refresh its full data
+        if (currentTranslation && currentTranslation.id) {
+          const fres = await translationsAPI.getById(currentTranslation.id);
+          setCurrentTranslation(fres.data || fres);
+          resetForm();
+          setSelectedSuggestion(null);
+          return;
+        }
+      }
+
       const response = await translationsAPI.getNextSuitable();
       const t = response.data || response;
       setCurrentTranslation(t);
@@ -114,6 +143,8 @@ const ValidatorPage = () => {
 
   const handleNextTranslation = async () => {
     if (!user || !currentTranslation) return;
+    // navigating manually clears any admin-selected fixed translation
+    setAdminSelectedTranslation(false);
     setLoading(true);
     try {
       // For the 'Next' button we want the sequential next translation (navigation),
@@ -136,6 +167,8 @@ const ValidatorPage = () => {
 
   const handlePreviousTranslation = async () => {
     if (!user || !currentTranslation) return;
+    // navigating manually clears any admin-selected fixed translation
+    setAdminSelectedTranslation(false);
     setLoading(true);
     try {
       const response = await translationsAPI.getPrevious(currentTranslation.id);
@@ -196,13 +229,18 @@ const ValidatorPage = () => {
 
       await validationsAPI.create(payload);
       setSelectedSuggestion(null);
-      await loadData();
+      // If admin loaded a specific translation, do not replace it with a random one.
+      if (adminSelectedTranslation && user?.is_superuser) {
+        setShowContinueModal(true);
+      } else {
+        await loadData();
+      }
     } catch (error) {
       console.error('Error al enviar la validación:', error);
       if (error.response?.status === 400) {
         const msg = error.response?.data?.detail || 'Ya has validado esta traducción.';
         toast.error(msg);
-        await loadData();
+        if (!adminSelectedTranslation) await loadData();
       } else {
         toast.error('Error al enviar la validación. Inténtalo de nuevo.');
       }
@@ -215,7 +253,13 @@ const ValidatorPage = () => {
     try {
       await suggestionsAPI.create(suggestionData);
       toast.success('¡Sugerencia enviada con éxito! Tu propuesta ayudará a mejorar la calidad de las traducciones.');
-      await loadData();
+      if (!adminSelectedTranslation) {
+        await loadData();
+      } else if (currentTranslation && currentTranslation.id) {
+        // refresh counts for the admin-selected translation
+        const fres = await translationsAPI.getById(currentTranslation.id);
+        setCurrentTranslation(fres.data || fres);
+      }
     } catch (error) {
       console.error('Error al enviar la sugerencia:', error);
       if (error.response?.status === 400) {
@@ -226,6 +270,37 @@ const ValidatorPage = () => {
         toast.error('Error al enviar la sugerencia. Inténtalo de nuevo.');
       }
     }
+  };
+
+  // Admin: load a specific translation by ID (uses /api/translations/{id})
+  const loadTranslationById = async (id) => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const res = await translationsAPI.getById(id);
+      const t = res?.data || res;
+      setCurrentTranslation(t);
+      setAdminSelectedTranslation(true);
+      resetForm();
+      setSelectedSuggestion(null);
+      // remove query param (optional) to avoid repeated auto-loads
+      try { setSearchParams({}); } catch (e) { /* ignore if not available */ }
+      toast.info(`Cargando traducción #${id}`);
+    } catch (err) {
+      console.error('Error cargando traducción por ID', err);
+      toast.error(err.response?.data?.detail || 'No se pudo cargar la traducción');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLoadById = async () => {
+    const id = parseInt(adminSearch, 10);
+    if (!id) {
+      toast.error('Ingresa un ID de traducción válido');
+      return;
+    }
+    await loadTranslationById(id);
   };
 
   if (loading) return (
@@ -263,12 +338,32 @@ const ValidatorPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Admin quick-load: allow admins to load a translation by ID */}
+        {user?.is_superuser && (
+          <div className="mb-4 p-4 bg-white rounded-lg shadow-sm flex items-center gap-3">
+            <label className="text-sm font-medium">Cargar traducción por ID:</label>
+            <input
+              type="text"
+              value={adminSearch}
+              onChange={(e) => setAdminSearch(e.target.value)}
+              placeholder="ID de traducción"
+              className="px-3 py-2 border rounded w-40"
+            />
+            <button onClick={handleAdminLoadById} className="px-3 py-2 bg-blue-600 text-white rounded">Cargar</button>
+            <button onClick={() => { setAdminSearch(''); setAdminSelectedTranslation(false); loadData(); }} className="px-3 py-2 border rounded">Cancelar selección</button>
+            {adminSelectedTranslation && currentTranslation && (
+              <div className="ml-auto text-sm text-blue-700">Seleccionada: #{currentTranslation.id}</div>
+            )}
+          </div>
+        )}
+
         {user && (
           <NavigationControls
             currentTranslation={currentTranslation}
             onNext={handleNextTranslation}
             onPrevious={handlePreviousTranslation}
-            onSuggest={() => setShowSuggestionModal(true)}
+            // disable suggest action when user already suggested
+            onSuggest={!currentTranslation?.user_has_suggested ? () => setShowSuggestionModal(true) : undefined}
             loading={loading}
           />
         )}
@@ -318,69 +413,70 @@ const ValidatorPage = () => {
                 Puedes <strong>sugerir una traducción</strong> o <strong>validar una sugerencia existente</strong> haciendo clic en "Validar" en las sugerencias arriba.
               </p>
               <div className="pt-4 flex flex-col items-center gap-3">
-                <button 
-                  onClick={() => setShowSuggestionModal(true)} 
-                  className="btn btn-primary text-lg px-6 py-3"
-                >
-                  Sugerir traducción al español
-                </button>
+                {!currentTranslation?.user_has_suggested && (
+                  <button 
+                    onClick={() => setShowSuggestionModal(true)} 
+                    className="btn btn-primary text-lg px-6 py-3"
+                  >
+                    Sugerir traducción al español
+                  </button>
+                )}
                 <p className="text-sm text-gray-500">
                   💡 Tip: Si hay sugerencias arriba, puedes hacer clic en "Validar" para evaluarlas
                 </p>
               </div>
             </div>
           </div>
-        ) : !(currentTranslation.validation_count !== undefined && currentTranslation.validation_count >= 3) && (
-          <div className="card mt-6">
-            <div className="space-y-6">
-              {currentTranslation.user_has_suggested && (
-                <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
-                  <h3 className="text-lg font-medium">Has sugerido una traducción</h3>
-                  <p className="text-sm text-gray-600 mt-2">Ya enviaste una sugerencia para esta traducción. Puedes editarla si lo deseas, pero esto no impide que puedas validar la traducción.</p>
-                  <div className="pt-3">
-                    <button onClick={() => setShowSuggestionModal(true)} className="btn btn-secondary">✏️ Editar sugerencia</button>
+        ) : (
+          <>
+            {currentTranslation?.user_has_suggested ? (
+              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100 mt-6">
+                <h3 className="text-lg font-medium">Has sugerido una traducción</h3>
+                <p className="text-sm text-gray-600 mt-2">Ya enviaste una sugerencia para esta traducción. No puedes editarla ni validar esta traducción desde la interfaz.</p>
+              </div>
+            ) : !(currentTranslation.validation_count !== undefined && currentTranslation.validation_count >= 3) && (
+              <div className="card mt-6">
+                <div className="space-y-6">
+                  <CorrectnessButtons selectedCorrectness={formData.correctness} onSelect={handleCorrectnessSelect} disabled={submitting} />
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <ScoreSelector label="Puntuación de fluidez" selectedScore={formData.fluency_score} onSelect={handleFluencySelect} disabled={submitting} />
+                    <ScoreSelector label="Puntuación de precisión" selectedScore={formData.accuracy_score} onSelect={handleAccuracySelect} disabled={submitting} />
+                  </div>
+
+                  <NotesTextarea notes={formData.notes} onNotesChange={handleNotesChange} disabled={submitting} />
+
+                  {/* Category requirement message for gn-sp */}
+                  {currentTranslation?.direction === 'gn-sp' && currentTranslation?.is_original && !selectedCategory && (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
+                      <strong>📋 Clasificación requerida:</strong> Para oraciones originales en Guaraní, debes seleccionar una categoría (Guaraní Puro, Jopara, o Jehe'a) antes de enviar la validación.
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={handleSubmitValidation}
+                      disabled={!isFormValid() || submitting}
+                      aria-disabled={!isFormValid() || submitting}
+                      className="btn btn-primary flex-1 min-w-[200px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-blue-400"
+                    >
+                      {submitting ? (
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Enviando...
+                        </div>
+                      ) : 'Enviar validación'}
+                    </button>
+                    {(!isFormValid() && !submitting) && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        Completa la clasificación (tipo de guaraní si aplica), la corrección (Correcta/Incorrecta) y las puntuaciones de fluidez y precisión para habilitar el botón.
+                      </p>
+                    )}
                   </div>
                 </div>
-              )}
-
-              <CorrectnessButtons selectedCorrectness={formData.correctness} onSelect={handleCorrectnessSelect} disabled={submitting} />
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <ScoreSelector label="Puntuación de fluidez" selectedScore={formData.fluency_score} onSelect={handleFluencySelect} disabled={submitting} />
-                <ScoreSelector label="Puntuación de precisión" selectedScore={formData.accuracy_score} onSelect={handleAccuracySelect} disabled={submitting} />
               </div>
-
-              <NotesTextarea notes={formData.notes} onNotesChange={handleNotesChange} disabled={submitting} />
-
-              {/* Category requirement message for gn-sp */}
-              {currentTranslation?.direction === 'gn-sp' && currentTranslation?.is_original && !selectedCategory && (
-                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800">
-                  <strong>📋 Clasificación requerida:</strong> Para oraciones originales en Guaraní, debes seleccionar una categoría (Guaraní Puro, Jopara, o Jehe'a) antes de enviar la validación.
-                </div>
-              )}
-
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
-                <button
-                  onClick={handleSubmitValidation}
-                  disabled={!isFormValid() || submitting}
-                  aria-disabled={!isFormValid() || submitting}
-                  className="btn btn-primary flex-1 min-w-[200px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-blue-400"
-                >
-                  {submitting ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Enviando...
-                    </div>
-                  ) : 'Enviar validación'}
-                </button>
-                {(!isFormValid() && !submitting) && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    Completa la clasificación (tipo de guaraní si aplica), la corrección (Correcta/Incorrecta) y las puntuaciones de fluidez y precisión para habilitar el botón.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
 
