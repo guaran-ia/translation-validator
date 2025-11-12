@@ -55,11 +55,14 @@ def load_corpus_from_csv(file_path: str):
             print(f"Note: normalized columns: {col_map}")
         
         # Validate required columns
-        required_columns = ['guarani', 'spanish']
-        if not all(col in df.columns for col in required_columns):
-            print(f"❌ CSV must have columns: {required_columns}")
+        # We require at least `guarani`. `spanish` is optional (rows without spanish will create a single gn->sp entry).
+        if 'guarani' not in df.columns:
+            print(f"❌ CSV must have a 'guarani' column")
             print(f"   Found columns: {list(df.columns)}")
             return
+        if 'spanish' not in df.columns:
+            # ensure the column exists so downstream logic can reference it
+            df['spanish'] = ''
         
         # Add source column if not present
         if 'source' not in df.columns:
@@ -68,10 +71,11 @@ def load_corpus_from_csv(file_path: str):
         if 'direction' not in df.columns:
             df['direction'] = 'sp-gn'
         
-        # Normalize values and drop empty rows
-        df = df.dropna(subset=['guarani', 'spanish'])
+        # Normalize values and drop rows missing guarani
+        df = df.dropna(subset=['guarani'])
         df['guarani'] = df['guarani'].astype(str).str.strip()
-        df['spanish'] = df['spanish'].astype(str).str.strip()
+        # Keep spanish as string; empty strings indicate no spanish translation available
+        df['spanish'] = df['spanish'].fillna('').astype(str).str.strip()
         if 'source' not in df.columns:
             df['source'] = 'jojajovai'
         else:
@@ -90,6 +94,32 @@ def load_corpus_from_csv(file_path: str):
         # (original: sp-gn) and (inverse: gn-sp) and link them via pair_id.
         added = 0
         for g, s, src, dirv in zip(dedupe_df['guarani'], dedupe_df['spanish'], dedupe_df['source'], dedupe_df['direction']):
+            # If spanish is empty, create a single gn->sp record (no inverse)
+            if not s or str(s).strip() == '':
+                # force direction to gn-sp for Guarani-only rows
+                direction_single = 'gn-sp'
+                # check if such a record already exists
+                exists_single = db.query(Translation).filter(
+                    Translation.guarani_text == g,
+                    Translation.direction == direction_single
+                ).first()
+                if exists_single:
+                    continue
+                try:
+                    single = Translation(
+                        guarani_text=g,
+                        spanish_text=None,
+                        source=src,
+                        direction=direction_single,
+                        is_original=True
+                    )
+                    db.add(single)
+                    db.commit()
+                    added += 1
+                except Exception as e:
+                    print(f"❌ Error inserting single GN entry ({g}): {e}")
+                    db.rollback()
+                continue
             # Determine inverse direction
             inverse_dir = 'gn-sp' if dirv == 'sp-gn' else 'sp-gn'
 

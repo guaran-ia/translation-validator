@@ -43,7 +43,7 @@ def main():
             initialize_database()
             print("\n📋 Next steps:")
             print("1. Start API: cd ../api && uvicorn app.main:app --reload")
-            print("2. Login with: username=admin, password=admin123")
+            print("2. Login with: username=admin, password=4dm!n$Pass")
             print("3. Change admin password immediately!")
             
         elif command == "reset":

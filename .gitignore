@@ -74,6 +74,10 @@ coverage-report/
 *.swp
 *.tmp
 
+#datajson
+data/*.jsonl
+data/*.csv
+
 # Keep Alembic migrations tracked (do NOT ignore db_schema/alembic/versions/)
 # If you have generated SQL dumps for local testing you may add patterns:
 # db_schema/*.sql     # uncomment only if you want to ignore generated SQL files

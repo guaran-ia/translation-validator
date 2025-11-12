@@ -105,7 +105,7 @@ def create_default_admin():
             logger.info("👤 No users found. Creating default admin user...")
             
             # Create default admin user
-            hashed_password = get_password_hash("admin123")
+            hashed_password = get_password_hash("4dm!n$Pass")
             admin_user = User(
                 username="admin",
                 email="admin@translation-validator.com",
