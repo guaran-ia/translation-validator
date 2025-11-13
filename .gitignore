@@ -36,7 +36,8 @@ pnpm-debug.log*
 package-lock.json
 ui/dist/
 ui/.env.local
-ui/.vite
+ui/.vite/
+.vite/
 
 # Env files (keep .env.example)
 .env
