@@ -140,6 +140,72 @@ python -m app.scripts.load_corpus --file ../../data/translations.csv
 Notas rápidas
 - No comitees `.env` ni `venv/`.
 - Usa `db_schema/` para gestionar migraciones y mantener el historial con Alembic.
+ 
+Importar corpus desde JSON / JSONL (nuevo)
+---------------------------------------
+
+Si tienes un corpus en formato JSON o JSONL con textos en guaraní puedes extraer oraciones y convertirlas a CSV con la herramienta incluida. La extracción respeta estas reglas:
+
+- Se consideran oraciones los fragmentos que terminan en un punto '.' (se ignoran puntos suspensivos '...' y '…').
+- Se filtran oraciones con más de N palabras (por defecto 30; palabra = token separado por espacios).
+- Por cada item del JSON se extraen hasta M oraciones aleatorias (por defecto M = 50).
+- El archivo JSON/JSONL NO debe subirse al repositorio (mantener localmente).
+
+Script extractor
+- Ruta: `translation_validator_tool/scripts/extract_json_to_csv.py`
+- Comportamiento por defecto: crea un CSV "append-only" (no modifica `data/translations.csv`) con las filas extraídas. Para incluir las filas originales en la salida usar `--include-original`. Para forzar sobreescritura usar `--force` (no recomendado).
+
+Ejemplos (PowerShell):
+```powershell
+# Extraer desde un JSONL local y crear un CSV append-only (una sola línea)
+python "translation_validator_tool\scripts\extract_json_to_csv.py" --input "data\coreguapa_identified_gn.jsonl" --out "data\coreguapa_appended_only.csv" --max-sentences 50 --max-words 30
+
+# O multi-línea usando backtick ` para continuar:
+python "translation_validator_tool\scripts\extract_json_to_csv.py" `
+  --input "data\coreguapa_identified_gn.jsonl" `
+  --out "data\coreguapa_appended_only.csv" `
+  --max-sentences 50 --max-words 30
+
+# Incluir además las filas originales del translations.csv en la salida (opt-in)
+python "translation_validator_tool\scripts\extract_json_to_csv.py" --input "data\coreguapa_identified_gn.jsonl" --out "data\trans_with_coreguapa.csv" --include-original --max-sentences 50 --max-words 30
+```
+
+Ejemplos (bash):
+```bash
+# Extraer (JSONL -> CSV append-only)
+python3 translation_validator_tool/scripts/extract_json_to_csv.py \
+  --input data/coreguapa_identified_gn.jsonl \
+  --out data/coreguapa_appended_only.csv \
+  --max-sentences 50 --max-words 30
+```
+
+Notas del extractor
+- Por defecto el script escribe solo las filas extraídas (archivo nuevo). Si quieres combinar con `data/translations.csv` usa `--include-original`.
+- No comitees el JSON/JSONL de origen; guarda solo el CSV resultante si lo deseas.
+
+Importar el CSV generado en la base de datos
+-----------------------------------------
+
+Una vez generado el CSV puedes importarlo en la base de datos usando el cargador del backend.
+
+PowerShell (desde `translation_validator_tool/api` con el venv activado):
+```powershell
+cd translation_validator_tool\api
+.\venv\Scripts\Activate.ps1
+python -m app.scripts.load_corpus --file "..\..\data\coreguapa_appended_only.csv"
+```
+
+Bash:
+```bash
+cd translation_validator_tool/api
+source venv/bin/activate
+python -m app.scripts.load_corpus --file ../../data/coreguapa_appended_only.csv
+```
+
+Comportamiento del loader (resumen importante)
+- Si una fila del CSV NO tiene texto en `spanish`, el loader creará UNA SOLA entrada con `direction = 'gn-sp'` (no crea la pareja inversa). Esto evita duplicados cuando importamos oraciones en guaraní sin traducción al español.
+- Si la fila tiene ambos textos (`guarani` y `spanish`), el loader mantiene el comportamiento previo: crea/asegura la pareja (original + inversa) y repara registros con campos intercambiados.
+- El loader intenta deduplicar antes de insertar; ejecutar repetidamente el mismo CSV no debería crear duplicados pero es buena práctica probar en una BD de staging primero.
 
 Archivos de referencia
 - `translation_validator_tool/api/README.md` — instrucciones detalladas del backend

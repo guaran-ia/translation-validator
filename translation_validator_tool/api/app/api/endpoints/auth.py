@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, Token, UserLogin
+from app.schemas.user import UserCreate, UserResponse, Token, UserLogin, PasswordChange, AdminPasswordChange
 from app.core.security import verify_password, get_password_hash, create_access_token
 from app.api.deps import get_current_active_user, get_current_active_superuser
 from app.config import settings
@@ -125,6 +125,16 @@ async def register(
     return UserResponse.model_validate(db_user)
 
 
+@router.get('/users', response_model=list[UserResponse])
+async def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Return list of all users (requires superuser)."""
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    return [UserResponse.model_validate(u) for u in users]
+
+
 @router.get('/pending', response_model=list[UserResponse])
 async def get_pending_registrations(
     db: Session = Depends(get_db),
@@ -158,3 +168,110 @@ async def get_current_user_info(
 ):
     """Get current user information."""
     return UserResponse.model_validate(current_user)
+
+
+@router.post("/change-password", response_model=UserResponse)
+async def change_own_password(
+    password_data: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Change current user's password (requires current password verification)."""
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Contraseña actual incorrecta"
+        )
+    
+    # Update password
+    current_user.hashed_password = get_password_hash(password_data.new_password)
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    
+    return UserResponse.model_validate(current_user)
+
+
+@router.post("/admin/change-password/{user_id}", response_model=UserResponse)
+async def admin_change_user_password(
+    user_id: int,
+    password_data: AdminPasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Admin endpoint to change any user's password (no current password required). Requires superuser."""
+    # Find target user
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # Update password
+    target_user.hashed_password = get_password_hash(password_data.new_password)
+    db.add(target_user)
+    db.commit()
+    db.refresh(target_user)
+    
+    return UserResponse.model_validate(target_user)
+
+
+@router.patch("/admin/users/{user_id}", response_model=UserResponse)
+async def admin_update_user(
+    user_id: int,
+    updates: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Admin endpoint to update user info (email, username, is_active, is_superuser). Requires superuser."""
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # Allow updating: email, username, is_active, is_superuser
+    if 'email' in updates:
+        target_user.email = updates['email']
+    if 'username' in updates:
+        target_user.username = updates['username']
+    if 'is_active' in updates:
+        target_user.is_active = updates['is_active']
+    if 'is_superuser' in updates:
+        target_user.is_superuser = updates['is_superuser']
+    
+    db.add(target_user)
+    db.commit()
+    db.refresh(target_user)
+    
+    return UserResponse.model_validate(target_user)
+
+
+@router.delete("/admin/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def admin_delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_superuser)
+):
+    """Admin endpoint to delete a user. Requires superuser."""
+    target_user = db.query(User).filter(User.id == user_id).first()
+    if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # Prevent admin from deleting themselves
+    if target_user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes eliminar tu propia cuenta"
+        )
+    
+    db.delete(target_user)
+    db.commit()
+    
+    return None

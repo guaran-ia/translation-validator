@@ -40,8 +40,9 @@ const Navbar = () => {
                     </button>
 
                     {adminOpen && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg z-20">
+                      <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow-lg z-20">
                         <a href="/admin/users" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Usuarios</a>
+                        <a href="/admin/pending" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Registros Pendientes</a>
                         <a href="/admin/translations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Traducciones</a>
                       </div>
                     )}
@@ -102,6 +103,7 @@ const Navbar = () => {
                       <div className="pt-2">
                         <div className="text-sm font-medium text-gray-700">Admin</div>
                         <a href="/admin/users" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Usuarios</a>
+                        <a href="/admin/pending" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Registros Pendientes</a>
                         <a href="/admin/translations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducciones</a>
                       </div>
                     )}

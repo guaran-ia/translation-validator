@@ -53,10 +53,20 @@ export const authAPI = {
   getCurrentUser: () => 
     api.get('/auth/me'),
   // Admin endpoints
+  getAllUsers: () =>
+    api.get('/auth/users'),
   getPendingRegistrations: () =>
     api.get('/auth/pending'),
   approveUser: (userId) =>
     api.patch(`/auth/approve/${userId}`),
+  updateUser: (userId, updates) =>
+    api.patch(`/auth/admin/users/${userId}`, updates),
+  deleteUser: (userId) =>
+    api.delete(`/auth/admin/users/${userId}`),
+  changeUserPassword: (userId, newPassword) =>
+    api.post(`/auth/admin/change-password/${userId}`, { new_password: newPassword }),
+  changeOwnPassword: (currentPassword, newPassword) =>
+    api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
 };
 
 // Translations API

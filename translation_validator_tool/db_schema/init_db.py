@@ -121,7 +121,7 @@ def create_default_admin():
             logger.info("✅ Default admin user created:")
             logger.info(f"   Username: admin")
             logger.info(f"   Email: admin@translation-validator.com")
-            logger.info(f"   Password: admin123")
+            logger.info(f"   Password: 4dm!n$Pass")
             logger.info(f"   ID: {admin_user.id}")
             
         else:
