@@ -151,6 +151,11 @@ Si tienes un corpus en formato JSON o JSONL con textos en guaraní puedes extrae
 - Por cada item del JSON se extraen hasta M oraciones aleatorias (por defecto M = 50).
 - El archivo JSON/JSONL NO debe subirse al repositorio (mantener localmente).
 
+Ubicación y nombre del archivo JSON/JSONL
+- **Dónde colocar:** en la carpeta `data/` del repositorio (raíz del proyecto).
+- **Nombre recomendado:** cualquier nombre descriptivo con extensión `.json` o `.jsonl` (por ejemplo: `coreguapa_identified_gn.jsonl`, `mi_corpus_guarani.jsonl`).
+- **Formato esperado:** cada línea (JSONL) o cada item del array (JSON) debe ser un objeto con al menos el campo `text` que contiene las oraciones en guaraní. Opcionalmente puede incluir metadatos: `corpus`, `corpus_file`, `source`, `url`, `language`.
+
 Script extractor
 - Ruta: `translation_validator_tool/scripts/extract_json_to_csv.py`
 - Comportamiento por defecto: crea un CSV "append-only" (no modifica `data/translations.csv`) con las filas extraídas. Para incluir las filas originales en la salida usar `--include-original`. Para forzar sobreescritura usar `--force` (no recomendado).
