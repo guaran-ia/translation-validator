@@ -112,7 +112,7 @@ const HistoryPage = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Evaluadas ({pagination.validated.total})
+              {/*Evaluadas ({pagination.validated.total})*/}
             </button>
             <button
               onClick={() => setActiveTab('pending')}
@@ -122,7 +122,7 @@ const HistoryPage = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Pendientes ({pagination.pending.total})
+              {/*Pendientes ({pagination.pending.total})*/}
             </button>
           </nav>
         </div>
