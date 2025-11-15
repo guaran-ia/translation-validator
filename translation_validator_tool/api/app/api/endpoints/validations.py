@@ -79,17 +79,8 @@ async def create_validation(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Esta sugerencia ya tiene 3 validaciones; no se pueden añadir más validaciones a esta sugerencia."
             )
-    else:
-        # For plain translation validations, prevent users from validating a translation they have suggested for
-        user_suggestion = db.query(TranslationSuggestion).filter(
-            TranslationSuggestion.translation_id == translation.id,
-            TranslationSuggestion.user_id == current_user.id
-        ).first()
-        if user_suggestion:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="You cannot validate a translation for which you have submitted a suggestion"
-            )
+    # Removed restriction: Users can now both suggest AND validate the same translation
+    # This allows for more flexible workflow where validators can provide alternatives
     
     # Prevent creating a validation if this translation already has >= 3 validations
     # in its own direction (the pair may have reached the threshold).

@@ -22,6 +22,7 @@ const ValidatorPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [showContinueModal, setShowContinueModal] = useState(false);
+  const [showSuggestAfterValidationModal, setShowSuggestAfterValidationModal] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   // Admin-specific search state: allow admin to load a translation by ID
   const [adminSearch, setAdminSearch] = useState('');
@@ -36,6 +37,15 @@ const ValidatorPage = () => {
   });
   
   const [selectedCategory, setSelectedCategory] = useState(null);
+  
+  // Track if user has made changes to validation form without submitting
+  const hasUnsavedChanges = () => {
+    return formData.correctness !== '' || 
+           formData.fluency_score !== null || 
+           formData.accuracy_score !== null || 
+           formData.notes !== '' ||
+           selectedCategory !== null;
+  };
 
   useEffect(() => {
     const translationIdParam = searchParams.get('translation');
@@ -143,6 +153,13 @@ const ValidatorPage = () => {
 
   const handleNextTranslation = async () => {
     if (!user || !currentTranslation) return;
+    
+    // Check for unsaved changes
+    if (hasUnsavedChanges()) {
+      toast.warning('Tienes cambios sin guardar. Por favor envía la validación antes de continuar.');
+      return;
+    }
+    
     // navigating manually clears any admin-selected fixed translation
     setAdminSelectedTranslation(false);
     setLoading(true);
@@ -167,6 +184,13 @@ const ValidatorPage = () => {
 
   const handlePreviousTranslation = async () => {
     if (!user || !currentTranslation) return;
+    
+    // Check for unsaved changes
+    if (hasUnsavedChanges()) {
+      toast.warning('Tienes cambios sin guardar. Por favor envía la validación antes de continuar.');
+      return;
+    }
+    
     // navigating manually clears any admin-selected fixed translation
     setAdminSelectedTranslation(false);
     setLoading(true);
@@ -229,11 +253,18 @@ const ValidatorPage = () => {
 
       await validationsAPI.create(payload);
       setSelectedSuggestion(null);
-      // If admin loaded a specific translation, do not replace it with a random one.
-      if (adminSelectedTranslation && user?.is_superuser) {
-        setShowContinueModal(true);
+      
+      // Ask if user wants to suggest a translation after validating
+      // Only show if user hasn't already suggested for this translation
+      if (!currentTranslation?.user_has_suggested) {
+        setShowSuggestAfterValidationModal(true);
       } else {
-        await loadData();
+        // If admin loaded a specific translation, do not replace it with a random one.
+        if (adminSelectedTranslation && user?.is_superuser) {
+          setShowContinueModal(true);
+        } else {
+          await loadData();
+        }
       }
     } catch (error) {
       console.error('Error al enviar la validación:', error);
@@ -253,13 +284,8 @@ const ValidatorPage = () => {
     try {
       await suggestionsAPI.create(suggestionData);
       toast.success('¡Sugerencia enviada con éxito! Tu propuesta ayudará a mejorar la calidad de las traducciones.');
-      if (!adminSelectedTranslation) {
-        await loadData();
-      } else if (currentTranslation && currentTranslation.id) {
-        // refresh counts for the admin-selected translation
-        const fres = await translationsAPI.getById(currentTranslation.id);
-        setCurrentTranslation(fres.data || fres);
-      }
+      // Always load next translation after suggesting (whether from normal flow or after validation)
+      await loadData();
     } catch (error) {
       console.error('Error al enviar la sugerencia:', error);
       if (error.response?.status === 400) {
@@ -358,14 +384,36 @@ const ValidatorPage = () => {
         )}
 
         {user && (
-          <NavigationControls
-            currentTranslation={currentTranslation}
-            onNext={handleNextTranslation}
-            onPrevious={handlePreviousTranslation}
-            // disable suggest action when user already suggested
-            onSuggest={!currentTranslation?.user_has_suggested ? () => setShowSuggestionModal(true) : undefined}
-            loading={loading}
-          />
+          <>
+            <NavigationControls
+              currentTranslation={currentTranslation}
+              onNext={handleNextTranslation}
+              onPrevious={handlePreviousTranslation}
+              // disable suggest action when user already suggested
+              onSuggest={() => setShowSuggestionModal(true)}
+              loading={loading}
+              disabled={hasUnsavedChanges()}
+            />
+            
+            {/* Warning banner for unsaved changes */}
+            {hasUnsavedChanges() && (
+              <div className="mt-4 p-3 bg-amber-50 border-l-4 border-amber-400 rounded-r-md">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-amber-800">
+                      <strong className="font-medium">Tienes cambios sin guardar.</strong>
+                      {' '}Los botones de navegación están deshabilitados. Por favor envía la validación o limpia el formulario para continuar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <TranslationCard
@@ -413,14 +461,12 @@ const ValidatorPage = () => {
                 Puedes <strong>sugerir una traducción</strong> o <strong>validar una sugerencia existente</strong> haciendo clic en "Validar" en las sugerencias arriba.
               </p>
               <div className="pt-4 flex flex-col items-center gap-3">
-                {!currentTranslation?.user_has_suggested && (
-                  <button 
-                    onClick={() => setShowSuggestionModal(true)} 
-                    className="btn btn-primary text-lg px-6 py-3"
-                  >
-                    Sugerir traducción al español
-                  </button>
-                )}
+                <button 
+                  onClick={() => setShowSuggestionModal(true)} 
+                  className="btn btn-primary text-lg px-6 py-3"
+                >
+                  Sugerir traducción al español
+                </button>
                 <p className="text-sm text-gray-500">
                   💡 Tip: Si hay sugerencias arriba, puedes hacer clic en "Validar" para evaluarlas
                 </p>
@@ -429,12 +475,7 @@ const ValidatorPage = () => {
           </div>
         ) : (
           <>
-            {currentTranslation?.user_has_suggested ? (
-              <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100 mt-6">
-                <h3 className="text-lg font-medium">Has sugerido una traducción</h3>
-                <p className="text-sm text-gray-600 mt-2">Ya enviaste una sugerencia para esta traducción. No puedes editarla ni validar esta traducción desde la interfaz.</p>
-              </div>
-            ) : !(currentTranslation.validation_count !== undefined && currentTranslation.validation_count >= 3) && (
+            {!(currentTranslation.validation_count !== undefined && currentTranslation.validation_count >= 3) && (
               <div className="card mt-6">
                 <div className="space-y-6">
                   <CorrectnessButtons selectedCorrectness={formData.correctness} onSelect={handleCorrectnessSelect} disabled={submitting} />
@@ -481,6 +522,46 @@ const ValidatorPage = () => {
       </div>
 
       <SuggestionModal isOpen={showSuggestionModal} onClose={() => setShowSuggestionModal(false)} onSubmit={handleSubmitSuggestion} currentTranslation={currentTranslation} isLoading={submitting} />
+
+      {/* Modal: Ask if user wants to suggest after validating */}
+      {showSuggestAfterValidationModal && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black opacity-40" onClick={async () => {
+            setShowSuggestAfterValidationModal(false);
+            // Load next translation since validation was already saved
+            await loadData();
+          }} />
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4 z-50">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-2">✅ Validación enviada</h3>
+              <p className="text-sm text-gray-700 mb-4">
+                ¿Querés sugerir una traducción alternativa o mejorada para esta traducción que acabás de validar?
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button 
+                  onClick={async () => {
+                    setShowSuggestAfterValidationModal(false);
+                    // Load next translation since validation was already saved
+                    await loadData();
+                  }} 
+                  className="px-4 py-2 rounded-md border hover:bg-gray-50"
+                >
+                  No, continuar
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowSuggestAfterValidationModal(false);
+                    setShowSuggestionModal(true);
+                  }} 
+                  className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Sí, sugerir traducción
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showContinueModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center">

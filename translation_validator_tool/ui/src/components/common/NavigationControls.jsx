@@ -5,7 +5,8 @@ const NavigationControls = ({
   onNext, 
   onSuggest,
   currentTranslation, 
-  loading = false 
+  loading = false,
+  disabled = false 
 }) => {
   
 
@@ -13,7 +14,7 @@ const NavigationControls = ({
     <div className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border">
       <button
         onClick={onPrevious}
-        disabled={loading || !currentTranslation}
+        disabled={loading || !currentTranslation || disabled}
         className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <ChevronLeftIcon className="h-4 w-4" />
@@ -39,7 +40,7 @@ const NavigationControls = ({
 
       <button
         onClick={onNext}
-        disabled={loading || !currentTranslation}
+        disabled={loading || !currentTranslation || disabled}
         className="flex items-center space-x-2 px-4 py-2 bg-blue-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span>Siguiente</span>

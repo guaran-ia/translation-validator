@@ -250,7 +250,7 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
                               <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded">Tu sugerencia</span>
                             )}
 
-                            {user && s.user_id !== user.id && !current.user_has_suggested && (
+                            {user && s.user_id !== user.id && (
                               (() => {
                                 const reachedLimit = (s.validation_count ?? 0) >= 3;
                                 const alreadyValidated = !!s.user_has_validated;
@@ -491,7 +491,7 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
             )*/}
 
             {current.user_has_suggested && (
-              <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Has sugerido esto</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">✓ Ya sugeriste para esta traducción</span>
             )}
           </div>
         </div>
