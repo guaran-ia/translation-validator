@@ -212,9 +212,48 @@ Comportamiento del loader (resumen importante)
 - Si la fila tiene ambos textos (`guarani` y `spanish`), el loader mantiene el comportamiento previo: crea/asegura la pareja (original + inversa) y repara registros con campos intercambiados.
 - El loader intenta deduplicar antes de insertar; ejecutar repetidamente el mismo CSV no debería crear duplicados pero es buena práctica probar en una BD de staging primero.
 
+Prodigy — Anotación Gramatical (POS Tagging)
+-------------------------------------------
+
+El proyecto incluye **Prodigy** (v1.18.3), una herramienta profesional de anotación desarrollada por Explosion AI para identificar categorías gramaticales en textos Guaraní.
+
+**¿Qué hace Prodigy?**
+Permite anotar manualmente categorías gramaticales (SUJETO, VERBO, OBJETO, SUSTANTIVO, ADJETIVO, etc.) en oraciones Guaraní. Esto genera datos de entrenamiento de alta calidad para análisis lingüístico y futuros modelos de ML.
+
+**Características principales:**
+- ✅ 10 categorías gramaticales predefinidas para Guaraní
+- ✅ Interfaz web intuitiva con atajos de teclado
+- ✅ Base de datos local (SQLite) - privacidad garantizada
+- ✅ Exportación a JSONL/CSV para análisis posterior
+- ✅ Integración opcional con PostgreSQL del proyecto
+
+**Inicio rápido (Windows PowerShell):**
+```powershell
+# 1. Navegar al directorio Prodigy
+cd translation_validator_tool\prodigy
+
+# 2. Iniciar servidor de anotación (puerto 8081)
+$env:PRODIGY_PORT=8081
+python -m prodigy guarani-pos pos_guarani_new data/export/original_translations.jsonl -F recipes/guarani_pos_tagging.py
+
+# 3. Abrir navegador en http://localhost:8081
+
+# 4. Exportar anotaciones
+python -m prodigy db-out pos_guarani_new > data/annotations/export_$(Get-Date -Format 'yyyyMMdd_HHmmss').jsonl
+```
+
+**Documentación completa:**
+- `translation_validator_tool/prodigy/README.md` — guía completa de uso
+- `translation_validator_tool/prodigy/POS_ANNOTATION_GUIDE.md` — guía detallada de categorías gramaticales
+
+**Estado actual:** 🟢 Producción - 10 anotaciones completadas exitosamente
+
+---
+
 Archivos de referencia
 - `translation_validator_tool/api/README.md` — instrucciones detalladas del backend
 - `translation_validator_tool/ui/README.md` — instrucciones detalladas del frontend
 - `translation_validator_tool/db_schema/README.md` — migraciones y helpers
+- `translation_validator_tool/prodigy/README.md` — anotación gramatical con Prodigy
 
 ---

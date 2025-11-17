@@ -1,0 +1,21 @@
+# Prodigy and dependencies for Guaraní-Spanish annotation project
+
+# Prodigy annotation tool
+# Install with: pip install prodigy -f https://131F-F897-0B9B-090F@download.prodi.gy
+# prodigy>=1.18.0
+
+# Database connectivity
+psycopg2-binary>=2.9.0
+
+# NLP libraries
+spacy>=3.7.0
+
+# Optional: Hugging Face transformers for ML models
+transformers>=4.35.0
+
+# Data processing
+pandas>=2.0.0
+jsonlines>=3.1.0
+
+# Progress bars and utilities
+tqdm>=4.65.0
