@@ -24,6 +24,7 @@ const ValidatorPage = () => {
   const [showContinueModal, setShowContinueModal] = useState(false);
   const [showSuggestAfterValidationModal, setShowSuggestAfterValidationModal] = useState(false);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
+  const [comingFromValidation, setComingFromValidation] = useState(false);
   // Admin-specific search state: allow admin to load a translation by ID
   const [adminSearch, setAdminSearch] = useState('');
   const [adminSelectedTranslation, setAdminSelectedTranslation] = useState(false);
@@ -257,6 +258,7 @@ const ValidatorPage = () => {
       // Ask if user wants to suggest a translation after validating
       // Only show if user hasn't already suggested for this translation
       if (!currentTranslation?.user_has_suggested) {
+        setComingFromValidation(true);
         setShowSuggestAfterValidationModal(true);
       } else {
         // If admin loaded a specific translation, do not replace it with a random one.
@@ -284,6 +286,8 @@ const ValidatorPage = () => {
     try {
       await suggestionsAPI.create(suggestionData);
       toast.success('¡Sugerencia enviada con éxito! Tu propuesta ayudará a mejorar la calidad de las traducciones.');
+      // Reset the validation flow flag
+      setComingFromValidation(false);
       // Always load next translation after suggesting (whether from normal flow or after validation)
       await loadData();
     } catch (error) {
@@ -521,13 +525,26 @@ const ValidatorPage = () => {
         )}
       </div>
 
-      <SuggestionModal isOpen={showSuggestionModal} onClose={() => setShowSuggestionModal(false)} onSubmit={handleSubmitSuggestion} currentTranslation={currentTranslation} isLoading={submitting} />
+      <SuggestionModal 
+        isOpen={showSuggestionModal} 
+        onClose={() => {
+          setShowSuggestionModal(false);
+          // If coming from post-validation flow, return to confirmation modal
+          if (comingFromValidation) {
+            setShowSuggestAfterValidationModal(true);
+          }
+        }} 
+        onSubmit={handleSubmitSuggestion} 
+        currentTranslation={currentTranslation} 
+        isLoading={submitting} 
+      />
 
       {/* Modal: Ask if user wants to suggest after validating */}
       {showSuggestAfterValidationModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center">
           <div className="absolute inset-0 bg-black opacity-40" onClick={async () => {
             setShowSuggestAfterValidationModal(false);
+            setComingFromValidation(false);
             // Load next translation since validation was already saved
             await loadData();
           }} />
@@ -541,6 +558,7 @@ const ValidatorPage = () => {
                 <button 
                   onClick={async () => {
                     setShowSuggestAfterValidationModal(false);
+                    setComingFromValidation(false);
                     // Load next translation since validation was already saved
                     await loadData();
                   }} 
