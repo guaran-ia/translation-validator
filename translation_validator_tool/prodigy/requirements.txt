@@ -19,3 +19,33 @@ jsonlines>=3.1.0
 
 # Progress bars and utilities
 tqdm>=4.65.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🤖 NEW: OpenAI Integration for Auto-Tagging
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# OpenAI API client (NEW version - for custom recipes)
+# Our guarani_openai.py recipe uses the new openai>=1.0 SDK
+openai>=1.0.0
+
+# YAML support for loading few-shot examples
+PyYAML>=6.0
+
+# HTTP requests (for proxy)
+httpx>=0.24.0
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🔮 ALTERNATIVE: spacy-llm (Prodigy's built-in LLM integration)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# If you prefer Prodigy's native LLM recipes (spans.llm.correct),
+# uncomment the following:
+# spacy-llm>=0.6.0
+
+# Uncomment for Claude/Anthropic integration
+# anthropic>=0.7.0
+
+# Uncomment for local LLMs (Llama, Mistral, etc.)
+# llama-cpp-python>=0.2.0

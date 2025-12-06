@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización de Anotaciones - guarani_openai_secure</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        header .subtitle {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .panel h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #374151;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #8b5cf6;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+        
+        .label-stats {
+            margin-top: 20px;
+        }
+        
+        .label-stats h4 {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 10px;
+        }
+        
+        .label-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .label-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        
+        .label-name {
+            width: 80px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .bar {
+            height: 16px;
+            border-radius: 4px;
+            min-width: 4px;
+        }
+        
+        .label-count {
+            color: #6b7280;
+            font-size: 11px;
+        }
+        
+        .legend {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .legend-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .legend-family {
+            border-bottom: 1px solid #f3f4f6;
+            padding-bottom: 10px;
+        }
+        
+        .legend-family:last-child {
+            border-bottom: none;
+        }
+        
+        .family-header {
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+        
+        .family-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .label-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            color: white;
+        }
+        
+        .examples-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .example-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .example-header {
+            background: #f9fafb;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .example-number {
+            font-weight: bold;
+            color: #8b5cf6;
+        }
+        
+        .example-stats {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+        }
+        
+        .example-stats .stat {
+            padding: 2px 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            color: #6b7280;
+        }
+        
+        .agreement-high {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+        }
+        
+        .agreement-medium {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+        }
+        
+        .agreement-low {
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+        
+        .conflict {
+            background: #fee2e2 !important;
+            color: #991b1b !important;
+        }
+        
+        .example-content {
+            padding: 16px;
+        }
+        
+        .spanish-text, .guarani-text {
+            margin-bottom: 12px;
+        }
+        
+        .lang-label {
+            font-weight: 600;
+            font-size: 13px;
+            margin-right: 8px;
+        }
+        
+        .annotated-text {
+            display: inline;
+            font-size: 16px;
+            line-height: 2;
+        }
+        
+        .span-highlight {
+            padding: 2px 0;
+            cursor: help;
+        }
+        
+        .span-list {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #f3f4f6;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .span-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            background: #f9fafb;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        
+        .span-text {
+            color: #374151;
+            font-style: italic;
+        }
+        
+        .span-label {
+            color: white;
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        
+        .span-ud {
+            color: #9ca3af;
+            font-size: 10px;
+        }
+        
+        .annotators-list {
+            margin: 12px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .annotator-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: #e0e7ff;
+            color: #3730a3;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .conflicts-section {
+            margin-top: 16px;
+            padding: 16px;
+            background: #fef2f2;
+            border-radius: 8px;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .conflicts-section h4 {
+            color: #991b1b;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        
+        .conflicts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .conflict-item {
+            padding: 10px 12px;
+            background: white;
+            border-radius: 6px;
+            font-size: 13px;
+            border: 1px solid #fecaca;
+        }
+        
+        .conflict-type {
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .conflict-text {
+            font-style: italic;
+            color: #374151;
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .conflict-details {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .conflict-label {
+            border-left: 3px solid #f59e0b;
+        }
+        
+        .conflict-missing {
+            border-left: 3px solid #ef4444;
+        }
+        
+        .span-list h4 {
+            width: 100%;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 Visualización de Anotaciones Morfológicas</h1>
+            <div class="subtitle">
+                Dataset: <strong>guarani_openai_secure</strong> | 
+                Exportado: 2025-12-03
+            </div>
+        </header>
+        
+        <div class="main-grid">
+            <div class="sidebar">
+                
+    <div class="stats-panel">
+        <h3>📊 Estadísticas</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value">12</div>
+                <div class="stat-label">Ejemplos</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">130</div>
+                <div class="stat-label">Spans totales</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">80.8%</div>
+                <div class="stat-label">Acuerdo IAA</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">44</div>
+                <div class="stat-label">Conflictos</div>
+            </div>
+        </div>
+        <div class="label-stats">
+            <h4>Top Etiquetas (Amigables)</h4>
+            <div class="label-bars">
+                <div class="label-bar"><span class="label-name">Raíz</span><div class="bar" style="width:37%;background:#3b82f6;"></div><span class="label-count">48</span></div><div class="label-bar"><span class="label-name">Verbo</span><div class="bar" style="width:17%;background:#dc2626;"></div><span class="label-count">22</span></div><div class="label-bar"><span class="label-name">Sustantivo</span><div class="bar" style="width:10%;background:#dc2626;"></div><span class="label-count">13</span></div><div class="label-bar"><span class="label-name">Prefijo</span><div class="bar" style="width:8%;background:#3b82f6;"></div><span class="label-count">10</span></div><div class="label-bar"><span class="label-name">3ra Persona</span><div class="bar" style="width:7%;background:#8b5cf6;"></div><span class="label-count">9</span></div><div class="label-bar"><span class="label-name">Adverbio</span><div class="bar" style="width:6%;background:#dc2626;"></div><span class="label-count">8</span></div><div class="label-bar"><span class="label-name">Pronombre</span><div class="bar" style="width:5%;background:#dc2626;"></div><span class="label-count">6</span></div><div class="label-bar"><span class="label-name">Sufijo</span><div class="bar" style="width:5%;background:#3b82f6;"></div><span class="label-count">6</span></div><div class="label-bar"><span class="label-name">Locativo</span><div class="bar" style="width:3%;background:#f97316;"></div><span class="label-count">4</span></div><div class="label-bar"><span class="label-name">Plural</span><div class="bar" style="width:2%;background:#06b6d4;"></div><span class="label-count">2</span></div>
+            </div>
+        </div>
+    </div>
+    
+                <div class="legend">
+<h3>📋 Familias de Etiquetas</h3>
+<div class="legend-grid">
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#3b82f6;">
+                    📦 Morfemas
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#3b82f6;">Raíz</span>
+<span class="label-badge" style="background:#3b82f6;">Prefijo</span>
+<span class="label-badge" style="background:#3b82f6;">Sufijo</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#8b5cf6;">
+                    👤 Persona
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#8b5cf6;">1ra Persona</span>
+<span class="label-badge" style="background:#8b5cf6;">2da Persona</span>
+<span class="label-badge" style="background:#8b5cf6;">3ra Persona</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#06b6d4;">
+                    🔢 Número
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#06b6d4;">Singular</span>
+<span class="label-badge" style="background:#06b6d4;">Plural</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#0ea5e9;">
+                    👥 Clusividad
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#0ea5e9;">Inclusivo</span>
+<span class="label-badge" style="background:#0ea5e9;">Exclusivo</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#f97316;">
+                    📍 Caso
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#f97316;">Ablativo</span>
+<span class="label-badge" style="background:#f97316;">Alativo</span>
+<span class="label-badge" style="background:#f97316;">Locativo</span>
+<span class="label-badge" style="background:#f97316;">Dativo</span>
+<span class="label-badge" style="background:#f97316;">Referencial</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#6366f1;">
+                    🔗 Relacional
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#6366f1;">Rel. Absoluto</span>
+<span class="label-badge" style="background:#6366f1;">Rel. Contiguo</span>
+<span class="label-badge" style="background:#6366f1;">Rel. No-Contiguo</span>
+<span class="label-badge" style="background:#6366f1;">Correferencial</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#eab308;">
+                    ⏰ Tiempo
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#eab308;">Pasado</span>
+<span class="label-badge" style="background:#eab308;">Futuro</span>
+<span class="label-badge" style="background:#eab308;">Futuro-Pasado</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#84cc16;">
+                    🔄 Aspecto
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#84cc16;">Completivo</span>
+<span class="label-badge" style="background:#84cc16;">Iterativo</span>
+<span class="label-badge" style="background:#84cc16;">Sucesivo</span>
+<span class="label-badge" style="background:#84cc16;">Habitual</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#14b8a6;">
+                    💭 Modo
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#14b8a6;">Imperativo</span>
+<span class="label-badge" style="background:#14b8a6;">Permisivo</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#ec4899;">
+                    🗣️ Voz
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#ec4899;">Causativo</span>
+<span class="label-badge" style="background:#ec4899;">Comitativo</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#f472b6;">
+                    📝 Forma Verbal
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#f472b6;">Gerundio</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#ef4444;">
+                    🚫 Polaridad
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#ef4444;">Negación</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#f59e0b;">
+                    🏠 Posesión
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#f59e0b;">Poseedor</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#a855f7;">
+                    🔧 Nominalizadores
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#a855f7;">Agentivo (-sar)</span>
+<span class="label-badge" style="background:#a855f7;">Circunstancial (-saβ)</span>
+<span class="label-badge" style="background:#a855f7;">Pasivo (-pɨr)</span>
+<span class="label-badge" style="background:#a855f7;">C-Circunstancial</span>
+<span class="label-badge" style="background:#a855f7;">Derivación Pasiva</span>
+<span class="label-badge" style="background:#a855f7;">Relativo (Nomzr)</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#64748b;">
+                    ✨ Otros Features
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#64748b;">No-Primera Mano</span>
+<span class="label-badge" style="background:#64748b;">Enfático</span>
+<span class="label-badge" style="background:#64748b;">Intensificador</span>
+<span class="label-badge" style="background:#64748b;">Privativo</span>
+<span class="label-badge" style="background:#64748b;">Reduplicación</span>
+<span class="label-badge" style="background:#64748b;">Interrogativo</span>
+<span class="label-badge" style="background:#64748b;">Correferencia</span>
+<span class="label-badge" style="background:#64748b;">Reflexivo</span>
+</div></div>
+
+            <div class="legend-family">
+                <div class="family-header" style="color:#dc2626;">
+                    📝 Categoría (UPOS)
+                </div>
+                <div class="family-labels">
+        
+<span class="label-badge" style="background:#dc2626;">Verbo</span>
+<span class="label-badge" style="background:#dc2626;">Sustantivo</span>
+<span class="label-badge" style="background:#dc2626;">Pronombre</span>
+<span class="label-badge" style="background:#dc2626;">Adverbio</span>
+<span class="label-badge" style="background:#dc2626;">Posposición</span>
+<span class="label-badge" style="background:#dc2626;">Determinante</span>
+<span class="label-badge" style="background:#dc2626;">Numeral</span>
+<span class="label-badge" style="background:#dc2626;">Partícula</span>
+<span class="label-badge" style="background:#dc2626;">Interjección</span>
+<span class="label-badge" style="background:#dc2626;">Nombre Propio</span>
+<span class="label-badge" style="background:#dc2626;">Puntuación</span>
+</div></div>
+</div></div>
+            </div>
+            
+            <div class="content">
+                <div class="examples-container">
+
+        <div class="example-card" data-index="1">
+            <div class="example-header">
+                <span class="example-number">#1</span>
+                <span class="example-stats">
+                    <span class="stat">9 spans</span>
+                    <span class="stat agreement-high">92% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    <span class="stat conflict">2 conflictos</span>
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    En Itauguá promueven "limpiar" el Congreso
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN">Itaugua</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Pronombre" data-ud="PRON" title="Pronombre → PRON"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix"><span class="span-highlight" style="background:#8b5cf622;border-bottom:2px solid #8b5cf6;" data-label="3ra Persona" data-ud="Person=3" title="3ra Persona → Person=3">o</span></span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">mokyre'ÿ</span></span></span> "<span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">omopotî</span></span>" <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN">Congreso</span></div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (2 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Itaugua"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"omokyre'ÿ"</span> → <span class="span-label" style="background:#dc2626;">Pronombre</span> <span class="span-ud">(PRON)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #8b5cf6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#8b5cf6;">3ra Persona</span> <span class="span-ud">(Person=3)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"omokyre'ÿ"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"mokyre'ÿ"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"omopotî"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"omopotî"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Congreso"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span></div>
+                
+                <div class="conflicts-section">
+                    <h4>⚠️ Conflictos (1):</h4>
+                    <div class="conflicts-list">
+                        <div class="conflict-item conflict-label"><span class="conflict-type">🏷️ Etiquetas diferentes</span> <span class="conflict-text">"Congreso"</span> [28:36]<br/><span class="conflict-details">Anotadores eligieron: <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Sustantivo (1/2)</span> vs <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Verbo (1/2)</span></span></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="2">
+            <div class="example-header">
+                <span class="example-number">#2</span>
+                <span class="example-stats">
+                    <span class="stat">27 spans</span>
+                    <span class="stat agreement-high">100% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    Con el propósito de limpiar al país de los vicios de la política, los itaugüeños expresan su repudio a los corruptos con elementos de limpieza.
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix"><span class="span-highlight" style="background:#8b5cf622;border-bottom:2px solid #8b5cf6;" data-label="3ra Persona" data-ud="Person=3" title="3ra Persona → Person=3">O</span></span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">m<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix"><span class="span-highlight" style="background:#8b5cf622;border-bottom:2px solid #8b5cf6;" data-label="3ra Persona" data-ud="Person=3" title="3ra Persona → Person=3">o</span></span>potîvo</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Pronombre" data-ud="PRON" title="Pronombre → PRON">hikuái</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">tetã</span><span class="span-highlight" style="background:#f9731622;border-bottom:2px solid #f97316;" data-label="Locativo" data-ud="Case=Loc" title="Locativo → Case=Loc">me</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">vicio</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">política</span>, <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Partícula" data-ud="PART" title="Partícula → PART">ko'ã</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">itaugüe</span><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN">ño</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">he'í<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Sufijo" data-ud="Suffix" title="Sufijo → Suffix">va</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix"><span class="span-highlight" style="background:#8b5cf622;border-bottom:2px solid #8b5cf6;" data-label="3ra Persona" data-ud="Person=3" title="3ra Persona → Person=3">o</span></span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">mbotovévo</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN">pokarême</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Pronombre" data-ud="PRON" title="Pronombre → PRON">umi</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN">elemento</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">mopotîva</span></span>.</div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (11 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"O"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #8b5cf6;"><span class="span-text">"O"</span> → <span class="span-label" style="background:#8b5cf6;">3ra Persona</span> <span class="span-ud">(Person=3)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Omopotîvo"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"mopotîvo"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #8b5cf6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#8b5cf6;">3ra Persona</span> <span class="span-ud">(Person=3)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"hikuái"</span> → <span class="span-label" style="background:#dc2626;">Pronombre</span> <span class="span-ud">(PRON)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"tetãme"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"tetã"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #f97316;"><span class="span-text">"me"</span> → <span class="span-label" style="background:#f97316;">Locativo</span> <span class="span-ud">(Case=Loc)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"vicio"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"política"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"ko'ã"</span> → <span class="span-label" style="background:#dc2626;">Partícula</span> <span class="span-ud">(PART)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"itaugüeño"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"itaugüe"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"ño"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"he'íva"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"va"</span> → <span class="span-label" style="background:#3b82f6;">Sufijo</span> <span class="span-ud">(Suffix)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #8b5cf6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#8b5cf6;">3ra Persona</span> <span class="span-ud">(Person=3)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"ombotovévo"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"mbotovévo"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"pokarême"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"umi"</span> → <span class="span-label" style="background:#dc2626;">Pronombre</span> <span class="span-ud">(PRON)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"elemento"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"omopotîva"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"mopotîva"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span></div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="3">
+            <div class="example-header">
+                <span class="example-number">#3</span>
+                <span class="example-stats">
+                    <span class="stat">4 spans</span>
+                    <span class="stat agreement-low">36% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    <span class="stat conflict">7 conflictos</span>
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    Unas 50 personas se encuentran en la plazoleta de la parroquía Virgen del Rosario de este distrito manifestando su repudio hacia los políticos corruptos.
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text">Ko'ã 50 <span class="span-highlight" style="background:#06b6d422;border-bottom:2px solid #06b6d4;" data-label="Plural" data-ud="Number=Plur" title="Plural → Number=Plur">tapicha</span> oñembyaty <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">parroquía</span> Virgen del Rosario plazoleta<span class="span-highlight" style="background:#f9731622;border-bottom:2px solid #f97316;" data-label="Locativo" data-ud="Case=Loc" title="Locativo → Case=Loc">-pe</span> ko distrito <span class="span-highlight" style="background:#06b6d422;border-bottom:2px solid #06b6d4;" data-label="Plural" data-ud="Number=Plur" title="Plural → Number=Plur">oñemanifestávo</span> político pokarême.</div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (7 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #06b6d4;"><span class="span-text">"tapicha"</span> → <span class="span-label" style="background:#06b6d4;">Plural</span> <span class="span-ud">(Number=Plur)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"parroquía"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span><span class="span-item" style="border-left:3px solid #f97316;"><span class="span-text">"-pe"</span> → <span class="span-label" style="background:#f97316;">Locativo</span> <span class="span-ud">(Case=Loc)</span></span><span class="span-item" style="border-left:3px solid #06b6d4;"><span class="span-text">"oñemanifestávo"</span> → <span class="span-label" style="background:#06b6d4;">Plural</span> <span class="span-ud">(Number=Plur)</span></span></div>
+                
+                <div class="conflicts-section">
+                    <h4>⚠️ Conflictos (6):</h4>
+                    <div class="conflicts-list">
+                        <div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Rosario"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Virgen"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Virgen del Rosario"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-label"><span class="conflict-type">🏷️ Etiquetas diferentes</span> <span class="conflict-text">"Ko'ã"</span> [0:4]<br/><span class="conflict-details">Anotadores eligieron: <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Sustantivo (1/2)</span> vs <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Verbo (1/2)</span></span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"del"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"oñembyaty"</span> <span class="span-label" style="background:#dc2626;">Verbo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="4">
+            <div class="example-header">
+                <span class="example-number">#4</span>
+                <span class="example-stats">
+                    <span class="stat">22 spans</span>
+                    <span class="stat agreement-low">65% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    <span class="stat conflict">12 conflictos</span>
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    Los itaugüeños quieren demostrar que los paraguayos pueden limpiar el parlamento y por eso se acercaron, con palos de repasar, trapos de piso, escobas y lavandina hasta la plaza parroquial.
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">Itaugüeño</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">ipotá</span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Sufijo" data-ud="Suffix" title="Sufijo → Suffix">va</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">hechauka</span></span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">ipotî</span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Sufijo" data-ud="Suffix" title="Sufijo → Suffix">ha</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">itá</span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Sufijo" data-ud="Suffix" title="Sufijo → Suffix">va</span> ha ikatúha paraguayo <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">ikatu</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">mopotî</span></span> parlamento ha <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">upé</span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Sufijo" data-ud="Suffix" title="Sufijo → Suffix">vare</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">hi'agu</span>î, <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix"><span class="span-highlight" style="background:#0ea5e922;border-bottom:2px solid #0ea5e9;" data-label="Exclusivo" data-ud="Clusivity=Ex" title="Exclusivo → Clusivity=Ex">ore</span></span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">kóva</span> yvyra ore<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">pasa</span> haguã, trapo de piso, typycha ha lavandina o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">guahë</span>va plaza parroquial <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">rová</span>i.</div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (29 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"Itaugüeño"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"oipotáva"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ipotá"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"va"</span> → <span class="span-label" style="background:#3b82f6;">Sufijo</span> <span class="span-ud">(Suffix)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"ohechauka"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"hechauka"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ipotî"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ha"</span> → <span class="span-label" style="background:#3b82f6;">Sufijo</span> <span class="span-ud">(Suffix)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"itá"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"va"</span> → <span class="span-label" style="background:#3b82f6;">Sufijo</span> <span class="span-ud">(Suffix)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ikatu"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"omopotî"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"mopotî"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"upé"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"vare"</span> → <span class="span-label" style="background:#3b82f6;">Sufijo</span> <span class="span-ud">(Suffix)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"hi'agu"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ore"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #0ea5e9;"><span class="span-text">"ore"</span> → <span class="span-label" style="background:#0ea5e9;">Exclusivo</span> <span class="span-ud">(Clusivity=Ex)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"kóva"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"pasa"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"guahë"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"rová"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span></div>
+                
+                <div class="conflicts-section">
+                    <h4>⚠️ Conflictos (11):</h4>
+                    <div class="conflicts-list">
+                        <div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Itaugüeño"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"paraguayo"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"parlamento"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-label"><span class="conflict-type">🏷️ Etiquetas diferentes</span> <span class="conflict-text">"I"</span> [0:1]<br/><span class="conflict-details">Anotadores eligieron: <span style="background:#8b5cf6;color:white;padding:2px 8px;border-radius:4px;margin:2px;">3ra Persona (1/2)</span> vs <span style="background:#3b82f6;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Prefijo (1/2)</span></span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"de"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"i"</span> <span class="span-label" style="background:#3b82f6;">Sufijo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"o"</span> <span class="span-label" style="background:#3b82f6;">Prefijo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"piso"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"oh"</span> <span class="span-label" style="background:#3b82f6;">Prefijo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"trapo"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"trapo de piso"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="5">
+            <div class="example-header">
+                <span class="example-number">#5</span>
+                <span class="example-stats">
+                    <span class="stat">8 spans</span>
+                    <span class="stat agreement-low">67% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    <span class="stat conflict">4 conflictos</span>
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    Además, piden  el rechazo del Ejecutivo de las notas reversales de Yacyretá ya aprobadas por el Congreso Nacional.
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix"><span class="span-highlight" style="background:#8b5cf622;border-bottom:2px solid #8b5cf6;" data-label="3ra Persona" data-ud="Person=3" title="3ra Persona → Person=3">O</span></span>jerúre</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">hikuái</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">Ejecutivo</span> nota reversal Yasyretã <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">monéî</span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Sufijo" data-ud="Suffix" title="Sufijo → Suffix">va</span></span> Congreso Nacional.</div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (10 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"O"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #8b5cf6;"><span class="span-text">"O"</span> → <span class="span-label" style="background:#8b5cf6;">3ra Persona</span> <span class="span-ud">(Person=3)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Ojerúre"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"hikuái"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Ejecutivo"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"omonéîva"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"monéî"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"va"</span> → <span class="span-label" style="background:#3b82f6;">Sufijo</span> <span class="span-ud">(Suffix)</span></span></div>
+                
+                <div class="conflicts-section">
+                    <h4>⚠️ Conflictos (4):</h4>
+                    <div class="conflicts-list">
+                        <div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Congreso"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Congreso Nacional."</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Nacional"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Yasyretã"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="6">
+            <div class="example-header">
+                <span class="example-number">#6</span>
+                <span class="example-stats">
+                    <span class="stat">21 spans</span>
+                    <span class="stat agreement-low">62% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    <span class="stat conflict">13 conflictos</span>
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    Personas de todas las edades, pero en su mayoría adultos mayores exigen que los corruptos como el senador Oscar González Daher, sigan el mismo camino del diputado José Maria Ibañez y renuncien a su cargo.
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">Opavave</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">tavaygua</span></span>  <span class="span-highlight" style="background:#8b5cf622;border-bottom:2px solid #8b5cf6;" data-label="3ra Persona" data-ud="Person=3" title="3ra Persona → Person=3"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix">o</span></span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">jerúre</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">senador</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">Oscar</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">González</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">Daher</span>, <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">toipykúi</span></span>  <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">diputado</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">José</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">Maria</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">Ibañez</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">rape</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">ha</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">toheja</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">cargo</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">oîha</span>.</div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (25 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"Opavave"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"tavaygua"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"tavaygua"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #8b5cf6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#8b5cf6;">3ra Persona</span> <span class="span-ud">(Person=3)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"o"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"jerúre"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"senador"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"Oscar"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"González"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"Daher"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"toipykúi"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"toipykúi"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"diputado"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"José"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"Maria"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"Ibañez"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"rape"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ha"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"toheja"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"cargo"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"oîha"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span></div>
+                
+                <div class="conflicts-section">
+                    <h4>⚠️ Conflictos (12):</h4>
+                    <div class="conflicts-list">
+                        <div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Daher"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"González"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"diputado José Maria Ibañez"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"ojerúre"</span> <span class="span-label" style="background:#dc2626;">Sustantivo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Oscar"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-label"><span class="conflict-type">🏷️ Etiquetas diferentes</span> <span class="conflict-text">"Opavave"</span> [0:7]<br/><span class="conflict-details">Anotadores eligieron: <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Sustantivo (1/2)</span> vs <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Verbo (1/2)</span></span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"senador Oscar González Daher"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Ibañez"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"senador"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"diputado"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"José"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"Maria"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="7">
+            <div class="example-header">
+                <span class="example-number">#7</span>
+                <span class="example-stats">
+                    <span class="stat">7 spans</span>
+                    <span class="stat agreement-high">100% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    Solicitarán su desafuero
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Prefijo" data-ud="Prefix" title="Prefijo → Prefix"><span class="span-highlight" style="background:#8b5cf622;border-bottom:2px solid #8b5cf6;" data-label="3ra Persona" data-ud="Person=3" title="3ra Persona → Person=3">O</span></span><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">jeruréta</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Pronombre" data-ud="PRON" title="Pronombre → PRON">hikuái</span> <span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">desafuero</span></span></div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (7 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"O"</span> → <span class="span-label" style="background:#3b82f6;">Prefijo</span> <span class="span-ud">(Prefix)</span></span><span class="span-item" style="border-left:3px solid #8b5cf6;"><span class="span-text">"O"</span> → <span class="span-label" style="background:#8b5cf6;">3ra Persona</span> <span class="span-ud">(Person=3)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Ojeruréta"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"jeruréta"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"hikuái"</span> → <span class="span-label" style="background:#dc2626;">Pronombre</span> <span class="span-ud">(PRON)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"desafuero"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"desafuero"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span></div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="8">
+            <div class="example-header">
+                <span class="example-number">#8</span>
+                <span class="example-stats">
+                    <span class="stat">7 spans</span>
+                    <span class="stat agreement-high">100% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    El diputado Ulises Quintana (Colorado Añeteté) figura entre los 15 nuevos imputados en el marco del megaoperativo contra el narcotráfico efectuado días atrás en Ciudad del Este.
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN">Diputado Ulises Quintana</span> (Colorado Añeteté) <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">oime</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Pronombre" data-ud="PRON" title="Pronombre → PRON">umi</span> 15 imputado <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">pyahu</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">megaoperativo</span> ombotenondéva narcotráfico oikóva <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Sustantivo" data-ud="NOUN" title="Sustantivo → NOUN">Ciudad del Este</span><span class="span-highlight" style="background:#f9731622;border-bottom:2px solid #f97316;" data-label="Locativo" data-ud="Case=Loc" title="Locativo → Case=Loc">-pe</span>.</div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (7 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Diputado Ulises Quintana"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"oime"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"umi"</span> → <span class="span-label" style="background:#dc2626;">Pronombre</span> <span class="span-ud">(PRON)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"pyahu"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"megaoperativo"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"Ciudad del Este"</span> → <span class="span-label" style="background:#dc2626;">Sustantivo</span> <span class="span-ud">(NOUN)</span></span><span class="span-item" style="border-left:3px solid #f97316;"><span class="span-text">"-pe"</span> → <span class="span-label" style="background:#f97316;">Locativo</span> <span class="span-ud">(Case=Loc)</span></span></div>
+                
+            </div>
+        </div>
+        
+
+        <div class="example-card" data-index="9">
+            <div class="example-header">
+                <span class="example-number">#9</span>
+                <span class="example-stats">
+                    <span class="stat">11 spans</span>
+                    <span class="stat agreement-low">65% acuerdo</span>
+                    <span class="stat">1 anotador(es)</span>
+                    <span class="stat conflict">6 conflictos</span>
+                </span>
+            </div>
+            <div class="example-content">
+                <div class="spanish-text">
+                    <span class="lang-label">🇪🇸 Español:</span>
+                    La manifestación se realiza en la plaza parroquial donde fue habilitado un micrófono abierto y se espera que lleguen más personas conforme avance la noche.
+                </div>
+                <div class="guarani-text">
+                    <span class="lang-label">🇵🇾 Guaraní:</span>
+                    <div class="annotated-text"><span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">Ko'ã</span> manifestación <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">ñemotenonde</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">plaza</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Adverbio" data-ud="ADV" title="Adverbio → ADV">parroquial</span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">ipe'áva</span></span>  micrófono abierto ha <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">ha'ãrõ</span></span> <span class="span-highlight" style="background:#dc262622;border-bottom:2px solid #dc2626;" data-label="Verbo" data-ud="VERB" title="Verbo → VERB">o<span class="span-highlight" style="background:#3b82f622;border-bottom:2px solid #3b82f6;" data-label="Raíz" data-ud="Root" title="Raíz → Root">guahëvo</span></span> pyhare  noche.</div>
+                </div>
+                <div class="annotators-list"><span class="annotator-badge">👤 unknown (14 spans)</span></div>
+                <div class="span-list"><h4>📌 Spans consensuados:</h4><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"Ko'ã"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"oñemotenonde"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ñemotenonde"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"plaza"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"parroquial"</span> → <span class="span-label" style="background:#dc2626;">Adverbio</span> <span class="span-ud">(ADV)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"oipe'áva"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ipe'áva"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"oha'ãrõ"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"ha'ãrõ"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span><span class="span-item" style="border-left:3px solid #dc2626;"><span class="span-text">"oguahëvo"</span> → <span class="span-label" style="background:#dc2626;">Verbo</span> <span class="span-ud">(VERB)</span></span><span class="span-item" style="border-left:3px solid #3b82f6;"><span class="span-text">"guahëvo"</span> → <span class="span-label" style="background:#3b82f6;">Raíz</span> <span class="span-ud">(Root)</span></span></div>
+                
+                <div class="conflicts-section">
+                    <h4>⚠️ Conflictos (5):</h4>
+                    <div class="conflicts-list">
+                        <div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"pyhare"</span> <span class="span-label" style="background:#dc2626;">Verbo</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"micrófono"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"micrófono abierto"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-missing"><span class="conflict-type">❓ Span parcial</span> <span class="conflict-text">"abierto"</span> <span class="span-label" style="background:#dc2626;">Adverbio</span><br/><span class="conflict-details">Solo 1 de 2 anotadores marcaron este span (50% acuerdo)</span></div><div class="conflict-item conflict-label"><span class="conflict-type">🏷️ Etiquetas diferentes</span> <span class="conflict-text">"manifestación"</span> [5:18]<br/><span class="conflict-details">Anotadores eligieron: <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Sustantivo (1/2)</span> vs <span style="background:#dc2626;color:white;padding:2px 8px;border-radius:4px;margin:2px;">Verbo (1/2)</span></span></div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generado con UD Guaraní Mapper | Universal Dependencies para Old Guaraní</p>
+            <p>Referencia: <a href="https://universaldependencies.org/treebanks/gn_oldtudet/index.html">UD Guarani OldTuDeT</a></p>
+        </div>
+    </div>
+</body>
+</html>

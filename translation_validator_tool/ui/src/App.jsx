@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage';
 import AdminUsers from './pages/AdminUsers';
 import AdminUsersList from './pages/AdminUsersList';
 import AdminTranslations from './pages/AdminTranslations';
+import ProdigyPage from './pages/ProdigyPage';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -62,6 +63,14 @@ const App = () => {
               element={
                 <ProtectedRoute>
                   <HistoryPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/prodigy" 
+              element={
+                <ProtectedRoute>
+                  <ProdigyPage />
                 </ProtectedRoute>
               } 
             />

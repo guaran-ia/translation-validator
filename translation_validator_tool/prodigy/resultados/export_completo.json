@@ -1,0 +1,540 @@
+{
+  "metadata": {
+    "dataset_name": "pos_character",
+    "export_date": "2025-11-28T20:19:15.252733",
+    "total_examples": 7,
+    "total_annotations": 12,
+    "average_agreement": 0.79,
+    "total_conflicts": 8,
+    "min_agreement_filter": 0.0,
+    "examples_filtered": 0
+  },
+  "examples": [
+    {
+      "text": "Itaugua omokyre'ÿ \"omopotî\" Congreso",
+      "meta": {
+        "translation_id": 1,
+        "spanish_text": "En Itauguá promueven \"limpiar\" el Congreso",
+        "direction": "sp-gn",
+        "source": "abc",
+        "is_original": true,
+        "pair_id": 2,
+        "validation_count": 0,
+        "created_at": "2025-11-13T12:40:44.444607",
+        "upos_convertible": true
+      },
+      "spans": [
+        {
+          "start": 0,
+          "end": 7,
+          "label": "NOUN",
+          "text": "Itaugua",
+          "upos": "NOUN",
+          "confidence": 1.0
+        },
+        {
+          "start": 8,
+          "end": 17,
+          "label": "VERB",
+          "text": "omokyre'ÿ",
+          "upos": "VERB",
+          "confidence": 1.0
+        },
+        {
+          "start": 28,
+          "end": 36,
+          "label": "NOUN",
+          "text": "Congreso",
+          "upos": "NOUN",
+          "confidence": 1.0
+        }
+      ],
+      "iaa_metrics": {
+        "agreement_score": 1.0,
+        "num_annotators": 1,
+        "num_conflicts": 0,
+        "conflicts": []
+      },
+      "annotators": [
+        {
+          "session_id": "pos_character-alice",
+          "timestamp": 1764159240,
+          "num_spans": 3
+        }
+      ],
+      "_task_hash": -129568764
+    },
+    {
+      "text": "Omopotîvo hikuái tetãme vicio política, ko'ã itaugüeño he'íva ombotovévo pokarême umi elemento omopotîva.",
+      "meta": {
+        "translation_id": 3,
+        "spanish_text": "Con el propósito de limpiar al país de los vicios de la política, los itaugüeños expresan su repudio a los corruptos con elementos de limpieza.",
+        "direction": "sp-gn",
+        "source": "abc",
+        "is_original": true,
+        "pair_id": 4,
+        "validation_count": 0,
+        "created_at": "2025-11-13T12:40:44.470305",
+        "upos_convertible": true
+      },
+      "spans": [
+        {
+          "start": 0,
+          "end": 9,
+          "label": "NOUN",
+          "text": "Omopotîvo",
+          "upos": "NOUN",
+          "confidence": 1.0
+        },
+        {
+          "start": 10,
+          "end": 16,
+          "label": "VERB",
+          "text": "hikuái",
+          "upos": "VERB",
+          "confidence": 1.0
+        },
+        {
+          "start": 24,
+          "end": 29,
+          "label": "VERB",
+          "text": "vicio",
+          "upos": "VERB",
+          "confidence": 1.0
+        },
+        {
+          "start": 45,
+          "end": 54,
+          "label": "PRON",
+          "text": "itaugüeño",
+          "upos": "PRON",
+          "confidence": 1.0
+        },
+        {
+          "start": 55,
+          "end": 59,
+          "label": "NOUN",
+          "text": "he'í",
+          "upos": "NOUN",
+          "confidence": 1.0
+        },
+        {
+          "start": 59,
+          "end": 61,
+          "label": "SUFF",
+          "text": "va",
+          "upos": "SUFF",
+          "confidence": 1.0
+        }
+      ],
+      "iaa_metrics": {
+        "agreement_score": 1.0,
+        "num_annotators": 1,
+        "num_conflicts": 0,
+        "conflicts": []
+      },
+      "annotators": [
+        {
+          "session_id": "pos_character-alice",
+          "timestamp": 1764159281,
+          "num_spans": 6
+        }
+      ],
+      "_task_hash": -1724281845
+    },
+    {
+      "text": "Itaugua omokyre'ÿ \"omopotî\" Congreso",
+      "meta": {
+        "translation_id": 1,
+        "spanish_text": "En Itauguá promueven \"limpiar\" el Congreso",
+        "direction": "sp-gn",
+        "source": "abc",
+        "is_original": true,
+        "pair_id": 2,
+        "validation_count": 0,
+        "created_at": "2025-11-13T12:40:44.444607",
+        "upos_convertible": true
+      },
+      "spans": [
+        {
+          "start": 0,
+          "end": 7,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "Itaugua",
+          "confidence": 1.0
+        },
+        {
+          "start": 8,
+          "end": 17,
+          "label": "VERBO",
+          "upos": "VERB",
+          "text": "omokyre'ÿ",
+          "confidence": 1.0
+        },
+        {
+          "start": 28,
+          "end": 36,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "Congreso",
+          "confidence": 1.0
+        }
+      ],
+      "iaa_metrics": {
+        "agreement_score": 1.0,
+        "num_annotators": 2,
+        "num_conflicts": 0,
+        "conflicts": []
+      },
+      "annotators": [
+        {
+          "session_id": "pos_character-alice",
+          "timestamp": 1764159571,
+          "num_spans": 3
+        },
+        {
+          "session_id": "pos_character-carlos",
+          "timestamp": 1764159580,
+          "num_spans": 3
+        }
+      ],
+      "_task_hash": -217429465
+    },
+    {
+      "text": "Ko'ã 50 tapicha oñembyaty parroquía Virgen del Rosario plazoleta-pe ko distrito oñemanifestávo político pokarême.",
+      "meta": {
+        "translation_id": 5,
+        "spanish_text": "Unas 50 personas se encuentran en la plazoleta de la parroquía Virgen del Rosario de este distrito manifestando su repudio hacia los políticos corruptos.",
+        "direction": "sp-gn",
+        "source": "abc",
+        "is_original": true,
+        "pair_id": 6,
+        "validation_count": 0,
+        "created_at": "2025-11-13T12:40:44.486163",
+        "upos_convertible": true
+      },
+      "spans": [
+        {
+          "start": 0,
+          "end": 4,
+          "label": "VERBO",
+          "upos": "VERB",
+          "text": "Ko'ã",
+          "confidence": 1.0
+        },
+        {
+          "start": 5,
+          "end": 7,
+          "label": "NUMERAL",
+          "upos": "NUM",
+          "text": "50",
+          "confidence": 1.0
+        },
+        {
+          "start": 8,
+          "end": 15,
+          "label": "VERBO",
+          "upos": "VERB",
+          "text": "tapicha",
+          "confidence": 1.0
+        },
+        {
+          "start": 36,
+          "end": 54,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "Virgen del Rosario",
+          "confidence": 1.0
+        },
+        {
+          "start": 55,
+          "end": 64,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "plazoleta",
+          "confidence": 1.0
+        },
+        {
+          "start": 64,
+          "end": 67,
+          "label": "SUFIJO",
+          "upos": "X",
+          "text": "-pe",
+          "confidence": 1.0
+        },
+        {
+          "start": 71,
+          "end": 79,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "distrito",
+          "confidence": 1.0
+        },
+        {
+          "start": 95,
+          "end": 103,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "político",
+          "confidence": 1.0
+        }
+      ],
+      "iaa_metrics": {
+        "agreement_score": 1.0,
+        "num_annotators": 2,
+        "num_conflicts": 0,
+        "conflicts": []
+      },
+      "annotators": [
+        {
+          "session_id": "pos_character-alice",
+          "timestamp": 1764159721,
+          "num_spans": 8
+        },
+        {
+          "session_id": "pos_character-carlos",
+          "timestamp": 1764159719,
+          "num_spans": 8
+        }
+      ],
+      "_task_hash": -1797664626
+    },
+    {
+      "text": "Itaugüeño oipotáva ohechauka ipotîha itáva ha ikatúha paraguayo ikatu omopotî parlamento ha upévare hi'aguî, orekóva yvyra orepasa haguã, trapo de piso, typycha ha lavandina oguahëva plaza parroquial rovái.",
+      "meta": {
+        "translation_id": 7,
+        "spanish_text": "Los itaugüeños quieren demostrar que los paraguayos pueden limpiar el parlamento y por eso se acercaron, con palos de repasar, trapos de piso, escobas y lavandina hasta la plaza parroquial.",
+        "direction": "sp-gn",
+        "source": "abc",
+        "is_original": true,
+        "pair_id": 8,
+        "validation_count": 0,
+        "created_at": "2025-11-13T12:40:44.495328",
+        "upos_convertible": true
+      },
+      "spans": [
+        {
+          "start": 0,
+          "end": 9,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "Itaugüeño",
+          "confidence": 1.0
+        },
+        {
+          "start": 78,
+          "end": 88,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "parlamento",
+          "confidence": 1.0
+        }
+      ],
+      "iaa_metrics": {
+        "agreement_score": 0.333,
+        "num_annotators": 2,
+        "num_conflicts": 4,
+        "conflicts": [
+          {
+            "start": 54,
+            "end": 63,
+            "label": "SUSTANTIVO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          },
+          {
+            "start": 164,
+            "end": 173,
+            "label": "VERBO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          },
+          {
+            "start": 153,
+            "end": 160,
+            "label": "VERBO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          },
+          {
+            "start": 64,
+            "end": 69,
+            "label": "VERBO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          }
+        ]
+      },
+      "annotators": [
+        {
+          "session_id": "pos_character-alice",
+          "timestamp": 1764159776,
+          "num_spans": 5
+        },
+        {
+          "session_id": "pos_character-bob",
+          "timestamp": 1764159735,
+          "num_spans": 3
+        }
+      ],
+      "_task_hash": -178249221
+    },
+    {
+      "text": "Opavave tavaygua  ojerúre senador Oscar González Daher, toipykúi  diputado José Maria Ibañez rape ha toheja cargo oîha.",
+      "meta": {
+        "translation_id": 9,
+        "spanish_text": "Personas de todas las edades, pero en su mayoría adultos mayores exigen que los corruptos como el senador Oscar González Daher, sigan el mismo camino del diputado José Maria Ibañez y renuncien a su cargo.",
+        "direction": "sp-gn",
+        "source": "abc",
+        "is_original": true,
+        "pair_id": 10,
+        "validation_count": 0,
+        "created_at": "2025-11-13T12:40:44.503129",
+        "upos_convertible": true
+      },
+      "spans": [
+        {
+          "start": 26,
+          "end": 54,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "senador Oscar González Daher",
+          "confidence": 1.0
+        },
+        {
+          "start": 66,
+          "end": 92,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "diputado José Maria Ibañez",
+          "confidence": 1.0
+        },
+        {
+          "start": 98,
+          "end": 100,
+          "label": "CONJUNCION",
+          "upos": "CCONJ",
+          "text": "ha",
+          "confidence": 1.0
+        }
+      ],
+      "iaa_metrics": {
+        "agreement_score": 0.6,
+        "num_annotators": 2,
+        "num_conflicts": 2,
+        "conflicts": [
+          {
+            "start": 101,
+            "end": 107,
+            "label": "VERBO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          },
+          {
+            "start": 108,
+            "end": 113,
+            "label": "ADVERBIO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          }
+        ]
+      },
+      "annotators": [
+        {
+          "session_id": "pos_character-alice",
+          "timestamp": 1764159798,
+          "num_spans": 4
+        },
+        {
+          "session_id": "pos_character-carlos",
+          "timestamp": 1764159759,
+          "num_spans": 4
+        }
+      ],
+      "_task_hash": -1519206895
+    },
+    {
+      "text": "Omopotîvo hikuái tetãme vicio política, ko'ã itaugüeño he'íva ombotovévo pokarême umi elemento omopotîva.",
+      "meta": {
+        "translation_id": 3,
+        "spanish_text": "Con el propósito de limpiar al país de los vicios de la política, los itaugüeños expresan su repudio a los corruptos con elementos de limpieza.",
+        "direction": "sp-gn",
+        "source": "abc",
+        "is_original": true,
+        "pair_id": 4,
+        "validation_count": 0,
+        "created_at": "2025-11-13T12:40:44.470305",
+        "upos_convertible": true
+      },
+      "spans": [
+        {
+          "start": 0,
+          "end": 9,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "Omopotîvo",
+          "confidence": 1.0
+        },
+        {
+          "start": 40,
+          "end": 44,
+          "label": "VERBO",
+          "upos": "VERB",
+          "text": "ko'ã",
+          "confidence": 1.0
+        },
+        {
+          "start": 45,
+          "end": 54,
+          "label": "SUSTANTIVO",
+          "upos": "X",
+          "text": "itaugüeño",
+          "confidence": 1.0
+        }
+      ],
+      "iaa_metrics": {
+        "agreement_score": 0.6,
+        "num_annotators": 2,
+        "num_conflicts": 2,
+        "conflicts": [
+          {
+            "start": 10,
+            "end": 16,
+            "label": "VERBO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          },
+          {
+            "start": 17,
+            "end": 23,
+            "label": "VERBO",
+            "agreement_ratio": 0.5,
+            "annotators_agree": 1,
+            "total_annotators": 2
+          }
+        ]
+      },
+      "annotators": [
+        {
+          "session_id": "pos_character-carlos",
+          "timestamp": 1764159612,
+          "num_spans": 4
+        },
+        {
+          "session_id": "pos_character-bob",
+          "timestamp": 1764159624,
+          "num_spans": 4
+        }
+      ],
+      "_task_hash": 1517102972
+    }
+  ]
+}

@@ -5,7 +5,7 @@ import logging
 import sys
 from pathlib import Path
 from app.config import settings
-from app.api.endpoints import auth, translations, validations, suggestions
+from app.api.endpoints import auth, translations, validations, suggestions, prodigy_auth
 
 # Add db_schema to path for database initialization
 db_schema_path = Path(__file__).parent.parent.parent / "db_schema"
@@ -61,6 +61,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
+app.include_router(prodigy_auth.router, prefix="/api", tags=["prodigy"])
 app.include_router(translations.router, prefix="/api/translations", tags=["translations"])
 app.include_router(validations.router, prefix="/api/validations", tags=["validations"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["suggestions"])
