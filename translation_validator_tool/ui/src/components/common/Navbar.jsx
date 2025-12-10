@@ -24,7 +24,7 @@ const Navbar = () => {
               <>
                 <a href="/" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Validar</a>
                 <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
-                <a href="/prodigy" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">🏷️ Prodigy</a>
+                <a href="/prodigy" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Prodigy</a>
 
                 {user.is_superuser && (
                   // Compact admin menu: one label that reveals two explicit admin links

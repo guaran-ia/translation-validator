@@ -905,6 +905,59 @@ async def get_paired_translation(
     )
 
 
+@router.get("/context/{translation_id}")
+async def get_translation_context(
+    translation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get context for a translation: previous and next original sentences.
+    
+    Returns the previous and next translations that are marked as is_original=True,
+    which helps show the surrounding context without duplicates from paired entries.
+    """
+    translation = db.query(Translation).filter(Translation.id == translation_id).first()
+    if not translation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Translation not found")
+    
+    # Get previous original translation (lower ID, is_original=True)
+    prev_translation = db.query(Translation).filter(
+        Translation.id < translation_id,
+        Translation.is_original == True
+    ).order_by(Translation.id.desc()).first()
+    
+    # Get next original translation (higher ID, is_original=True)
+    next_translation = db.query(Translation).filter(
+        Translation.id > translation_id,
+        Translation.is_original == True
+    ).order_by(Translation.id.asc()).first()
+    
+    return {
+        "previous": {
+            "id": prev_translation.id,
+            "guarani_text": prev_translation.guarani_text,
+            "spanish_text": prev_translation.spanish_text,
+            "source": prev_translation.source,
+            "direction": prev_translation.direction
+        } if prev_translation else None,
+        "current": {
+            "id": translation.id,
+            "guarani_text": translation.guarani_text,
+            "spanish_text": translation.spanish_text,
+            "source": translation.source,
+            "direction": translation.direction,
+            "is_original": translation.is_original
+        },
+        "next": {
+            "id": next_translation.id,
+            "guarani_text": next_translation.guarani_text,
+            "spanish_text": next_translation.spanish_text,
+            "source": next_translation.source,
+            "direction": next_translation.direction
+        } if next_translation else None
+    }
+
+
 @router.post("/admin/create", response_model=TranslationResponse)
 async def admin_create_translation(
     translation_data: TranslationAdminCreate,

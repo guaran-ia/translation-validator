@@ -53,12 +53,6 @@ const ProdigyPage = () => {
     }
   };
 
-  const copyToken = () => {
-    if (prodigyInfo?.token) {
-      navigator.clipboard.writeText(prodigyInfo.token);
-      alert('Token copiado al portapapeles');
-    }
-  };
 
   if (loading) {
     return (
@@ -132,8 +126,8 @@ const ProdigyPage = () => {
                 ? 'text-red-800'
                 : 'text-gray-600'
             }`}>
-              {prodigyStatus === 'online' && '✅ Prodigy Secure Proxy está activo'}
-              {prodigyStatus === 'offline' && '❌ Prodigy no está corriendo'}
+              {prodigyStatus === 'online' && '✅ Activo'}
+              {prodigyStatus === 'offline' && '❌ Inactivo'}
               {prodigyStatus === 'checking' && '🔄 Verificando estado...'}
             </span>
           </div>
@@ -245,12 +239,6 @@ const ProdigyPage = () => {
             <p className="text-sm text-gray-600 mb-2">
               Tu sesión usa autenticación JWT. El token expira en 24 horas.
             </p>
-            <button
-              onClick={copyToken}
-              className="text-xs text-indigo-600 hover:text-indigo-800 underline"
-            >
-              📋 Copiar token
-            </button>
           </div>
         </div>
 

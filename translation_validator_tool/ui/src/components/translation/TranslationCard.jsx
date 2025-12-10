@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { translationsAPI, suggestionsAPI } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
-import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowsRightLeftIcon, BookOpenIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import guaraniTooltips from '../../config/guaraniTooltips';
 
@@ -14,6 +14,42 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
   const [selectedLocal, setSelectedLocal] = useState(null);
   const [forceOriginal, setForceOriginal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  
+  // Context modal states
+  const [showContextModal, setShowContextModal] = useState(false);
+  const [contextLoading, setContextLoading] = useState(false);
+  const [prevTranslation, setPrevTranslation] = useState(null);
+  const [nextTranslation, setNextTranslation] = useState(null);
+
+  // Fetch context (previous and next original sentences)
+  const fetchContext = async () => {
+    if (!current?.id) return;
+    setContextLoading(true);
+    setPrevTranslation(null);
+    setNextTranslation(null);
+    
+    try {
+      // Use the context endpoint that returns only original sentences
+      const res = await translationsAPI.getContext(current.id);
+      const data = res?.data || res;
+      
+      if (data.previous) {
+        setPrevTranslation(data.previous);
+      }
+      if (data.next) {
+        setNextTranslation(data.next);
+      }
+    } catch (err) {
+      console.warn('Could not fetch context translations', err);
+    } finally {
+      setContextLoading(false);
+    }
+  };
+
+  const openContextModal = () => {
+    setShowContextModal(true);
+    fetchContext();
+  };
 
   useEffect(() => {
     setCurrent(translation);
@@ -191,6 +227,18 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
             <div className="flex-1 text-left">
               <span className="block text-[11px] font-medium text-gray-700">{dirState === 'sp-gn' ? 'GN' : 'ES'}</span>
             </div>
+          </div>
+        </button>
+
+        {/* Context button */}
+        <button
+          onClick={openContextModal}
+          className="px-2 py-1 rounded-sm text-[11px] border bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-200"
+          title="Ver contexto (oración anterior y siguiente)"
+        >
+          <div className="flex items-center gap-1">
+            <BookOpenIcon className="h-4 w-4 text-gray-600" />
+            <span className="text-[11px] font-medium text-gray-700">Contexto</span>
           </div>
         </button>
 
@@ -496,6 +544,130 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
           </div>
         </div>
       </div>
+
+      {/* Context Modal */}
+      {showContextModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowContextModal(false)}>
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+              <div className="flex items-center gap-2">
+                <BookOpenIcon className="h-5 w-5 text-gray-600" />
+                <h3 className="text-lg font-semibold text-gray-800">Contexto</h3>
+              </div>
+              <button
+                onClick={() => setShowContextModal(false)}
+                className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {contextLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin w-8 h-8 border-3 border-gray-300 border-t-blue-600 rounded-full"></div>
+                  <span className="ml-3 text-gray-600">Cargando contexto...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Previous Sentence */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">← Oración anterior</span>
+                      {prevTranslation && (
+                        <span className="text-xs text-gray-400">ID: {prevTranslation.id}</span>
+                      )}
+                    </div>
+                    {prevTranslation ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-xs font-medium text-blue-600">Guaraní:</span>
+                            <p className="text-gray-800">{prevTranslation.guarani_text || <em className="text-gray-400">Sin texto</em>}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs font-medium text-green-600">Español:</span>
+                            <p className="text-gray-800">{prevTranslation.spanish_text || <em className="text-gray-400">Sin texto</em>}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <span className="text-gray-400 text-sm">No hay oración anterior disponible</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Current Sentence (highlighted) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">● Oración actual</span>
+                      <span className="text-xs text-gray-400">ID: {current.id}</span>
+                    </div>
+                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 shadow-sm">
+                      <div className="space-y-2">
+                        <div>
+                          <span className="text-xs font-medium text-blue-600">Guaraní:</span>
+                          <p className="text-gray-800 font-medium">{current.guarani_text || <em className="text-gray-400">Sin texto</em>}</p>
+                        </div>
+                        <div>
+                          <span className="text-xs font-medium text-green-600">Español:</span>
+                          <p className="text-gray-800 font-medium">{current.spanish_text || <em className="text-gray-400">Sin texto</em>}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Next Sentence */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Oración siguiente →</span>
+                      {nextTranslation && (
+                        <span className="text-xs text-gray-400">ID: {nextTranslation.id}</span>
+                      )}
+                    </div>
+                    {nextTranslation ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-xs font-medium text-blue-600">Guaraní:</span>
+                            <p className="text-gray-800">{nextTranslation.guarani_text || <em className="text-gray-400">Sin texto</em>}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs font-medium text-green-600">Español:</span>
+                            <p className="text-gray-800">{nextTranslation.spanish_text || <em className="text-gray-400">Sin texto</em>}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <span className="text-gray-400 text-sm">No hay oración siguiente disponible</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowContextModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
