@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { translationsAPI, suggestionsAPI } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
-import { ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
+import { ArrowsRightLeftIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { CheckIcon } from '@heroicons/react/24/solid';
 import guaraniTooltips from '../../config/guaraniTooltips';
+import ContextModal from './ContextModal';
 
 const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidateSuggestion, selectedSuggestion, onClearSelection, onCategoryChange }) => {
   const { user } = useAuth();
@@ -14,6 +15,7 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
   const [selectedLocal, setSelectedLocal] = useState(null);
   const [forceOriginal, setForceOriginal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showContextModal, setShowContextModal] = useState(false);
 
   useEffect(() => {
     setCurrent(translation);
@@ -84,6 +86,23 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
       abortController.abort();
     };
   }, [translation?.id]); // Only depend on translation.id to avoid unnecessary re-runs
+
+  // Keyboard shortcut for context modal (Ctrl+Shift+C)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        setShowContextModal(prev => !prev);
+      }
+      // Also ESC to close
+      if (e.key === 'Escape' && showContextModal) {
+        setShowContextModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showContextModal]);
 
   if (!current) {
     return (
@@ -171,6 +190,25 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
         <h2 className="text-xl font-semibold text-gray-800">Evalúa la siguiente traducción</h2>
         {/*<div className="text-xs text-gray-500 mt-1">ID: {current.id}</div>*/}
       </div>
+
+      {/* Context Button */}
+      <div className="flex justify-center mb-3">
+        <button
+          onClick={() => setShowContextModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 border border-gray-300 bg-white hover:bg-gray-50 rounded text-xs"
+          title="Ver contexto (Ctrl+Shift+C)"
+        >
+          <DocumentTextIcon className="h-4 w-4" />
+          <span>Contexto</span>
+        </button>
+      </div>
+
+      {/* Context Modal */}
+      <ContextModal 
+        translation={current}
+        isOpen={showContextModal}
+        onClose={() => setShowContextModal(false)}
+      />
 
       <div className="mt-3 flex items-center justify-center gap-2">
         <button

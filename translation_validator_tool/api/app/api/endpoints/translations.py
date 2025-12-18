@@ -313,6 +313,68 @@ async def get_random_translation(
     )
 
 
+@router.get("/context/{translation_id}")
+async def get_translation_context(
+    translation_id: int,
+    before: int = 2,
+    after: int = 2,
+    db: Session = Depends(get_db)
+):
+    """
+    Get contextual translations around a specific translation ID.
+    Returns the current translation plus surrounding translations for context.
+    
+    Args:
+        translation_id: The ID of the current translation
+        before: Number of translations before the current one (default 2)
+        after: Number of translations after the current one (default 2)
+    
+    Returns:
+        Dict with current translation and context translations
+    """
+    # Get the current translation
+    current = db.query(Translation).filter(Translation.id == translation_id).first()
+    
+    if not current:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Translation not found"
+        )
+    
+    # Get translations before (by ID order, same source if possible)
+    translations_before = db.query(Translation).filter(
+        Translation.id < translation_id,
+        Translation.source == current.source,
+        Translation.is_original == True
+    ).order_by(Translation.id.desc()).limit(before).all()
+    
+    # Reverse to get chronological order
+    translations_before = list(reversed(translations_before))
+    
+    # Get translations after
+    translations_after = db.query(Translation).filter(
+        Translation.id > translation_id,
+        Translation.source == current.source,
+        Translation.is_original == True
+    ).order_by(Translation.id.asc()).limit(after).all()
+    
+    def translation_to_dict(t):
+        return {
+            "id": t.id,
+            "guarani_text": t.guarani_text,
+            "spanish_text": t.spanish_text,
+            "source": t.source,
+            "direction": t.direction
+        }
+    
+    return {
+        "current": translation_to_dict(current),
+        "before": [translation_to_dict(t) for t in translations_before],
+        "after": [translation_to_dict(t) for t in translations_after],
+        "total_context": len(translations_before) + 1 + len(translations_after)
+    }
+
+
 @router.get("/{translation_id}", response_model=TranslationWithStats)
 async def get_translation(
     translation_id: int,

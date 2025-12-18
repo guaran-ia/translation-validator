@@ -520,22 +520,22 @@ def get_family_labels(family_key: str) -> list:
 # CLAVES DE FAMILIA PARA CLI
 # =============================================================================
 FAMILY_KEYS = {
-    "morfema": "📦 Morfemas",
-    "persona": "👤 Persona",
-    "numero": "🔢 Número",
-    "clusividad": "👥 Clusividad",
-    "caso": "📍 Caso",
-    "relacional": "🔗 Relacional",
-    "tiempo": "⏰ Tiempo",
-    "aspecto": "🔄 Aspecto",
-    "modo": "💭 Modo",
-    "voz": "🗣️ Voz",
-    "forma": "📝 Forma Verbal",
-    "polaridad": "🚫 Polaridad",
-    "posesion": "🏠 Posesión",
-    "nominalizador": "🔧 Nominalizadores",
-    "otros": "✨ Otros Features",
-    "categoria": "📝 Categoría (UPOS)",
+    "morfema": "Morfemas",
+    "persona": "Persona",
+    "numero": "Número",
+    "clusividad": "Clusividad",
+    "caso": "Caso",
+    "relacional": "Relacional",
+    "tiempo": "Tiempo",
+    "aspecto": "Aspecto",
+    "modo": "Modo",
+    "voz": "Voz",
+    "forma": "Forma Verbal",
+    "polaridad": "Polaridad",
+    "posesion": "Posesión",
+    "nominalizador": "Nominalizadores",
+    "otros": "Otros Features",
+    "categoria": "Categoría (UPOS)",
 }
 
 # =============================================================================

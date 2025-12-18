@@ -1,8 +1,10 @@
 """
-Script para convertir anotaciones entre etiquetas internas y UPOS
+Script para convertir anotaciones entre etiquetas amigables y Universal Dependencies
 
-Convierte archivos JSONL/JSON entre etiquetas internas (español) y 
-Universal Dependencies (UPOS), manteniendo toda la metadata y estructura.
+Convierte archivos JSONL/JSON entre etiquetas amigables (español) y 
+Universal Dependencies (UD), manteniendo toda la metadata y estructura.
+
+Usa ud_guarani_mapper.py como fuente única de verdad para el mapeo.
 """
 
 import json
@@ -10,18 +12,88 @@ import sys
 from pathlib import Path
 from typing import Dict, List
 
-# Importar el módulo de mapeo
-from pos_tag_mapper import (
-    convert_spans_to_upos,
-    convert_spans_to_internal,
-    INTERNAL_TO_UPOS,
-    UPOS_TO_INTERNAL
+# Importar el módulo de mapeo UD (fuente única de verdad)
+from ud_guarani_mapper import (
+    FRIENDLY_TO_UD,
+    UD_TO_FRIENDLY,
+    map_label,
+    map_labels_batch,
+    is_valid_ud,
+    VALID_UPOS,
+    VALID_FEATURES,
 )
 
 
-def convert_jsonl_to_upos(input_file: str, output_file: str, verbose: bool = False):
+def convert_spans_to_ud(spans: list) -> list:
     """
-    Convierte archivo JSONL con etiquetas internas a UPOS.
+    Convierte una lista de spans con etiquetas amigables a UD.
+    
+    Args:
+        spans: Lista de dicts con keys 'start', 'end', 'label', 'text'
+        
+    Returns:
+        Nueva lista de spans con etiquetas UD
+    """
+    converted = []
+    for span in spans:
+        new_span = span.copy()
+        friendly_label = span.get("label", "")
+        
+        try:
+            ud_label = map_label(friendly_label, direction="to_ud")
+            new_span["ud_label"] = ud_label
+            new_span["original_label"] = friendly_label
+            new_span["label"] = ud_label
+        except Exception:
+            # Si la etiqueta ya está en formato UD, mantenerla
+            if is_valid_ud(friendly_label):
+                new_span["ud_label"] = friendly_label
+                new_span["original_label"] = friendly_label
+            else:
+                new_span["ud_label"] = "X"
+                new_span["original_label"] = friendly_label
+                new_span["label"] = "X"
+                new_span["conversion_error"] = f"Etiqueta no reconocida: {friendly_label}"
+        
+        converted.append(new_span)
+    
+    return converted
+
+
+def convert_spans_to_friendly(spans: list) -> list:
+    """
+    Convierte una lista de spans con etiquetas UD a amigables (español).
+    
+    Args:
+        spans: Lista de dicts con keys 'start', 'end', 'label', 'text'
+        
+    Returns:
+        Nueva lista de spans con etiquetas amigables
+    """
+    converted = []
+    for span in spans:
+        new_span = span.copy()
+        ud_label = span.get("label", "")
+        
+        try:
+            friendly_label = map_label(ud_label, direction="to_friendly")
+            new_span["friendly_label"] = friendly_label
+            new_span["ud_label"] = ud_label
+            new_span["label"] = friendly_label
+        except Exception:
+            # Mantener original si no se puede convertir
+            new_span["friendly_label"] = ud_label
+            new_span["ud_label"] = ud_label
+            new_span["conversion_error"] = f"Sin mapeo amigable para: {ud_label}"
+        
+        converted.append(new_span)
+    
+    return converted
+
+
+def convert_jsonl_to_ud(input_file: str, output_file: str, verbose: bool = False):
+    """
+    Convierte archivo JSONL con etiquetas amigables a UD.
     
     Args:
         input_file: Ruta al archivo JSONL de entrada
@@ -41,7 +113,7 @@ def convert_jsonl_to_upos(input_file: str, output_file: str, verbose: bool = Fal
                 # Convertir spans si existen
                 if 'spans' in example and example['spans']:
                     original_spans = example['spans']
-                    converted_spans = convert_spans_to_upos(original_spans)
+                    converted_spans = convert_spans_to_ud(original_spans)
                     example['spans'] = converted_spans
                     
                     span_count += len(converted_spans)
@@ -51,15 +123,15 @@ def convert_jsonl_to_upos(input_file: str, output_file: str, verbose: bool = Fal
                         print(f"Línea {line_num}: {len(original_spans)} spans convertidos")
                         for span in converted_spans:
                             orig = span.get('original_label', '')
-                            upos = span.get('upos', '')
+                            ud = span.get('ud_label', '')
                             text = span.get('text', '')
-                            print(f"  • '{text}': {orig} → {upos}")
+                            print(f"  • '{text}': {orig} → {ud}")
                 
                 # Agregar metadata de conversión
                 if 'meta' not in example:
                     example['meta'] = {}
-                example['meta']['converted_to_upos'] = True
-                example['meta']['conversion_source'] = 'internal_spanish'
+                example['meta']['converted_to_ud'] = True
+                example['meta']['conversion_source'] = 'friendly_spanish'
                 
                 # Escribir línea convertida
                 f_out.write(json.dumps(example, ensure_ascii=False) + '\n')
@@ -77,9 +149,9 @@ def convert_jsonl_to_upos(input_file: str, output_file: str, verbose: bool = Fal
     print(f"  • Archivo de salida: {output_file}")
 
 
-def convert_jsonl_to_internal(input_file: str, output_file: str, verbose: bool = False):
+def convert_jsonl_to_friendly(input_file: str, output_file: str, verbose: bool = False):
     """
-    Convierte archivo JSONL con etiquetas UPOS a internas (español).
+    Convierte archivo JSONL con etiquetas UD a amigables (español).
     
     Args:
         input_file: Ruta al archivo JSONL de entrada
@@ -99,7 +171,7 @@ def convert_jsonl_to_internal(input_file: str, output_file: str, verbose: bool =
                 # Convertir spans si existen
                 if 'spans' in example and example['spans']:
                     original_spans = example['spans']
-                    converted_spans = convert_spans_to_internal(original_spans)
+                    converted_spans = convert_spans_to_friendly(original_spans)
                     example['spans'] = converted_spans
                     
                     span_count += len(converted_spans)
@@ -108,16 +180,16 @@ def convert_jsonl_to_internal(input_file: str, output_file: str, verbose: bool =
                     if verbose:
                         print(f"Línea {line_num}: {len(original_spans)} spans convertidos")
                         for span in converted_spans:
-                            upos = span.get('upos', '')
-                            internal = span.get('internal_label', '')
+                            ud = span.get('ud_label', '')
+                            friendly = span.get('friendly_label', '')
                             text = span.get('text', '')
-                            print(f"  • '{text}': {upos} → {internal}")
+                            print(f"  • '{text}': {ud} → {friendly}")
                 
                 # Agregar metadata de conversión
                 if 'meta' not in example:
                     example['meta'] = {}
-                example['meta']['converted_to_internal'] = True
-                example['meta']['conversion_source'] = 'upos'
+                example['meta']['converted_to_friendly'] = True
+                example['meta']['conversion_source'] = 'ud'
                 
                 # Escribir línea convertida
                 f_out.write(json.dumps(example, ensure_ascii=False) + '\n')
@@ -135,14 +207,14 @@ def convert_jsonl_to_internal(input_file: str, output_file: str, verbose: bool =
     print(f"  • Archivo de salida: {output_file}")
 
 
-def convert_json_report(input_file: str, output_file: str, direction: str = "to_upos", verbose: bool = False):
+def convert_json_report(input_file: str, output_file: str, direction: str = "to_ud", verbose: bool = False):
     """
     Convierte archivo JSON (reporte con metadata) entre formatos.
     
     Args:
         input_file: Ruta al archivo JSON de entrada
         output_file: Ruta al archivo JSON de salida
-        direction: 'to_upos' o 'to_internal'
+        direction: 'to_ud' o 'to_friendly'
         verbose: Mostrar detalles de conversión
     """
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -155,10 +227,10 @@ def convert_json_report(input_file: str, output_file: str, direction: str = "to_
     if 'examples' in report:
         for example in report['examples']:
             if 'spans' in example and example['spans']:
-                if direction == "to_upos":
-                    example['spans'] = convert_spans_to_upos(example['spans'])
+                if direction == "to_ud":
+                    example['spans'] = convert_spans_to_ud(example['spans'])
                 else:
-                    example['spans'] = convert_spans_to_internal(example['spans'])
+                    example['spans'] = convert_spans_to_friendly(example['spans'])
                 
                 span_count += len(example['spans'])
                 converted_count += 1
@@ -167,7 +239,7 @@ def convert_json_report(input_file: str, output_file: str, direction: str = "to_
     if 'metadata' not in report:
         report['metadata'] = {}
     
-    report['metadata']['label_format'] = 'upos' if direction == "to_upos" else 'internal_spanish'
+    report['metadata']['label_format'] = 'ud' if direction == "to_ud" else 'friendly_spanish'
     report['metadata']['conversion_direction'] = direction
     
     # Guardar archivo convertido
@@ -238,13 +310,17 @@ def show_statistics(file_path: str):
         
         # Detectar formato
         sample_labels = set(label_counts.keys())
-        is_upos = any(label in ['VERB', 'NOUN', 'ADJ', 'ADV', 'PRON'] for label in sample_labels)
-        is_internal = any(label in ['VERBO', 'SUSTANTIVO', 'SUJETO', 'OBJETO'] for label in sample_labels)
+        # Etiquetas UD típicas
+        ud_tags = VALID_UPOS | VALID_FEATURES
+        is_ud = any(label in ud_tags for label in sample_labels)
+        # Etiquetas amigables típicas
+        friendly_tags = {'Verbo', 'Sustantivo', 'Pronombre', 'Adverbio', '1ra Persona', 'Singular'}
+        is_friendly = any(label in friendly_tags for label in sample_labels)
         
-        if is_upos:
-            print("✓ Formato detectado: UPOS (Universal Dependencies)")
-        elif is_internal:
-            print("✓ Formato detectado: INTERNO (Español)")
+        if is_ud and not is_friendly:
+            print("✓ Formato detectado: UD (Universal Dependencies)")
+        elif is_friendly:
+            print("✓ Formato detectado: AMIGABLE (Español)")
         else:
             print("⚠ Formato no detectado claramente")
     
@@ -256,7 +332,7 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Convertir anotaciones entre etiquetas internas (español) y UPOS"
+        description="Convertir anotaciones entre etiquetas amigables (español) y UD"
     )
     
     parser.add_argument(
@@ -271,9 +347,9 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--direction", "-d",
-        choices=["to_upos", "to_internal"],
-        default="to_upos",
-        help="Dirección de conversión (por defecto: to_upos)"
+        choices=["to_ud", "to_friendly"],
+        default="to_ud",
+        help="Dirección de conversión (por defecto: to_ud)"
     )
     
     parser.add_argument(
@@ -293,7 +369,7 @@ if __name__ == "__main__":
     # Determinar archivo de salida
     if not args.output:
         input_path = Path(args.input)
-        suffix = "_upos" if args.direction == "to_upos" else "_internal"
+        suffix = "_ud" if args.direction == "to_ud" else "_friendly"
         args.output = str(input_path.parent / f"{input_path.stem}{suffix}{input_path.suffix}")
     
     # Mostrar estadísticas si se solicita
@@ -307,10 +383,10 @@ if __name__ == "__main__":
     
     try:
         if file_ext == '.jsonl':
-            if args.direction == "to_upos":
-                convert_jsonl_to_upos(args.input, args.output, args.verbose)
+            if args.direction == "to_ud":
+                convert_jsonl_to_ud(args.input, args.output, args.verbose)
             else:
-                convert_jsonl_to_internal(args.input, args.output, args.verbose)
+                convert_jsonl_to_friendly(args.input, args.output, args.verbose)
         
         elif file_ext == '.json':
             convert_json_report(args.input, args.output, args.direction, args.verbose)

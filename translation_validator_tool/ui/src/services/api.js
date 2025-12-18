@@ -75,6 +75,8 @@ export const translationsAPI = {
     api.get(`/translations/${id}`),
   getPair: (id) =>
     api.get(`/translations/pair/${id}`),
+  getContext: (id, before = 2, after = 2) =>
+    api.get(`/translations/context/${id}?before=${before}&after=${after}`),
   getNext: () => 
     api.get('/translations/next'),
   getNextSuitable: () =>
