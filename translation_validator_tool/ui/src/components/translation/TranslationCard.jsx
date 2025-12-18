@@ -15,7 +15,42 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
   const [selectedLocal, setSelectedLocal] = useState(null);
   const [forceOriginal, setForceOriginal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  
+  // Context modal states
   const [showContextModal, setShowContextModal] = useState(false);
+  const [contextLoading, setContextLoading] = useState(false);
+  const [prevTranslation, setPrevTranslation] = useState(null);
+  const [nextTranslation, setNextTranslation] = useState(null);
+
+  // Fetch context (previous and next original sentences)
+  const fetchContext = async () => {
+    if (!current?.id) return;
+    setContextLoading(true);
+    setPrevTranslation(null);
+    setNextTranslation(null);
+    
+    try {
+      // Use the context endpoint that returns only original sentences
+      const res = await translationsAPI.getContext(current.id);
+      const data = res?.data || res;
+      
+      if (data.previous) {
+        setPrevTranslation(data.previous);
+      }
+      if (data.next) {
+        setNextTranslation(data.next);
+      }
+    } catch (err) {
+      console.warn('Could not fetch context translations', err);
+    } finally {
+      setContextLoading(false);
+    }
+  };
+
+  const openContextModal = () => {
+    setShowContextModal(true);
+    fetchContext();
+  };
 
   useEffect(() => {
     setCurrent(translation);
@@ -231,13 +266,6 @@ const TranslationCard = ({ translation, onDirectionChange, onReplace, onValidate
             </div>
           </div>
         </button>
-
-        {isSaving && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <div className="animate-spin w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
-            <span>Cambiando...</span>
-          </div>
-        )}
       </div>
 
       {/* Suggestions: show above the sentences now */}
