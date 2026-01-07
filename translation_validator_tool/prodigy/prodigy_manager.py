@@ -28,6 +28,7 @@ import json
 import time
 import signal
 import socket
+import asyncio
 import argparse
 import subprocess
 from datetime import datetime, timedelta
@@ -71,6 +72,25 @@ SERVICE_PORTS = {
     "relations": 8082,
 }
 
+# Usuarios permitidos por tipo de servicio (desde .env)
+def parse_validators_list(env_var: str, default: str) -> list:
+    """Parsea una lista de validadores desde variable de entorno"""
+    value = os.getenv(env_var, default).strip('"').strip("'")
+    return [v.strip() for v in value.split(",") if v.strip()]
+
+SERVICE_VALIDATORS = {
+    "pos": parse_validators_list("VALIDATORS_POS", "alice,bob"),
+    "features": parse_validators_list("VALIDATORS_FEATURES", "carlos,elena"),
+    "relations": parse_validators_list("VALIDATORS_RELATIONS", "marcos,nicolas"),
+}
+
+# Lista global de todas las sesiones permitidas
+ALL_ALLOWED_SESSIONS = list(set(
+    SERVICE_VALIDATORS["pos"] + 
+    SERVICE_VALIDATORS["features"] + 
+    SERVICE_VALIDATORS["relations"]
+))
+
 # Estado global para múltiples servicios
 class ProdigyServiceState:
     def __init__(self):
@@ -92,6 +112,44 @@ prodigy_services: Dict[str, ProdigyServiceState] = {
 # Para compatibilidad con proxy single-service
 prodigy_state = ProdigyServiceState()
 validated_tokens: Dict[str, dict] = {}
+
+# =============================================================================
+# CONFIGURACIÓN DE BUFFER GLOBAL
+# =============================================================================
+# Archivo de configuración persistente
+CONFIG_FILE = BASE_DIR / "data" / "prodigy_config.json"
+
+# Configuración por defecto del buffer
+DEFAULT_BUFFER_CONFIG = {
+    "instant_submit": False,
+    "batch_size": 3,
+}
+
+def load_buffer_config() -> dict:
+    """Carga la configuración del buffer desde archivo"""
+    try:
+        if CONFIG_FILE.exists():
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                # Merge con defaults para asegurar todas las claves
+                return {**DEFAULT_BUFFER_CONFIG, **config}
+    except Exception as e:
+        print(f"[CONFIG] Error cargando configuración: {e}")
+    return DEFAULT_BUFFER_CONFIG.copy()
+
+def save_buffer_config(config: dict) -> bool:
+    """Guarda la configuración del buffer a archivo"""
+    try:
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"[CONFIG] Error guardando configuración: {e}")
+        return False
+
+# Cargar configuración al inicio
+buffer_config: Dict[str, Any] = load_buffer_config()
 
 
 # =============================================================================
@@ -209,6 +267,16 @@ def get_error_page(title: str, message: str, show_login: bool = True) -> str:
 # API DE GESTIÓN
 # =============================================================================
 
+@app.get("/api/validators")
+async def get_validators_config():
+    """Retorna la configuración de validadores por tipo de servicio"""
+    return {
+        "validators_by_service": SERVICE_VALIDATORS,
+        "all_validators": ALL_ALLOWED_SESSIONS,
+        "services": list(SERVICE_VALIDATORS.keys()),
+    }
+
+
 @app.get("/api/status")
 async def get_status(request: Request):
     """Estado del sistema"""
@@ -220,12 +288,170 @@ async def get_status(request: Request):
         "user": user.get("username") if user else None,
         "prodigy": {
             "running": prodigy_state.process is not None and prodigy_state.process.poll() is None,
-            "type": prodigy_state.type,
+            "type": prodigy_state.annotation_type,
             "port": prodigy_state.port,
             "config": prodigy_state.config,
             "started_at": prodigy_state.started_at.isoformat() if prodigy_state.started_at else None
         }
     }
+
+
+# =============================================================================
+# API DE PROGRESO PARA BATCH MONITOR
+# =============================================================================
+
+@app.get("/api/batch-progress/{annotation_type}/{batch}")
+async def get_batch_progress(annotation_type: str, batch: int, request: Request):
+    """
+    Obtiene el progreso de anotaciones para un batch específico.
+    
+    Retorna el número de anotaciones por sesión/anotador.
+    """
+    token = get_token_from_request(request)
+    # Permitir acceso interno del monitor sin token válido
+    is_internal = token == "internal-monitor"
+    user = await validate_jwt_token(token) if token and not is_internal else None
+    
+    if not user and not is_internal:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    batch_str = str(batch).zfill(3)
+    dataset_name = f"guarani_{annotation_type}_batch_{batch_str}"
+    
+    try:
+        # Obtener anotaciones desde la DB de Prodigy
+        result = subprocess.run(
+            [sys.executable, "-m", "prodigy", "db-out", dataset_name],
+            capture_output=True,
+            text=True,
+            cwd=str(BASE_DIR),
+            timeout=30,
+        )
+        
+        if result.returncode != 0:
+            return {
+                "dataset": dataset_name,
+                "batch": batch,
+                "annotation_type": annotation_type,
+                "progress": {},
+                "total_annotations": 0,
+                "error": "Dataset no existe o está vacío"
+            }
+        
+        # Contar anotaciones por sesión
+        counts = {}
+        total = 0
+        for line in result.stdout.strip().split("\n"):
+            if not line:
+                continue
+            try:
+                annotation = json.loads(line)
+                session_id = annotation.get("_session_id", "default")
+                answer = annotation.get("answer", "")
+                
+                if answer in ["accept", "reject"]:
+                    counts[session_id] = counts.get(session_id, 0) + 1
+                    total += 1
+            except json.JSONDecodeError:
+                continue
+        
+        return {
+            "dataset": dataset_name,
+            "batch": batch,
+            "annotation_type": annotation_type,
+            "progress": counts,
+            "total_annotations": total,
+            "sentences_per_batch": 50,
+        }
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Timeout obteniendo anotaciones")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/batch-status")
+async def get_all_batch_status(request: Request):
+    """
+    Obtiene el estado de todos los servicios de batch actuales.
+    Incluye información de progreso para el batch monitor.
+    """
+    token = get_token_from_request(request)
+    is_internal = token == "internal-monitor"
+    user = await validate_jwt_token(token) if token and not is_internal else None
+    
+    if not user and not is_internal:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    status = {}
+    
+    for service_type, state in prodigy_services.items():
+        is_running = state.process and state.process.poll() is None
+        
+        status[service_type] = {
+            "running": is_running,
+            "port": state.port if is_running else None,
+            "batch": state.batch if is_running else None,
+            "started_at": state.started_at.isoformat() if state.started_at else None,
+            "config": state.config if is_running else None,
+        }
+    
+    return {
+        "services": status,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@app.post("/api/auto-advance/{annotation_type}")
+async def auto_advance_batch(annotation_type: str, request: Request):
+    """
+    Avanza automáticamente al siguiente batch.
+    Usado por el batch_monitor cuando se completa un batch.
+    """
+    token = get_token_from_request(request)
+    is_internal = token == "internal-monitor"
+    user = await validate_jwt_token(token) if token and not is_internal else None
+    
+    if not user and not is_internal:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    if annotation_type not in SERVICE_PORTS:
+        raise HTTPException(status_code=400, detail=f"Tipo de anotación desconocido: {annotation_type}")
+    
+    # Obtener batch actual
+    state = prodigy_services.get(annotation_type)
+    current_batch = state.batch if state else 1
+    next_batch = current_batch + 1
+    
+    if next_batch > 60:  # Máximo de batches
+        return {
+            "success": False,
+            "message": f"Todos los batches de {annotation_type} completados",
+            "current_batch": current_batch,
+            "next_batch": None,
+        }
+    
+    # Detener servicio actual
+    await stop_service_internal(annotation_type)
+    await asyncio.sleep(2)
+    
+    # Iniciar siguiente batch
+    port = SERVICE_PORTS[annotation_type]
+    config = get_prodigy_config_for_service(annotation_type, next_batch)
+    success = start_prodigy_process_for_service(annotation_type, config, port, next_batch)
+    
+    if success:
+        return {
+            "success": True,
+            "message": f"Batch {next_batch} de {annotation_type} iniciado",
+            "previous_batch": current_batch,
+            "current_batch": next_batch,
+        }
+    else:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error iniciando batch {next_batch}"
+        )
 
 
 @app.post("/api/start")
@@ -313,9 +539,10 @@ async def get_running_services(request: Request):
 async def stop_specific_service(service: str, request: Request):
     """Detiene un servicio específico de Prodigy"""
     token = get_token_from_request(request)
-    user = await validate_jwt_token(token)
+    is_internal = token == "internal-monitor"
+    user = await validate_jwt_token(token) if token and not is_internal else None
     
-    if not user:
+    if not user and not is_internal:
         raise HTTPException(status_code=401, detail="No autorizado")
     
     if service not in prodigy_services:
@@ -330,9 +557,10 @@ async def stop_specific_service(service: str, request: Request):
 async def start_prodigy_service(request: Request):
     """Inicia un servicio específico de Prodigy (para la UI)"""
     token = get_token_from_request(request)
-    user = await validate_jwt_token(token)
+    is_internal = token == "internal-monitor"
+    user = await validate_jwt_token(token) if token and not is_internal else None
     
-    if not user:
+    if not user and not is_internal:
         raise HTTPException(status_code=401, detail="No autorizado")
     
     body = await request.json()
@@ -361,13 +589,14 @@ async def start_prodigy_service(request: Request):
     success = start_prodigy_process_for_service(annotation_type, config, port, batch_number)
     
     if success:
+        session_name = user.get('username', 'default') if user else 'system'
         return {
             "success": True,
             "message": f"Servicio {annotation_type} iniciado para lote {batch_number}",
             "port": port,
             "service": annotation_type,
             "batch": batch_number,
-            "url": f"http://localhost:{PROXY_PORT}/?service={annotation_type}&session={user.get('username', 'default')}"
+            "url": f"http://localhost:{PROXY_PORT}/?service={annotation_type}&session={session_name}"
         }
     else:
         raise HTTPException(status_code=500, detail=f"Error iniciando servicio {annotation_type}")
@@ -432,6 +661,109 @@ async def get_annotation_types():
         ],
         "total_batches": 60,
         "sentences_per_batch": 50
+    }
+
+
+# =============================================================================
+# API DE CONFIGURACIÓN DE BUFFER
+# =============================================================================
+
+@app.get("/api/config/buffer")
+async def get_buffer_config(request: Request):
+    """
+    Obtiene la configuración actual del buffer de anotaciones.
+    Accesible para cualquier usuario autenticado.
+    """
+    token = get_token_from_request(request)
+    user = await validate_jwt_token(token)
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    return {
+        "success": True,
+        "config": buffer_config,
+        "defaults": DEFAULT_BUFFER_CONFIG,
+    }
+
+
+@app.post("/api/config/buffer")
+async def update_buffer_config(request: Request):
+    """
+    Actualiza la configuración del buffer de anotaciones.
+    Solo accesible para administradores (is_superuser).
+    
+    Body esperado:
+    {
+        "instant_submit": true/false,
+        "batch_size": 1-20
+    }
+    """
+    global buffer_config
+    
+    token = get_token_from_request(request)
+    user = await validate_jwt_token(token)
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    # Solo admins pueden cambiar configuración
+    if not user.get("is_superuser", False):
+        raise HTTPException(status_code=403, detail="Solo administradores pueden modificar la configuración")
+    
+    try:
+        body = await request.json()
+    except:
+        raise HTTPException(status_code=400, detail="JSON inválido")
+    
+    # Validar y actualizar campos
+    new_config = buffer_config.copy()
+    
+    if "instant_submit" in body:
+        new_config["instant_submit"] = bool(body["instant_submit"])
+    
+    if "batch_size" in body:
+        batch_size = int(body["batch_size"])
+        if batch_size < 1 or batch_size > 20:
+            raise HTTPException(status_code=400, detail="batch_size debe estar entre 1 y 20")
+        new_config["batch_size"] = batch_size
+    
+    # Guardar a archivo
+    if save_buffer_config(new_config):
+        buffer_config = new_config
+        return {
+            "success": True,
+            "message": "Configuración actualizada",
+            "config": buffer_config,
+        }
+    else:
+        raise HTTPException(status_code=500, detail="Error guardando configuración")
+
+
+@app.post("/api/config/buffer/reset")
+async def reset_buffer_config(request: Request):
+    """
+    Restablece la configuración del buffer a valores por defecto.
+    Solo accesible para administradores.
+    """
+    global buffer_config
+    
+    token = get_token_from_request(request)
+    user = await validate_jwt_token(token)
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    if not user.get("is_superuser", False):
+        raise HTTPException(status_code=403, detail="Solo administradores pueden modificar la configuración")
+    
+    buffer_config = DEFAULT_BUFFER_CONFIG.copy()
+    save_buffer_config(buffer_config)
+    
+    return {
+        "success": True,
+        "message": "Configuración restablecida a valores por defecto",
+        "config": buffer_config,
     }
 
 
@@ -655,7 +987,7 @@ def get_waiting_page() -> str:
             </div>
             
             <a href="http://localhost:5173/prodigy" class="btn">
-                Ir al Dashboard →
+                Ir al Dashboard ->
             </a>
         </div>
     </body>
@@ -748,6 +1080,11 @@ def start_prodigy_process_for_service(service_type: str, config: dict, port: int
     env["PRODIGY_PORT"] = str(port)
     env["PRODIGY_HOST"] = "127.0.0.1"
     
+    # Configurar sesiones permitidas para este tipo de servicio
+    allowed_sessions = SERVICE_VALIDATORS.get(service_type, ALL_ALLOWED_SESSIONS)
+    env["PRODIGY_ALLOWED_SESSIONS"] = ",".join(allowed_sessions)
+    print(f"[PRODIGY-{service_type.upper()}] Sesiones permitidas: {allowed_sessions}")
+    
     try:
         # Crear archivo de log para este servicio
         log_dir = BASE_DIR / "logs"
@@ -778,7 +1115,7 @@ def start_prodigy_process_for_service(service_type: str, config: dict, port: int
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.settimeout(1)
                     s.connect(("127.0.0.1", port))
-                    print(f"[PRODIGY-{service_type.upper()}] ✓ Iniciado en puerto {port}")
+                    print(f"[PRODIGY-{service_type.upper()}] OK - Iniciado en puerto {port}")
                     state.port = port
                     state.annotation_type = service_type
                     state.batch = batch
@@ -788,7 +1125,7 @@ def start_prodigy_process_for_service(service_type: str, config: dict, port: int
             except:
                 # Verificar si el proceso sigue vivo
                 if state.process.poll() is not None:
-                    print(f"[PRODIGY-{service_type.upper()}] ✗ Proceso terminó inesperadamente")
+                    print(f"[PRODIGY-{service_type.upper()}] ERROR - Proceso termino inesperadamente")
                     # Leer log para debug
                     try:
                         log_handle.flush()
@@ -801,7 +1138,7 @@ def start_prodigy_process_for_service(service_type: str, config: dict, port: int
                     return False
                 time.sleep(0.5)
         
-        print(f"[PRODIGY-{service_type.upper()}] ✗ Timeout esperando inicio")
+        print(f"[PRODIGY-{service_type.upper()}] ERROR - Timeout esperando inicio")
         return False
         
     except Exception as e:
@@ -939,12 +1276,12 @@ def start_prodigy_process(config: dict, port: int) -> bool:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.settimeout(1)
                     s.connect(("127.0.0.1", port))
-                    print(f"[PRODIGY] ✓ Iniciado en puerto {port}")
+                    print(f"[PRODIGY] OK - Iniciado en puerto {port}")
                     return True
             except:
                 time.sleep(0.5)
         
-        print("[PRODIGY] ✗ Timeout esperando inicio")
+        print("[PRODIGY] ERROR - Timeout esperando inicio")
         return False
         
     except Exception as e:
@@ -1010,7 +1347,7 @@ def main():
     print("")
     print("  PUERTOS DE SERVICIOS:")
     for svc, port in SERVICE_PORTS.items():
-        print(f"    {svc.upper():12} → {port}")
+        print(f"    {svc.upper():12} -> {port}")
     print("")
     print("  ACCESO:")
     print(f"    1. Login en http://localhost:5173")

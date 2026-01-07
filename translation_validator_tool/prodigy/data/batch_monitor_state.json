@@ -1,0 +1,16 @@
+{
+  "current_batch": {
+    "pos": 5,
+    "features": 4,
+    "relations": 2
+  },
+  "progress": {
+    "pos": {},
+    "features": {
+      "guarani_features_batch_004-carlos": 49,
+      "guarani_features_batch_004-elena": 0
+    },
+    "relations": {}
+  },
+  "last_updated": "2026-01-03T15:15:31.020409"
+}

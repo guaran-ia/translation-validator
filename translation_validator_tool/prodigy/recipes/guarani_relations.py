@@ -81,66 +81,52 @@ from ud_guarani_mapper import (
 ANNOTATIONS_PER_TASK = int(os.getenv("ANNOTATIONS_PER_TASK", "2"))
 ENABLE_TASK_ROUTING = os.getenv("ENABLE_TASK_ROUTING", "true").lower() == "true"
 
+# =============================================================================
+# CONFIGURACIÓN DE BUFFER (desde prodigy_config.json)
+# =============================================================================
+BUFFER_CONFIG_FILE = Path(__file__).parent.parent / "data" / "prodigy_config.json"
+
+def load_buffer_config() -> dict:
+    """Carga la configuración del buffer desde prodigy_config.json"""
+    defaults = {
+        "instant_submit": False,
+        "batch_size": 3,
+    }
+    try:
+        if BUFFER_CONFIG_FILE.exists():
+            with open(BUFFER_CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                return {**defaults, **config}
+    except Exception as e:
+        logger.warning(f"Error cargando prodigy_config.json: {e}")
+    return defaults
+
+BUFFER_CONFIG = load_buffer_config()
+INSTANT_SUBMIT = BUFFER_CONFIG.get("instant_submit", False)
+BATCH_SIZE = BUFFER_CONFIG.get("batch_size", 3)
+
 
 # =============================================================================
-# ETIQUETAS DE RELACIONES - AMIGABLES PARA EL USUARIO
+# ETIQUETAS DE RELACIONES - DESDE MAPPER CENTRALIZADO
 # =============================================================================
-# Etiquetas en español que luego se mapean a Universal Dependencies
+# Etiquetas en español mapeadas desde ud_guarani_mapper.py
 # Basado en: https://universaldependencies.org/treebanks/gn_oldtudet/index.html
+# =============================================================================
 
-# Mapeo: Etiqueta amigable -> Codigo UD
-RELATION_TO_UD = {
-    "RAÍZ (Verbo Principal)": "root",
-    "SUJETO": "nsubj",
-    "OBJETO DIRECTO": "obj",
-    "OBJETO INDIRECTO": "iobj",
-    "COMPLEMENTO OBLICUO": "obl",
-    "OBLICUO-OBJETO": "obl:obj",
-    "OBLICUO-SUJETO": "obl:subj",
-    "MODIFICADOR ADVERBIAL": "advmod",
-    "CLÁUSULA ADVERBIAL": "advcl",
-    "MODIFICADOR NOMINAL": "nmod",
-    "DETERMINANTE": "det",
-    "MARCADOR DE CASO": "case",
-    "PALABRA COMPUESTA": "compound",
-    "APOSICIÓN": "appos",
-    "COMPLEMENTO VERBAL": "xcomp",
-    "ELEMENTO DE DISCURSO": "discourse",
-    "PARATAXIS": "parataxis",
-    "MODIFICADOR NUMÉRICO": "nummod",
-    "PUNTUACIÓN": "punct",
-    "DEPENDENCIA (General)": "dep",
-}
+# Obtener grupo de relaciones del mapper centralizado
+_RELATIONS_GROUP = SPECIALIZED_GROUPS.get("relations", {})
+
+# Etiquetas amigables para el usuario (desde mapper)
+RELATION_LABELS = _RELATIONS_GROUP.get("labels", [])
+
+# Mapeo: Etiqueta amigable -> Codigo UD (desde mapper)
+RELATION_TO_UD = _RELATIONS_GROUP.get("ud_mapping", {})
 
 # Mapeo inverso: Codigo UD -> Etiqueta amigable
 UD_TO_RELATION = {v: k for k, v in RELATION_TO_UD.items()}
 
-# Las etiquetas que se muestran al usuario (amigables)
-RELATION_LABELS = list(RELATION_TO_UD.keys())
-
-# Colores para relaciones (usando etiquetas amigables)
-RELATION_COLORS = {
-    "RAÍZ (Verbo Principal)": "#dc2626",      # Rojo - raiz
-    "SUJETO": "#2563eb",                       # Azul - sujeto
-    "OBJETO DIRECTO": "#16a34a",               # Verde - objeto
-    "OBJETO INDIRECTO": "#65a30d",             # Verde claro - objeto indirecto
-    "COMPLEMENTO OBLICUO": "#ca8a04",          # Amarillo - oblicuo
-    "OBLICUO-OBJETO": "#ca8a04",
-    "OBLICUO-SUJETO": "#ca8a04",
-    "MODIFICADOR ADVERBIAL": "#7c3aed",        # Violeta - modificador adverbial
-    "CLÁUSULA ADVERBIAL": "#a855f7",           # Violeta claro - clausula adverbial
-    "MODIFICADOR NOMINAL": "#0891b2",          # Cyan - modificador nominal
-    "DETERMINANTE": "#64748b",                 # Gris - determinante
-    "MARCADOR DE CASO": "#78716c",             # Gris oscuro - caso
-    "PALABRA COMPUESTA": "#ea580c",            # Naranja - compuesto
-    "APOSICIÓN": "#db2777",                    # Rosa - aposicion
-    "COMPLEMENTO VERBAL": "#059669",           # Esmeralda - complemento abierto
-    "ELEMENTO DE DISCURSO": "#94a3b8",         # Gris claro - discurso
-    "PARATAXIS": "#f97316",                    # Naranja - parataxis
-    "MODIFICADOR NUMÉRICO": "#0d9488",         # Teal - modificador numerico
-    "PUNTUACIÓN": "#d4d4d4",                   # Gris muy claro - puntuacion
-    "DEPENDENCIA (General)": "#a1a1aa",        # Gris - dependencia generica
-}
+# Colores para relaciones (desde mapper, con fallback)
+RELATION_COLORS = _RELATIONS_GROUP.get("colors", {})
 
 
 def tokenize_by_words(text: str) -> List[Dict[str, Any]]:
@@ -209,17 +195,6 @@ def generate_html_info(example: Dict, context: Dict) -> str:
     
     return f"""
 <div style="margin-bottom:8px;">
-    <div style="background:linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);color:white;padding:8px 12px;border-radius:6px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:bold;">🔗 Relaciones Sintácticas</span>
-        <span style="font-size:11px;opacity:0.9;">📊 {sentence_index}/{total_sentences}</span>
-    </div>
-    <div style="background:#e0f2fe;padding:8px 10px;border-left:3px solid #0284c7;margin-bottom:4px;">
-        <b>🇵🇾</b> <span style="font-size:16px;font-weight:bold;color:#0c4a6e;">{guarani_text}</span>
-        <span style="margin-left:12px;color:#92400e;"><b>🇪🇸</b> {spanish_text if spanish_text else "(sin traducción)"}</span>
-    </div>
-    <div style="background:#f5f5f5;padding:6px;text-align:center;font-size:12px;color:#6b7280;border-radius:4px;">
-        👇 Click en palabra origen → Click en palabra destino → Selecciona relación
-    </div>
     <button onclick="window.toggleContextDialog()" style="background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:12px;width:100%;margin-top:6px;font-weight:bold;">
         📖 Ver Contexto (Oración Anterior/Siguiente) <span style="opacity:0.7;font-size:10px;margin-left:8px;">Ctrl+Shift+C</span>
     </button>
@@ -501,8 +476,8 @@ def guarani_relations(
             "show_relations_labels": True,  # Mostrar labels de relaciones
             "hide_relations_arrow": False,  # Mostrar flechas
             "custom_theme": custom_theme,
-            "batch_size": 1,
-            "instant_submit": False,
+            "batch_size": BATCH_SIZE if not INSTANT_SUBMIT else 1,
+            "instant_submit": INSTANT_SUBMIT,
             "sessions": ["alice", "bob", "carlos", "diana", "elena"],
             "feed_overlap": not ENABLE_TASK_ROUTING,
             "javascript": CONTEXT_POPUP_JS,

@@ -225,6 +225,32 @@ FRIENDLY_TO_UD = {
     "Adjetivo": "ADJ",             # ✗ No existe en Guaraní clásico
     "Símbolo": "SYM",              # ✗ No usado en Old Guaraní
     "Otro": "X",                   # Para etiquetas no clasificables
+    
+    # =========================================================================
+    # RELACIONES SINTÁCTICAS (Deprel) - UD Relations
+    # https://universaldependencies.org/u/dep/
+    # Basado en Old Guaraní treebank
+    # =========================================================================
+    "RAÍZ (Verbo Principal)": "root",
+    "SUJETO": "nsubj",
+    "OBJETO DIRECTO": "obj",
+    "OBJETO INDIRECTO": "iobj",
+    "COMPLEMENTO OBLICUO": "obl",
+    "OBLICUO-OBJETO": "obl:obj",
+    "OBLICUO-SUJETO": "obl:subj",
+    "MODIFICADOR ADVERBIAL": "advmod",
+    "CLÁUSULA ADVERBIAL": "advcl",
+    "MODIFICADOR NOMINAL": "nmod",
+    "DETERMINANTE (Rel)": "det",
+    "MARCADOR DE CASO": "case",
+    "PALABRA COMPUESTA": "compound",
+    "APOSICIÓN": "appos",
+    "COMPLEMENTO VERBAL": "xcomp",
+    "ELEMENTO DE DISCURSO": "discourse",
+    "PARATAXIS": "parataxis",
+    "MODIFICADOR NUMÉRICO": "nummod",
+    "PUNTUACIÓN (Rel)": "punct",
+    "DEPENDENCIA (General)": "dep",
 }
 
 # =============================================================================
@@ -718,57 +744,79 @@ SPECIALIZED_GROUPS = {
     
     # =========================================================================
     # GRUPO PRINCIPAL 3: RELATIONS (Deprel)
-    # Relaciones sintácticas - Para futuro uso en parsing
+    # Relaciones sintácticas - Etiquetas amigables en español
+    # https://universaldependencies.org/u/dep/
     # =========================================================================
     "relations": {
-        "name": "Relations",
-        "description": "Relaciones sintácticas (Dependency Relations)",
+        "name": "Relaciones Sintácticas",
+        "description": "Relaciones de dependencia (Dependency Relations)",
         "color": "#22c55e",
         "emoji": "🔗",
         "labels": [
-            "advcl",        # Adverbial clause modifier
-            "advmod",       # Adverbial modifier
-            "appos",        # Appositional modifier
-            "case",         # Case marking
-            "compound",     # Compound
-            "dep",          # Unspecified dependency
-            "det",          # Determiner
-            "discourse",    # Discourse element
-            "iobj",         # Indirect object
-            "nmod",         # Nominal modifier
-            "nsubj",        # Nominal subject
-            "nummod",       # Numeric modifier
-            "obj",          # Object
-            "obl",          # Oblique nominal
-            "obl:obj",      # Oblique object
-            "obl:subj",     # Oblique subject
-            "parataxis",    # Parataxis
-            "punct",        # Punctuation
-            "root",         # Root
-            "xcomp",        # Open clausal complement
+            "RAÍZ (Verbo Principal)",
+            "SUJETO",
+            "OBJETO DIRECTO",
+            "OBJETO INDIRECTO",
+            "COMPLEMENTO OBLICUO",
+            "OBLICUO-OBJETO",
+            "OBLICUO-SUJETO",
+            "MODIFICADOR ADVERBIAL",
+            "CLÁUSULA ADVERBIAL",
+            "MODIFICADOR NOMINAL",
+            "DETERMINANTE (Rel)",
+            "MARCADOR DE CASO",
+            "PALABRA COMPUESTA",
+            "APOSICIÓN",
+            "COMPLEMENTO VERBAL",
+            "ELEMENTO DE DISCURSO",
+            "PARATAXIS",
+            "MODIFICADOR NUMÉRICO",
+            "PUNTUACIÓN (Rel)",
+            "DEPENDENCIA (General)",
         ],
         "ud_mapping": {
-            # Las relaciones ya están en formato UD
-            "advcl": "advcl",
-            "advmod": "advmod",
-            "appos": "appos",
-            "case": "case",
-            "compound": "compound",
-            "dep": "dep",
-            "det": "det",
-            "discourse": "discourse",
-            "iobj": "iobj",
-            "nmod": "nmod",
-            "nsubj": "nsubj",
-            "nummod": "nummod",
-            "obj": "obj",
-            "obl": "obl",
-            "obl:obj": "obl:obj",
-            "obl:subj": "obl:subj",
-            "parataxis": "parataxis",
-            "punct": "punct",
-            "root": "root",
-            "xcomp": "xcomp",
+            "RAÍZ (Verbo Principal)": "root",
+            "SUJETO": "nsubj",
+            "OBJETO DIRECTO": "obj",
+            "OBJETO INDIRECTO": "iobj",
+            "COMPLEMENTO OBLICUO": "obl",
+            "OBLICUO-OBJETO": "obl:obj",
+            "OBLICUO-SUJETO": "obl:subj",
+            "MODIFICADOR ADVERBIAL": "advmod",
+            "CLÁUSULA ADVERBIAL": "advcl",
+            "MODIFICADOR NOMINAL": "nmod",
+            "DETERMINANTE (Rel)": "det",
+            "MARCADOR DE CASO": "case",
+            "PALABRA COMPUESTA": "compound",
+            "APOSICIÓN": "appos",
+            "COMPLEMENTO VERBAL": "xcomp",
+            "ELEMENTO DE DISCURSO": "discourse",
+            "PARATAXIS": "parataxis",
+            "MODIFICADOR NUMÉRICO": "nummod",
+            "PUNTUACIÓN (Rel)": "punct",
+            "DEPENDENCIA (General)": "dep",
+        },
+        "colors": {
+            "RAÍZ (Verbo Principal)": "#dc2626",
+            "SUJETO": "#2563eb",
+            "OBJETO DIRECTO": "#16a34a",
+            "OBJETO INDIRECTO": "#65a30d",
+            "COMPLEMENTO OBLICUO": "#ca8a04",
+            "OBLICUO-OBJETO": "#ca8a04",
+            "OBLICUO-SUJETO": "#ca8a04",
+            "MODIFICADOR ADVERBIAL": "#7c3aed",
+            "CLÁUSULA ADVERBIAL": "#a855f7",
+            "MODIFICADOR NOMINAL": "#0891b2",
+            "DETERMINANTE (Rel)": "#64748b",
+            "MARCADOR DE CASO": "#78716c",
+            "PALABRA COMPUESTA": "#ea580c",
+            "APOSICIÓN": "#db2777",
+            "COMPLEMENTO VERBAL": "#059669",
+            "ELEMENTO DE DISCURSO": "#94a3b8",
+            "PARATAXIS": "#f97316",
+            "MODIFICADOR NUMÉRICO": "#0d9488",
+            "PUNTUACIÓN (Rel)": "#d4d4d4",
+            "DEPENDENCIA (General)": "#a1a1aa",
         },
     },
     
