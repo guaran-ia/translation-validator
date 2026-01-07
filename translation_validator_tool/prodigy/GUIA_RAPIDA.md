@@ -39,15 +39,13 @@ cp .env.example .env
 Edita `.env` y configura:
 
 ```env
-# Puertos
-PRODIGY_PORT=8080
-PRODIGY_PROXY_PORT=8085
-
 # Backend (si usas autenticación)
 BACKEND_URL=http://localhost:8000
 
-# Usuarios permitidos
-PRODIGY_ALLOWED_SESSIONS="alice,bob,carlos,diana,elena"
+# Validadores por tipo de anotación
+VALIDATORS_POS="alice,bob"
+VALIDATORS_FEATURES="carlos,elena"
+VALIDATORS_RELATIONS="marcos,nicolas"
 ```
 
 ### 1.3 Instalar dependencias
@@ -55,6 +53,7 @@ PRODIGY_ALLOWED_SESSIONS="alice,bob,carlos,diana,elena"
 ```bash
 pip install -r requirements.txt
 ```
+pip install prodigy -f https://XXXX-XXXX-XXXX-XXXX@download.prodi.gy
 
 ---
 
@@ -116,7 +115,7 @@ Esto inicia el servidor en `http://localhost:8085`
 
 # Linux/Mac
 python prodigy_manager.py &
-python batch_monitor.py --interval 60 --validators 3
+python batch_monitor.py --interval 60
 ```
 
 Esto inicia:
@@ -127,25 +126,17 @@ Esto inicia:
 **Opciones del auto-avance:**
 
 ```bash
-# Windows - Empezar desde batch 5
-.\start_batch_auto.ps1 -Batch 5
+# Empezar desde batch 5
+.\start_batch_auto.ps1 -Batch 5          # Windows
+python batch_monitor.py --start-batch 5   # Linux/Mac
 
-# Linux/Mac - Empezar desde batch 5
-python prodigy_manager.py &
-python batch_monitor.py --start-batch 5
-
-# Windows - Requiere solo 2 validadores
-.\start_batch_auto.ps1 -Validators 2
-
-# Linux/Mac
-python batch_monitor.py --validators 2
-
-# Windows - Chequear cada 30 segundos
-.\start_batch_auto.ps1 -Interval 30
-
-# Linux/Mac
-python batch_monitor.py --interval 30
+# Chequear cada 30 segundos
+.\start_batch_auto.ps1 -Interval 30       # Windows
+python batch_monitor.py --interval 30     # Linux/Mac
 ```
+
+> 💡 El sistema avanza automáticamente cuando **TODOS** los validadores 
+> asignados completan sus 50 frases. Configura los validadores en `.env`.
 
 ---
 

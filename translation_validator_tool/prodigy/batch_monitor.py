@@ -293,29 +293,45 @@ class BatchMonitor:
         
         print(f"{Colors.BOLD}[MONITOR] Iniciando batch {next_batch} para {annotation_type}...{Colors.ENDC}")
         
-        try:
-            response = await self.http_client.post(
-                f"{PRODIGY_MANAGER_URL}/api/start-prodigy",
-                json={
-                    "recipe": "batch",
-                    "annotation_type": annotation_type,
-                    "batch_number": next_batch,
-                },
-                headers={"Authorization": "Bearer internal-monitor"}
-            )
-            
-            if response.status_code == 200:
-                self.current_batch[annotation_type] = next_batch
-                self._save_state()
-                print(f"{Colors.GREEN}[MONITOR] OK - Batch {next_batch} ({annotation_type}) iniciado exitosamente{Colors.ENDC}")
-                return True
-            else:
-                print(f"{Colors.FAIL}[MONITOR] Error iniciando batch: {response.status_code}{Colors.ENDC}")
-                return False
+        # Reintentar hasta 3 veces en caso de 409 Conflict
+        max_retries = 3
+        retry_delay = 2  # segundos entre reintentos
+        
+        for attempt in range(max_retries):
+            try:
+                response = await self.http_client.post(
+                    f"{PRODIGY_MANAGER_URL}/api/start-prodigy",
+                    json={
+                        "recipe": "batch",
+                        "annotation_type": annotation_type,
+                        "batch_number": next_batch,
+                    },
+                    headers={"Authorization": "Bearer internal-monitor"}
+                )
                 
-        except Exception as e:
-            print(f"{Colors.FAIL}[MONITOR] Error conectando al manager: {e}{Colors.ENDC}")
-            return False
+                if response.status_code == 200:
+                    self.current_batch[annotation_type] = next_batch
+                    self._save_state()
+                    print(f"{Colors.GREEN}[MONITOR] OK - Batch {next_batch} ({annotation_type}) iniciado exitosamente{Colors.ENDC}")
+                    return True
+                elif response.status_code == 409:
+                    # Conflicto: servicio aún se está deteniendo
+                    if attempt < max_retries - 1:
+                        print(f"{Colors.WARNING}[MONITOR] Conflicto (409) - Reintentando en {retry_delay}s ({attempt+1}/{max_retries-1})...{Colors.ENDC}")
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    else:
+                        print(f"{Colors.FAIL}[MONITOR] Error iniciando batch después de {max_retries} intentos: 409 Conflict{Colors.ENDC}")
+                        return False
+                else:
+                    print(f"{Colors.FAIL}[MONITOR] Error iniciando batch: {response.status_code}{Colors.ENDC}")
+                    return False
+                    
+            except Exception as e:
+                print(f"{Colors.FAIL}[MONITOR] Error conectando al manager: {e}{Colors.ENDC}")
+                return False
+        
+        return False
     
     async def notify_batch_complete(self, annotation_type: str, batch: int, progress: Dict[str, int]):
         """Envía notificación de batch completado"""
@@ -416,7 +432,7 @@ class BatchMonitor:
                         f"{PRODIGY_MANAGER_URL}/api/stop-prodigy/{annotation_type}",
                         headers={"Authorization": "Bearer internal-monitor"}
                     )
-                    await asyncio.sleep(2)  # Esperar a que se detenga
+                    await asyncio.sleep(5)  # Esperar a que se detenga (5s en Linux puede ser lento)
                 except:
                     pass
                 
