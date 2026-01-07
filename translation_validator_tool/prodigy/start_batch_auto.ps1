@@ -7,15 +7,13 @@
 # 3. Los 3 servicios de Prodigy (POS, Features, Relations)
 #
 # Uso:
-#   .\start_batch_auto.ps1                    # Batch 1, 3 validadores
+#   .\start_batch_auto.ps1                    # Batch 1
 #   .\start_batch_auto.ps1 -Batch 5           # Empezar desde batch 5
-#   .\start_batch_auto.ps1 -Validators 2      # Requiere 2 validadores
 #   .\start_batch_auto.ps1 -Interval 30       # Chequear cada 30 segundos
 # ============================================================================
 
 param(
     [int]$Batch = 1,
-    [int]$Validators = 3,
     [int]$Interval = 60,
     [switch]$NoMonitor,
     [switch]$Help
@@ -58,14 +56,13 @@ function Show-Help {
   
   PARÁMETROS:
     -Batch <N>       Número de batch inicial (default: 1)
-    -Validators <N>  Validadores requeridos para avanzar (default: 3)
     -Interval <N>    Intervalo de chequeo en segundos (default: 60)
     -NoMonitor       No iniciar el batch monitor
     -Help            Mostrar esta ayuda
 
   EJEMPLOS:
     .\start_batch_auto.ps1
-    .\start_batch_auto.ps1 -Batch 5 -Validators 2
+    .\start_batch_auto.ps1 -Batch 5
     .\start_batch_auto.ps1 -Interval 30
     
   COMPONENTES:
@@ -75,11 +72,9 @@ function Show-Help {
     4. Features Service   Puerto 8081 - Características morfológicas
     5. Relations Service  Puerto 8082 - Relaciones sintácticas
 
-  FLUJO:
-    - Los validadores anotan 50 frases cada uno
-    - Cuando todos completan, el monitor detecta
-    - Se inicia automáticamente el siguiente batch
-    - Continúa hasta completar los 60 batches
+  VALIDADORES:
+    El sistema avanza cuando TODOS los validadores asignados completan.
+    Configurar en .env: VALIDATORS_POS, VALIDATORS_FEATURES, VALIDATORS_RELATIONS
 
 "@
 }
@@ -97,7 +92,6 @@ Write-Header "BATCH AUTO-ADVANCE SYSTEM"
 
 Write-Host "  Configuración:" -ForegroundColor $colors.Info
 Write-Host "    Batch inicial:        $Batch"
-Write-Host "    Validadores:          $Validators"
 Write-Host "    Intervalo chequeo:    ${Interval}s"
 Write-Host "    Batch Monitor:        $(if ($NoMonitor) { 'Deshabilitado' } else { 'Habilitado' })"
 Write-Host ""
@@ -290,7 +284,7 @@ try {
         Write-Host ""
         
         # Ejecutar en primer plano - asi siempre se ve el output
-        & $pythonCmd batch_monitor.py --interval $Interval --validators $Validators
+        & $pythonCmd batch_monitor.py --interval $Interval
     } else {
         Write-Host "  Presiona Ctrl+C para detener..." -ForegroundColor $colors.Warning
         Write-Host ""

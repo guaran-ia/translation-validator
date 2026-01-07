@@ -16,11 +16,9 @@ Características:
 Uso:
     python batch_monitor.py
     python batch_monitor.py --interval 30  # Check cada 30 segundos
-    python batch_monitor.py --validators 3  # Requiere 3 validadores
 
 Variables de Entorno:
     BATCH_MONITOR_INTERVAL: Intervalo de chequeo en segundos (default: 60)
-    REQUIRED_VALIDATORS: Número de validadores requeridos (default: 3)
     SENTENCES_PER_BATCH: Oraciones por batch (default: 50)
 """
 
@@ -51,9 +49,8 @@ else:
 PRODIGY_MANAGER_URL = os.getenv("PRODIGY_MANAGER_URL", "http://localhost:8085")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 BATCH_MONITOR_INTERVAL = int(os.getenv("BATCH_MONITOR_INTERVAL", "10"))
-REQUIRED_VALIDATORS = int(os.getenv("REQUIRED_VALIDATORS", "3"))
 SENTENCES_PER_BATCH = int(os.getenv("SENTENCES_PER_BATCH", "50"))
-TOTAL_BATCHES = int(os.getenv("TOTAL_BATCHES", "60"))
+TOTAL_BATCHES = 60  # Hardcodeado: 3000 oraciones / 50 por batch
 
 # Directorio base
 BASE_DIR = Path(__file__).parent
@@ -95,16 +92,15 @@ class Colors:
 class BatchMonitor:
     """
     Monitor de batches que rastrea el progreso y auto-avanza.
+    Avanza cuando TODOS los validadores asignados completan sus frases.
     """
     
     def __init__(
         self,
         check_interval: int = 10,
-        required_validators: int = 3,
         sentences_per_batch: int = 50,
     ):
         self.check_interval = check_interval
-        self.required_validators = required_validators
         self.sentences_per_batch = sentences_per_batch
         self.http_client = httpx.AsyncClient(timeout=30.0)
         
@@ -217,8 +213,9 @@ class BatchMonitor:
             return False, {}
 
         # Obtener validadores asignados a este tipo de anotación
+        # Avanza cuando TODOS los asignados completan
         assigned_validators = SERVICE_VALIDATORS.get(annotation_type, VALID_SESSIONS)
-        required_for_type = min(self.required_validators, len(assigned_validators))
+        required_for_type = len(assigned_validators)
 
         # Normalizar y mapear los session_ids devueltos por Prodigy a nombres de usuario
         # Ejemplo: 'guarani_features_batch_003-carlos' -> 'carlos'
@@ -439,9 +436,11 @@ class BatchMonitor:
         print(f"{Colors.BOLD}  BATCH MONITOR INICIADO{Colors.ENDC}")
         print(f"{Colors.HEADER}{'='*60}{Colors.ENDC}")
         print(f"  Intervalo de chequeo: {self.check_interval}s")
-        print(f"  Validadores requeridos: {self.required_validators}")
         print(f"  Frases por batch: {self.sentences_per_batch}")
         print(f"  Total de batches: {TOTAL_BATCHES}")
+        print(f"  Validadores por tipo:")
+        for atype, validators in SERVICE_VALIDATORS.items():
+            print(f"    - {atype}: {', '.join(validators)} ({len(validators)})")
         print(f"{Colors.HEADER}{'='*60}{Colors.ENDC}\n")
         
         while self.running:
@@ -478,12 +477,6 @@ def main():
         help=f"Intervalo de chequeo en segundos (default: {BATCH_MONITOR_INTERVAL})"
     )
     parser.add_argument(
-        "--validators", "-v",
-        type=int,
-        default=REQUIRED_VALIDATORS,
-        help=f"Número de validadores requeridos (default: {REQUIRED_VALIDATORS})"
-    )
-    parser.add_argument(
         "--sentences", "-s",
         type=int,
         default=SENTENCES_PER_BATCH,
@@ -499,7 +492,6 @@ def main():
     
     monitor = BatchMonitor(
         check_interval=args.interval,
-        required_validators=args.validators,
         sentences_per_batch=args.sentences,
     )
     
