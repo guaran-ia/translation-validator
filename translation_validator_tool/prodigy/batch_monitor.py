@@ -311,6 +311,8 @@ class BatchMonitor:
                 
                 if response.status_code == 200:
                     self.current_batch[annotation_type] = next_batch
+                    # Limpiar el progreso del tipo de anotación para evitar mostrar datos antiguos
+                    self.progress[annotation_type] = {}
                     self._save_state()
                     print(f"{Colors.GREEN}[MONITOR] OK - Batch {next_batch} ({annotation_type}) iniciado exitosamente{Colors.ENDC}")
                     return True
@@ -438,6 +440,8 @@ class BatchMonitor:
                 
                 # Iniciar siguiente batch
                 await self.start_next_batch(annotation_type, batch)
+                # Limpiar también del diccionario all_progress para evitar mostrar datos antiguos
+                all_progress[annotation_type] = {}
         
         # Mostrar estado
         self.print_status(services, all_progress)

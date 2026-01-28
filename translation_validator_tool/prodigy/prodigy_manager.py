@@ -1011,14 +1011,22 @@ def find_free_port(start: int = 8080) -> Optional[int]:
     return None
 
 
-def is_port_free(port: int) -> bool:
-    """Verifica si un puerto está libre"""
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("127.0.0.1", port))
-            return True
-    except OSError:
-        return False
+def is_port_free(port: int, retries: int = 5, delay: float = 0.5) -> bool:
+    """Verifica si un puerto está libre con reintentos para Linux"""
+    for attempt in range(retries):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Permitir reusar puerto
+                s.bind(("127.0.0.1", port))
+                return True
+        except OSError:
+            if attempt < retries - 1:
+                # Esperar antes de reintentar (Linux tarda en liberar puertos)
+                import time
+                time.sleep(delay)
+            else:
+                return False
+    return False
 
 
 def get_prodigy_config_for_service(annotation_type: str, batch: int) -> dict:
