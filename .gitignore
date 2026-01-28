@@ -75,6 +75,8 @@ coverage-report/
 *.swp
 *.tmp
 
+prodigy/data/batch_monitor_state.json
+
 #datajson
 data/*.jsonl
 data/*.csv

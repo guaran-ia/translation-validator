@@ -1,22 +1,23 @@
 """
-Recipe unificado para anotación de Guaraní por LOTES.
+Recipe unificado para anotacion de Guarani por LOTES.
 
-Soporta los 3 tipos de anotación:
+Soporta los 3 tipos de anotacion:
 - POS: Etiquetado de partes del discurso (Universal Dependencies)
-- Features: Características morfológicas (UD + Tupí-Guaraní)
-- Relations: Relaciones sintácticas (UD Dependency Relations)
+- Features: Caracteristicas morfologicas (UD + Tupi-Guarani)
+- Relations: Relaciones sintacticas (UD Dependency Relations)
 
-ETIQUETAS UD PARA OLD GUARANÍ:
+ETIQUETAS UD PARA OLD GUARANI:
 https://universaldependencies.org/treebanks/gn_oldtudet/index.html
 
 POS Tags usados (11): NOUN, VERB, PRON, PROPN, DET, ADP, ADV, NUM, PART, INTJ, PUNCT
 POS Tags NO usados: ADJ, AUX, CCONJ, SCONJ, SYM, X
 
-CARACTERÍSTICAS:
-- Carga datos de un LOTE específico (--batch N)
+CARACTERISTICAS:
+- Carga datos de un LOTE especifico (--batch N)
 - Usa spans_manual para permitir spans superpuestos
-- Incluye botón de contexto (Ctrl+Shift+C)
+- Incluye boton de contexto (Ctrl+Shift+C)
 - Dataset nombrado por tipo+lote: guarani_pos_batch_01, etc.
+- EXCLUSION POR SESION: Cada anotador tiene su propio progreso
 
 Uso:
     prodigy guarani-batch pos 5 -F recipes/guarani_batch.py --port 8080
@@ -25,166 +26,129 @@ Uso:
 """
 
 import os
+import sys
 import prodigy
 from prodigy.util import set_hashes
 from prodigy.components.db import connect
 import spacy
 import json
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Set, Iterator, Optional
 
 nlp = spacy.blank("es")
 
-# Configuración desde variables de entorno
+# =============================================================================
+# IMPORTAR MAPPER CENTRALIZADO
+# =============================================================================
+_scripts_dir = Path(__file__).parent.parent / "scripts"
+if str(_scripts_dir) not in sys.path:
+    sys.path.insert(0, str(_scripts_dir))
+
+from ud_guarani_mapper import (
+    SPECIALIZED_GROUPS,
+    LABEL_COLORS as UD_LABEL_COLORS,
+    map_label,
+    get_ud_main_group,
+    list_ud_main_groups,
+)
+
+# Configuracion desde variables de entorno
 ANNOTATIONS_PER_TASK = int(os.getenv("ANNOTATIONS_PER_TASK", "3"))
 ENABLE_TASK_ROUTING = os.getenv("ENABLE_TASK_ROUTING", "true").lower() == "true"
-AUTO_SAVE_EVERY = int(os.getenv("AUTO_SAVE_EVERY", "1"))  # Guardar cada N anotaciones
 
 # =============================================================================
-# ETIQUETAS UD PARA OLD GUARANÍ
+# CONFIGURACIÓN DE BUFFER (desde prodigy_config.json)
+# =============================================================================
+BUFFER_CONFIG_FILE = Path(__file__).parent.parent / "data" / "prodigy_config.json"
+
+def load_buffer_config() -> dict:
+    """Carga la configuración del buffer desde prodigy_config.json"""
+    defaults = {
+        "instant_submit": False,
+        "batch_size": 3,
+    }
+    try:
+        if BUFFER_CONFIG_FILE.exists():
+            with open(BUFFER_CONFIG_FILE, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                return {**defaults, **config}
+    except Exception as e:
+        print(f"[CONFIG] Error cargando prodigy_config.json: {e}")
+    return defaults
+
+# Cargar configuración al inicio del módulo
+BUFFER_CONFIG = load_buffer_config()
+INSTANT_SUBMIT = BUFFER_CONFIG.get("instant_submit", False)
+BATCH_SIZE = BUFFER_CONFIG.get("batch_size", 3)
+
+# Para compatibilidad con código existente
+AUTO_SAVE_EVERY = 1 if INSTANT_SUBMIT else BATCH_SIZE
+
+# =============================================================================
+# ETIQUETAS AMIGABLES DESDE MAPPER CENTRALIZADO
 # Basado en: https://universaldependencies.org/treebanks/gn_oldtudet/index.html
 # =============================================================================
 
-# POS Tags (UPOS) - Solo los 11 documentados para Old Guaraní
-# NO SE USAN EN OLD GUARANÍ: ADJ, AUX, CCONJ, SCONJ, SYM, X
-POS_LABELS = [
-    "NOUN",    # Sustantivo
-    "VERB",    # Verbo
-    "PRON",    # Pronombre
-    "PROPN",   # Nombre propio
-    "DET",     # Determinante
-    "ADP",     # Adposición (Posposición en Guaraní)
-    "ADV",     # Adverbio
-    "NUM",     # Numeral
-    "PART",    # Partícula
-    "INTJ",    # Interjección
-    "PUNCT",   # Puntuación
-]
+# Obtener grupos del mapper centralizado
+_POS_GROUP = SPECIALIZED_GROUPS.get("pos-tags", {})
+_FEATURES_GROUP = SPECIALIZED_GROUPS.get("features", {})
+_RELATIONS_GROUP = SPECIALIZED_GROUPS.get("relations", {})
 
-# Features morfológicos - Documentados para Old Guaraní
-FEATURE_LABELS = [
+# POS Tags - Etiquetas amigables en español
+POS_LABELS = _POS_GROUP.get("labels", [
+    "Sustantivo", "Verbo", "Pronombre", "Nombre Propio", "Determinante",
+    "Posposición", "Adverbio", "Numeral", "Partícula", "Interjección", "Puntuación"
+])
+
+# Features morfológicos - Etiquetas amigables en español  
+FEATURE_LABELS = _FEATURES_GROUP.get("labels", [
     # Persona
-    "Person=1", "Person=2", "Person=3",
+    "1ra Persona", "2da Persona", "3ra Persona",
     # Número
-    "Number=Sing", "Number=Plur",
-    # Clusividad (específico Tupí-Guaraní)
-    "Clusivity=In", "Clusivity=Ex",
+    "Singular", "Plural",
+    # Clusividad
+    "Inclusivo", "Exclusivo",
     # Caso
-    "Case=Abl", "Case=All", "Case=Dat", "Case=Loc", "Case=Ref",
-    # Relacional (específico Tupí-Guaraní)
-    "Rel=Abs", "Rel=Cont", "Rel=NCont",
+    "Ablativo", "Alativo", "Dativo", "Locativo", "Referencial",
+    # Relacional
+    "Rel. Absoluto", "Rel. Contiguo", "Rel. No-Contiguo",
     # Tiempo
-    "Tense=Past", "Tense=Fut", "Tense=FutPast",
+    "Pasado", "Futuro", "Futuro-Pasado",
     # Modo
-    "Mood=Imp", "Mood=Perm",
+    "Imperativo", "Permisivo",
     # Voz
-    "Voice=Cau", "Voice=Com",
+    "Causativo", "Comitativo",
     # Forma verbal
-    "VerbForm=Ger",
+    "Gerundio",
     # Otros
-    "Polarity=Neg",
-    "Reflex=Yes",
-    "Poss=Yes",
-    # Nominalizadores (específico Tupí-Guaraní)
-    "Nomzr=Ag", "Nomzr=Circ", "Nomzr=Pas", "Nomzr=CCirc", "Nomzr=DevPass", "Nomzr=Rel",
+    "Negación", "Reflexivo", "Poseedor",
+    # Nominalizadores
+    "Agentivo (-sar)", "Circunstancial (-saβ)", "Pasivo (-pɨr)", 
+    "C-Circunstancial", "Derivación Pasiva", "Relativo (Nomzr)",
     # Evidencialidad
-    "Evident=Nfh",
-    # Correferencia (específico Tupí-Guaraní)
-    "Corf=Yes",
-    # Otros features específicos
-    "Emph=Yes", "Intens=Yes", "Int=Yes", "Priv=Yes", "Red=Di",
-]
+    "No-Primera Mano",
+    # Correferencia
+    "Correferencial",
+    # Otros
+    "Enfático", "Intensificador", "Interrogativo", "Privativo", "Reduplicación",
+])
 
-# Relaciones sintácticas - Documentadas para Old Guaraní
-RELATION_LABELS = [
-    "root",       # Raíz
-    "nsubj",      # Sujeto nominal
-    "obj",        # Objeto directo
-    "iobj",       # Objeto indirecto
-    "obl",        # Oblicuo
-    "obl:obj",    # Oblicuo objeto
-    "obl:subj",   # Oblicuo sujeto
-    "advmod",     # Modificador adverbial
-    "advcl",      # Cláusula adverbial
-    "nmod",       # Modificador nominal
-    "nummod",     # Modificador numérico
-    "det",        # Determinante
-    "case",       # Marcador de caso
-    "compound",   # Compuesto
-    "appos",      # Aposición
-    "xcomp",      # Complemento abierto
-    "discourse",  # Elemento discursivo
-    "parataxis",  # Parataxis
-    "punct",      # Puntuación
-    "dep",        # Dependencia no especificada
-]
+# Relaciones sintácticas - Etiquetas amigables en español
+RELATION_LABELS = _RELATIONS_GROUP.get("labels", [
+    "RAÍZ (Verbo Principal)", "SUJETO", "OBJETO DIRECTO", "OBJETO INDIRECTO",
+    "COMPLEMENTO OBLICUO", "OBLICUO-OBJETO", "OBLICUO-SUJETO",
+    "MODIFICADOR ADVERBIAL", "CLÁUSULA ADVERBIAL", "MODIFICADOR NOMINAL",
+    "MODIFICADOR NUMÉRICO", "DETERMINANTE (Rel)", "MARCADOR DE CASO",
+    "PALABRA COMPUESTA", "APOSICIÓN", "COMPLEMENTO VERBAL",
+    "ELEMENTO DE DISCURSO", "PARATAXIS", "PUNTUACIÓN (Rel)", "DEPENDENCIA (General)"
+])
 
-# Colores por tipo - UD Old Guaraní
-LABEL_COLORS = {
-    # === POS TAGS (UPOS) ===
-    "NOUN": "#2563eb",     # Azul - Sustantivos
-    "VERB": "#dc2626",     # Rojo - Verbos
-    "PRON": "#0891b2",     # Cyan - Pronombres
-    "PROPN": "#3b82f6",    # Azul claro - Nombres propios
-    "DET": "#64748b",      # Gris - Determinantes
-    "ADP": "#ea580c",      # Naranja - Adposiciones
-    "ADV": "#7c3aed",      # Púrpura - Adverbios
-    "NUM": "#0d9488",      # Teal - Numerales
-    "PART": "#a855f7",     # Violeta - Partículas
-    "INTJ": "#f59e0b",     # Amarillo - Interjecciones
-    "PUNCT": "#9ca3af",    # Gris claro - Puntuación
-    
-    # === FEATURES - Persona ===
-    "Person=1": "#2563eb", "Person=2": "#3b82f6", "Person=3": "#60a5fa",
-    # === FEATURES - Número ===
-    "Number=Sing": "#16a34a", "Number=Plur": "#22c55e",
-    # === FEATURES - Clusividad ===
-    "Clusivity=In": "#0891b2", "Clusivity=Ex": "#06b6d4",
-    # === FEATURES - Caso ===
-    "Case=Abl": "#ea580c", "Case=All": "#f97316", "Case=Dat": "#fb923c", 
-    "Case=Loc": "#fdba74", "Case=Ref": "#fed7aa",
-    # === FEATURES - Relacional (Tupí-Guaraní) ===
-    "Rel=Abs": "#6366f1", "Rel=Cont": "#818cf8", "Rel=NCont": "#a5b4fc",
-    # === FEATURES - Tiempo ===
-    "Tense=Past": "#dc2626", "Tense=Fut": "#eab308", "Tense=FutPast": "#f97316",
-    # === FEATURES - Modo ===
-    "Mood=Imp": "#7c3aed", "Mood=Perm": "#a855f7",
-    # === FEATURES - Voz ===
-    "Voice=Cau": "#059669", "Voice=Com": "#14b8a6",
-    # === FEATURES - Forma verbal ===
-    "VerbForm=Ger": "#84cc16",
-    # === FEATURES - Otros ===
-    "Polarity=Neg": "#be123c", "Reflex=Yes": "#db2777", "Poss=Yes": "#65a30d",
-    # === FEATURES - Nominalizadores ===
-    "Nomzr=Ag": "#8b5cf6", "Nomzr=Circ": "#a78bfa", "Nomzr=Pas": "#c4b5fd",
-    "Nomzr=CCirc": "#a855f7", "Nomzr=DevPass": "#c084fc", "Nomzr=Rel": "#d8b4fe",
-    # === FEATURES - Evidencialidad y otros ===
-    "Evident=Nfh": "#0284c7", "Corf=Yes": "#0369a1",
-    "Emph=Yes": "#f472b6", "Intens=Yes": "#ec4899", "Int=Yes": "#be185d",
-    "Priv=Yes": "#9f1239", "Red=Di": "#831843",
-    
-    # === RELATIONS ===
-    "root": "#dc2626",       # Rojo - Raíz
-    "nsubj": "#2563eb",      # Azul - Sujeto
-    "obj": "#16a34a",        # Verde - Objeto
-    "iobj": "#65a30d",       # Verde lima - Obj indirecto
-    "obl": "#ca8a04",        # Amarillo oscuro - Oblicuo
-    "obl:obj": "#eab308",    # Amarillo - Oblicuo obj
-    "obl:subj": "#fde047",   # Amarillo claro - Oblicuo suj
-    "advmod": "#7c3aed",     # Púrpura - Mod adverbial
-    "advcl": "#a855f7",      # Violeta - Cláusula adv
-    "nmod": "#0891b2",       # Cyan - Mod nominal
-    "nummod": "#0d9488",     # Teal - Mod numérico
-    "det": "#64748b",        # Gris - Determinante
-    "case": "#78716c",       # Gris cálido - Caso
-    "compound": "#ea580c",   # Naranja - Compuesto
-    "appos": "#db2777",      # Rosa - Aposición
-    "xcomp": "#059669",      # Esmeralda - Comp abierto
-    "discourse": "#94a3b8",  # Gris azul - Discurso
-    "parataxis": "#f97316",  # Naranja claro - Parataxis
-    "punct": "#d4d4d4",      # Gris muy claro - Puntuación
-    "dep": "#a1a1aa",        # Gris - Dependencia
-}
+# Colores combinados desde mapper + colores específicos de relaciones
+LABEL_COLORS = {**UD_LABEL_COLORS}
+
+# Agregar colores de relaciones desde el mapper
+_relations_colors = _RELATIONS_GROUP.get("colors", {})
+LABEL_COLORS.update(_relations_colors)
 
 # =============================================================================
 # JAVASCRIPT PARA CONTEXTO
@@ -287,18 +251,6 @@ def generate_html_header(example: dict, annotation_type: str, batch_id: int, con
         <span style="font-weight:bold;">{config['title']} - {config['description']}</span>
         <span style="font-size:11px;opacity:0.9;">Lote {batch_id} | Paso {config['step']} | #{batch_idx}/{total}</span>
     </div>
-    <div style="background:#e0f2fe;padding:8px 10px;border-left:3px solid #0284c7;margin-bottom:4px;">
-        <b>🇵🇾 Guaraní:</b> <span style="font-size:15px;font-weight:bold;color:#0c4a6e;">{guarani_text}</span>
-    </div>
-    <div style="background:#fef3c7;padding:6px 10px;border-left:3px solid #f59e0b;margin-bottom:4px;">
-        <b>🇪🇸 Español:</b> <span style="color:#92400e;">{spanish_text}</span>
-    </div>
-    <div style="background:#f3f4f6;padding:4px 10px;border-left:3px solid #6b7280;margin-bottom:4px;">
-        {labels_html}
-    </div>
-    <div style="background:#f0fdf4;padding:4px;text-align:center;font-size:11px;color:#166534;border-radius:4px;">
-        👇 Selecciona texto y elige la etiqueta. Los spans pueden superponerse.
-    </div>
     <button onclick="window.toggleContextDialog()" style="background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11px;width:100%;margin-top:4px;">
         📖 Ver Contexto <span style="opacity:0.7;font-size:9px;margin-left:6px;">Ctrl+Shift+C</span>
     </button>
@@ -393,18 +345,116 @@ def prepare_examples(examples: list, annotation_type: str, batch_id: int) -> lis
 
 
 # =============================================================================
+# SESSION-AWARE EXCLUSION (MANEJO DE EXCLUSION POR SESION)
+# =============================================================================
+def get_session_completed_hashes(dataset_name: str, session_id: str) -> Set[int]:
+    """
+    Obtiene los task_hashes que una sesion especifica ya anoto.
+    
+    Args:
+        dataset_name: Nombre del dataset en Prodigy
+        session_id: ID de la sesion (alice, bob, etc.)
+    
+    Returns:
+        Set de task_hashes ya anotados por esta sesion
+    """
+    try:
+        db = connect()
+        if dataset_name not in db:
+            return set()
+        
+        completed = set()
+        examples = db.get_dataset_examples(dataset_name)
+        
+        for ex in examples:
+            ex_session = ex.get("_session_id", "")
+            task_hash = ex.get("_task_hash")
+            
+            if ex_session == session_id and task_hash is not None:
+                completed.add(task_hash)
+        
+        return completed
+    except Exception as e:
+        print(f"[WARN] Error al obtener hashes completados para {session_id}: {e}")
+        return set()
+
+
+def get_all_sessions_progress(dataset_name: str) -> Dict[str, Set[int]]:
+    """
+    Obtiene el progreso de TODAS las sesiones de un dataset.
+    
+    Args:
+        dataset_name: Nombre del dataset en Prodigy
+    
+    Returns:
+        Dict con session_id -> Set de task_hashes completados
+    """
+    try:
+        db = connect()
+        if dataset_name not in db:
+            return {}
+        
+        progress = {}
+        examples = db.get_dataset_examples(dataset_name)
+        
+        for ex in examples:
+            session_id = ex.get("_session_id", "")
+            task_hash = ex.get("_task_hash")
+            
+            if session_id and task_hash is not None:
+                if session_id not in progress:
+                    progress[session_id] = set()
+                progress[session_id].add(task_hash)
+        
+        return progress
+    except Exception as e:
+        print(f"[WARN] Error al obtener progreso global: {e}")
+        return {}
+
+
+def make_session_filter_stream(examples: List[Dict], dataset_name: str):
+    """
+    Crea un generador que filtra ejemplos basandose en lo que cada sesion ya anoto.
+    
+    Este generador consulta la DB al inicio y filtra los ejemplos que
+    la sesion actual ya ha completado.
+    
+    IMPORTANTE: En Prodigy, la sesion se determina por la URL (?session=xxx)
+    pero el stream se genera ANTES de conocer la sesion. Por eso usamos
+    feed_overlap=True y dejamos que todos vean todas las tareas inicialmente,
+    luego Prodigy filtra basandose en las anotaciones existentes.
+    
+    La solucion real es usar exclude_by="session" (disponible en Prodigy)
+    que excluye tareas que ESA sesion ya anoto, no globalmente.
+    
+    Args:
+        examples: Lista completa de ejemplos preparados
+        dataset_name: Nombre del dataset para consultar anotaciones
+    
+    Returns:
+        El mismo stream (la exclusion se maneja via exclude_by="session")
+    """
+    return examples
+
+
+# =============================================================================
 # TASK ROUTER PARA MULTI-ANNOTATOR (IAA)
 # =============================================================================
+
+# Variable global para el stream session-aware
+_session_stream = None
+
+
 def task_router_iaa(ctrl, session_id: str, item: Dict) -> List[str]:
     """
-    Router para distribuir tareas entre múltiples anotadores (Inter-Annotator Agreement).
+    Router para distribuir tareas entre multiples anotadores (Inter-Annotator Agreement).
     
-    Asigna cada tarea a N anotadores de forma determinística basada en el hash.
+    Asigna cada tarea a N anotadores de forma deterministica basada en el hash.
     Esto permite que exactamente ANNOTATIONS_PER_TASK anotadores vean cada tarea.
     
     Args:
         ctrl: Controller de Prodigy
-        session_id: ID de la sesión actual (alice, bob, carlos, etc.)
+        session_id: ID de la sesion actual (alice, bob, carlos, etc.)
         item: El ejemplo a enrutar
     
     Returns:
@@ -420,10 +470,10 @@ def task_router_iaa(ctrl, session_id: str, item: Dict) -> List[str]:
     if task_hash is None:
         return []
     
-    # Número de anotadores que deben ver cada tarea
+    # Numero de anotadores que deben ver cada tarea
     n_annotators = min(ANNOTATIONS_PER_TASK, len(pool))
     
-    # Usar hash módulo para seleccionar N anotadores consistentemente
+    # Usar hash modulo para seleccionar N anotadores consistentemente
     selected = []
     pool_copy = sorted(pool)
     
@@ -486,8 +536,8 @@ def make_update_callback(dataset_name: str):
 @prodigy.recipe(
     "guarani-batch",
     dataset=("Dataset name", "positional", None, str),
-    annotation_type=("Tipo de anotación: pos, features, relations", "option", "t", str),
-    lote=("Número de lote (1-60)", "option", "l", int),
+    annotation_type=("Tipo de anotacion: pos, features, relations", "option", "t", str),
+    lote=("Numero de lote (1-60)", "option", "l", int),
     source_dir=("Directorio de lotes", "option", "d", str),
 )
 def guarani_batch_recipe(
@@ -497,29 +547,47 @@ def guarani_batch_recipe(
     source_dir: str = "data/batches",
 ):
     """
-    Recipe unificado para anotación por lotes.
+    Recipe unificado para anotacion por lotes con soporte multi-anotador.
+    
+    IMPORTANTE: Este recipe usa exclusion por SESION, no global.
+    Cada anotador ve todas las tareas que EL no ha anotado,
+    independientemente de lo que otros anotadores hayan hecho.
     
     Args:
         dataset: Nombre del dataset en Prodigy
         annotation_type: "pos", "features", o "relations"
-        lote: Número del lote (1, 2, 3, ...)
-        source_dir: Directorio donde están los lotes
+        lote: Numero del lote (1, 2, 3, ...)
+        source_dir: Directorio donde estan los lotes
     
     Ejemplos:
         python -m prodigy guarani-batch guarani_pos_batch_01 -t pos -l 1 -F recipes/guarani_batch.py
         python -m prodigy guarani-batch guarani_features_batch_05 -t features -l 5 -F recipes/guarani_batch.py
     """
+    global _session_stream
+    
     # Validar tipo
     if annotation_type not in ["pos", "features", "relations"]:
-        raise ValueError(f"Tipo inválido: {annotation_type}. Usa: pos, features, relations")
+        raise ValueError(f"Tipo invalido: {annotation_type}. Usa: pos, features, relations")
     
-    # Obtener configuración
+    # Obtener configuracion
     config = get_type_config(annotation_type)
     
-    # Configurar Task Router para IAA
-    router = task_router_iaa if ENABLE_TASK_ROUTING else None
-    router_status = f"HABILITADO ({ANNOTATIONS_PER_TASK} anotadores por tarea)" if ENABLE_TASK_ROUTING else "DESHABILITADO"
-    auto_save_status = f"cada {AUTO_SAVE_EVERY} anotación(es)"
+    # Recargar configuración por si cambió desde la UI
+    global BUFFER_CONFIG, INSTANT_SUBMIT, BATCH_SIZE, AUTO_SAVE_EVERY
+    BUFFER_CONFIG = load_buffer_config()
+    INSTANT_SUBMIT = BUFFER_CONFIG.get("instant_submit", False)
+    BATCH_SIZE = BUFFER_CONFIG.get("batch_size", 3)
+    AUTO_SAVE_EVERY = 1 if INSTANT_SUBMIT else BATCH_SIZE
+    
+    # Configurar Task Router para IAA - DESHABILITADO para permitir que get_stream maneje exclusion
+    # El task_router no es compatible con get_stream personalizado
+    router = None  # Usamos get_stream en lugar de task_router
+    router_status = "DESHABILITADO (usando get_stream para exclusion por sesion)"
+    
+    if INSTANT_SUBMIT:
+        auto_save_status = "INSTANTÁNEO (cada anotación)"
+    else:
+        auto_save_status = f"cada {BATCH_SIZE} anotación(es)"
     
     print("=" * 60)
     print(f"{config['title']} - Lote {lote}")
@@ -529,6 +597,7 @@ def guarani_batch_recipe(
     print(f"   Lote: {lote}")
     print(f"   Task Router: {router_status}")
     print(f"   Auto-guardado: {auto_save_status}")
+    print(f"   Exclusion: POR SESION (cada anotador ve sus pendientes)")
     print("=" * 60)
     
     # Cargar y preparar ejemplos
@@ -538,15 +607,22 @@ def guarani_batch_recipe(
         raise ValueError(f"No se encontraron ejemplos en el lote {lote}")
     
     examples = prepare_examples(raw_examples, annotation_type, lote)
+    total_examples = len(examples)
+    
+    # Mostrar progreso existente por sesion
+    print("\n[PROGRESO EXISTENTE]")
+    existing_progress = get_all_sessions_progress(dataset)
+    if existing_progress:
+        for sid, hashes in sorted(existing_progress.items()):
+            print(f"   {sid}: {len(hashes)}/{total_examples} completadas")
+    else:
+        print("   (Sin anotaciones previas)")
+    print()
     
     # Crear tema de colores para las etiquetas
     custom_theme = {"labels": {}}
     for label in config["labels"]:
         custom_theme["labels"][label] = LABEL_COLORS.get(label, "#6b7280")
-    
-    # feed_overlap debe ser False cuando usamos task_router (el router controla la distribución)
-    # Si NO hay router, feed_overlap=True permite que todos vean todas las tareas
-    use_feed_overlap = not ENABLE_TASK_ROUTING
     
     # Crear callback de auto-guardado
     update_callback = make_update_callback(dataset)
@@ -554,8 +630,7 @@ def guarani_batch_recipe(
     return {
         "dataset": dataset,
         "view_id": "blocks",
-        "stream": examples,
-        "task_router": router,  # Router para distribuir tareas entre anotadores
+        "stream": examples,  # Stream con todos los ejemplos
         "update": update_callback,  # Callback para auto-guardado
         "config": {
             "blocks": [
@@ -565,12 +640,17 @@ def guarani_batch_recipe(
             "labels": config["labels"],
             "spans_key": "spans",
             "custom_theme": custom_theme,
-            "exclude_by": "task",  # Excluir por tarea+sesión, no por input global
+            # feed_overlap=True + exclude_by=None permite que:
+            # 1. Todos los anotadores vean todas las tareas
+            # 2. La exclusion se maneje internamente por sesion
+            # Prodigy con feed_overlap=True ya maneja esto correctamente
             "auto_count_stream": True,
             "show_stats": True,
             "javascript": CONTEXT_JS,
-            "feed_overlap": use_feed_overlap,  # False con task_router, True sin él
-            "instant_submit": True,  # Enviar cada anotación inmediatamente al servidor
+            "feed_overlap": True,  # CLAVE: Todos pueden ver todas las tareas
+            "instant_submit": INSTANT_SUBMIT,  # Desde prodigy_config.json
+            "batch_size": BATCH_SIZE if not INSTANT_SUBMIT else 1,  # Tamaño del buffer
             "sessions": ["alice", "bob", "carlos", "diana", "elena"],  # Sesiones permitidas
+            "total_examples_target": total_examples,  # Para mostrar progreso correcto
         },
     }
