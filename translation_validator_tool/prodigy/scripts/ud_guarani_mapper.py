@@ -1,452 +1,775 @@
 """
-MAPPER CENTRALIZADO: Etiquetas Amigables ↔ Universal Dependencies (Old Guaraní)
+Mapper centralizado: Etiquetas amigables <-> Universal Dependencies (Guarani)
 
-Este archivo es la ÚNICA FUENTE DE VERDAD para el mapeo de etiquetas.
-Basado en: https://universaldependencies.org/treebanks/gn_oldtudet/index.html
+Este archivo es la UNICA FUENTE DE VERDAD para el mapeo de etiquetas.
+Todos los recipes y scripts importan de aca.
+
+Referencia UD: https://universaldependencies.org/u/pos/
+               https://universaldependencies.org/u/feat/
+               https://universaldependencies.org/u/dep/
+
+Como configurar:
+    1) POS tags        -> editar POS_TAGS
+    2) Features        -> editar FEATURES
+    3) Dependencias    -> editar DEPENDENCY_RELATIONS
+    4) Morfemas        -> editar MORPHEMES (no es estandar UD)
+    5) Colores de UI   -> editar GROUP_COLORS / RELATION_COLORS
 
 Importar en cualquier script:
     from ud_guarani_mapper import FRIENDLY_TO_UD, UD_TO_FRIENDLY, map_label, LABEL_FAMILIES
-
-Autor: Proyecto Guaraní Corpus Lacuna
-Fecha: 2025-12-01
 """
 
+
 # =============================================================================
-# MAPEO PRINCIPAL: Etiqueta Amigable → Universal Dependencies
+# 1) CATEGORIAS GRAMATICALES / POS TAGS
 # =============================================================================
-# Basado en: https://universaldependencies.org/treebanks/gn_oldtudet/index.html
+# Ref: https://universaldependencies.org/u/pos/
 #
-# UPOS usados en Old Guaraní:
-#   ADP, ADV, DET, INTJ, NOUN, NUM, PART, PRON, PROPN, PUNCT, VERB
-#   NO SE USAN: ADJ, AUX, SCONJ, CCONJ, SYM, X
-#
-# Features usados en Old Guaraní:
-#   Case, Clusivity, Corf, Dev, Emph, Evident, Int, Intens, Mood, 
-#   Nomzr, Number, Number[psor], Number[subj], Person, Person[obj], 
-#   Person[psor], Person[subj], Polarity, Poss, Priv, PronType, 
-#   Red, Reflex, Rel, Tense, Voice, VerbForm
+# Formato: (etiqueta_amigable, codigo_UD, activa)
+#   - activa=True  -> se usa en anotacion
+#   - activa=False -> definida pero no se muestra en Prodigy
 # =============================================================================
 
-FRIENDLY_TO_UD = {
-    # =========================================================================
-    # MORFEMAS (Análisis morfológico)
-    # =========================================================================
-    # Nota: Root, Prefix, Suffix no son etiquetas UD estándar, pero las usamos
-    # para análisis morfológico. Se mantienen tal cual para exportación.
-    "Raíz": "Root",
-    "Prefijo": "Prefix", 
-    "Sufijo": "Suffix",
-    
-    # =========================================================================
-    # PERSONA (Person) - UD Feature
-    # https://universaldependencies.org/u/feat/Person.html
-    # =========================================================================
-    "1ra Persona": "Person=1",
-    "2da Persona": "Person=2", 
-    "3ra Persona": "Person=3",
-    
-    # =========================================================================
-    # NÚMERO (Number) - UD Feature
-    # https://universaldependencies.org/u/feat/Number.html
-    # =========================================================================
-    "Singular": "Number=Sing",
-    "Plural": "Number=Plur",
-    
-    # =========================================================================
-    # CLUSIVIDAD (Clusivity) - UD Feature (Específico Guaraní)
-    # https://universaldependencies.org/u/feat/Clusivity.html
-    # =========================================================================
-    "Inclusivo": "Clusivity=In",
-    "Exclusivo": "Clusivity=Ex",
-    
-    # =========================================================================
-    # CASO (Case) - UD Feature
-    # https://universaldependencies.org/u/feat/Case.html
-    # Valores usados en Old Guaraní: Abl, All, Dat, Loc, Ref
-    # =========================================================================
-    "Ablativo": "Case=Abl",        # Movimiento desde (usado en Old Guaraní)
-    "Alativo": "Case=All",         # Movimiento hacia (usado en Old Guaraní)
-    "Locativo": "Case=Loc",        # Ubicación
-    "Dativo": "Case=Dat",          # Beneficiario/receptor
-    "Referencial": "Case=Ref",     # Referencial (usado en Old Guaraní)
-    # Los siguientes NO están documentados en Old Guaraní, se mapean a X
-    "Perlativo": "Case=Per",       # Por/a través de (no en Old Guaraní docs)
-    "Translativo": "Case=Tra",     # Cambio de estado (no en Old Guaraní docs)
-    
-    # =========================================================================
-    # RELACIONAL (Rel) - UD Feature (Específico Tupí-Guaraní)
-    # https://universaldependencies.org/aqz/feat/Rel.html
-    # Valores usados en Old Guaraní: Abs, Cont, NCont
-    # =========================================================================
-    "Rel. Absoluto": "Rel=Abs",       # Sin poseedor
-    "Rel. Contiguo": "Rel=Cont",      # Poseedor contiguo (r-)
-    "Rel. No-Contiguo": "Rel=NCont",  # Poseedor no contiguo (h-/i-)
-    # Alias para compatibilidad
-    "Rel. Humano": "Rel=NCont",       # Mapea a NCont (aproximación)
-    
-    # =========================================================================
-    # REFLEXIVO (Reflex) - UD Feature
-    # https://universaldependencies.org/u/feat/Reflex.html
-    # =========================================================================
-    "Correferencial": "Reflex=Yes",
-    "Reflexivo": "Reflex=Yes",
-    
-    # =========================================================================
-    # ASPECTO (Aspect) - UD Feature
-    # https://universaldependencies.org/u/feat/Aspect.html
-    # NOTA: Old Guaraní no documenta Aspect explícitamente, pero lo incluimos
-    # =========================================================================
-    "Completivo": "Aspect=Perf",   # Perfectivo (acción completada)
-    "Iterativo": "Aspect=Iter",    # Iterativo
-    "Sucesivo": "Aspect=Prosp",    # Prospectivo (aproximación)
-    "Habitual": "Aspect=Hab",      # Habitual
-    
-    # =========================================================================
-    # MODO (Mood) - UD Feature  
-    # https://universaldependencies.org/u/feat/Mood.html
-    # Valores usados en Old Guaraní: Imp, Perm
-    # =========================================================================
-    "Imperativo": "Mood=Imp",      # Imperativo (documentado)
-    "Permisivo": "Mood=Perm",      # Permisivo/optativo (documentado)
-    
-    # =========================================================================
-    # TIEMPO (Tense) - UD Feature
-    # https://universaldependencies.org/u/feat/Tense.html
-    # Valores usados en Old Guaraní: Fut, FutPast, Past
-    # =========================================================================
-    "Pasado": "Tense=Past",        # Pasado (documentado)
-    "Futuro": "Tense=Fut",         # Futuro (documentado)
-    "Futuro-Pasado": "Tense=FutPast",  # Futuro del pasado (documentado)
-    
-    # =========================================================================
-    # FORMA VERBAL (VerbForm) - UD Feature
-    # https://universaldependencies.org/u/feat/VerbForm.html
-    # Valor usado en Old Guaraní: Ger
-    # =========================================================================
-    "Gerundio": "VerbForm=Ger",    # Gerundio (documentado)
-    
-    # =========================================================================
-    # VOZ (Voice) - UD Feature
-    # https://universaldependencies.org/u/feat/Voice.html
-    # Valores usados en Old Guaraní: Cau, Com
-    # =========================================================================
-    "Causativo": "Voice=Cau",      # Causativo (documentado)
-    "Comitativo": "Voice=Com",     # Comitativo (documentado)
-    
-    # =========================================================================
-    # POLARIDAD (Polarity) - UD Feature
-    # https://universaldependencies.org/u/feat/Polarity.html
-    # Valor usado en Old Guaraní: Neg
-    # =========================================================================
-    "Negación": "Polarity=Neg",    # Negación (documentado)
-    
-    # =========================================================================
-    # POSESIÓN (Poss) - UD Feature
-    # https://universaldependencies.org/u/feat/Poss.html
-    # =========================================================================
-    "Poseedor": "Poss=Yes",
-    "Posesivo": "Poss=Yes",
-    
-    # =========================================================================
-    # NOMINALIZADORES (Nomzr) - UD Feature (Específico Tupí-Guaraní)
-    # https://universaldependencies.org/apy/feat/Nomzr.html
-    # Valores usados en Old Guaraní: Ag, CCirc, Circ, DevPass, Pas, Rel
-    # =========================================================================
-    "Agentivo (-sar)": "Nomzr=Ag",           # Agentivo (documentado)
-    "Circunstancial (-saβ)": "Nomzr=Circ",   # Circunstancial (documentado)
-    "Pasivo (-pɨr)": "Nomzr=Pas",            # Pasivo (documentado)
-    "C-Circunstancial": "Nomzr=CCirc",       # C-Circunstancial (documentado)
-    "Derivación Pasiva": "Nomzr=DevPass",    # Derivación pasiva (documentado)
-    "Relativo (Nomzr)": "Nomzr=Rel",         # Nominalizador relativo (documentado)
-    # Alias para compatibilidad con código anterior
-    "Habitual (-βor)": "Aspect=Hab",         # Redirigido a Aspect
-    
-    # =========================================================================
-    # EVIDENCIALIDAD (Evident) - UD Feature
-    # https://universaldependencies.org/u/feat/Evident.html
-    # Valor usado en Old Guaraní: Nfh
-    # =========================================================================
-    "No-Primera Mano": "Evident=Nfh",  # Evidencia no de primera mano (documentado)
-    
-    # =========================================================================
-    # ÉNFASIS (Emph) - UD Feature (Específico Tupí-Guaraní)
-    # =========================================================================
+POS_TAGS = [
+    # etiqueta amigable        UD      activa   descripcion
+    ("Adjetivo",               "ADJ",   True),  # adjetivo
+    ("Posposicion",            "ADP",   True),  # adposicion (preposicion o posposicion)
+    ("Adverbio",               "ADV",   True),  # adverbio
+    ("Auxiliar",               "AUX",   True),  # verbo auxiliar
+    ("Conj. Coordinante",      "CCONJ", True),  # conjuncion coordinante
+    ("Determinante",           "DET",   True),  # determinante
+    ("Interjeccion",           "INTJ",  True),  # interjeccion
+    ("Sustantivo",             "NOUN",  True),  # sustantivo
+    ("Numeral",                "NUM",   True),  # numero
+    ("Particula",              "PART",  True),  # particula
+    ("Pronombre",              "PRON",  True),  # pronombre
+    ("Nombre Propio",          "PROPN", True),  # nombre propio
+    ("Puntuacion",             "PUNCT", True),  # puntuacion
+    ("Conj. Subordinante",     "SCONJ", True),  # conjuncion subordinante
+    ("Simbolo",                "SYM",   True),  # simbolo
+    ("Verbo",                  "VERB",  True),  # verbo
+    ("Otro",                   "X",     True),  # otra categoria no definible
+]
+
+
+# =============================================================================
+# 2) RASGOS MORFOLOGICOS / FEATURES
+# =============================================================================
+# Ref: https://universaldependencies.org/u/feat/
+#
+# Cada feature es: (etiqueta_amigable, valor_UD, activa)
+#
+# Para desactivar un feature, poner activa=False.
+# Para agregar uno nuevo, agregar una tupla a la lista correspondiente.
+#
+# NOTA: Los features marcados "no usamos" en el doc del equipo estan
+#       con activa=False. Se pueden activar cambiando a True.
+# =============================================================================
+
+FEATURES = {
+    # --- Abbreviation (Abbr) ---
+    "Abbr": [
+        ("Abreviacion",          "Abbr=Yes",       True),
+    ],
+
+    # --- Aspect ---
+    "Aspect": [
+        ("Completivo",           "Aspect=Perf",    True),   # perfectivo
+        ("Iterativo",            "Aspect=Iter",    True),
+        ("Sucesivo",             "Aspect=Prosp",   True),   # prospectivo (aprox.)
+        ("Habitual",             "Aspect=Hab",     True),
+    ],
+
+    # --- Case ---
+    "Case": [
+        ("Ablativo",             "Case=Abl",       True),
+        ("Alativo",              "Case=All",       True),
+        ("Locativo",             "Case=Loc",       True),
+        ("Dativo",               "Case=Dat",       True),
+        ("Referencial",          "Case=Ref",       True),
+        ("Perlativo",            "Case=Per",       False),  # no documentado en Old Guarani
+        ("Translativo",          "Case=Tra",       False),  # no documentado en Old Guarani
+    ],
+
+    # --- Clusivity (especifico guarani, 1ra persona plural) ---
+    "Clusivity": [
+        ("Inclusivo",            "Clusivity=In",   True),
+        ("Exclusivo",            "Clusivity=Ex",   True),
+    ],
+
+    # --- Definite ---
+    "Definite": [
+        ("Definido",             "Definite=Def",   True),
+        ("Indefinido (Def)",     "Definite=Ind",   True),
+    ],
+
+    # --- Foreign ---
+    "Foreign": [
+        ("Extranjerismo",        "Foreign=Yes",    True),
+    ],
+
+    # --- Mood ---
+    "Mood": [
+        ("Imperativo",           "Mood=Imp",       True),
+        ("Permisivo",            "Mood=Perm",      True),
+    ],
+
+    # --- Nasality (nueva, especifica del proyecto) ---
+    "Nasality": [
+        ("Nasal",                "Nasality=Yes",   True),
+    ],
+
+    # --- Number ---
+    "Number": [
+        ("Singular",             "Number=Sing",    True),
+        ("Plural",               "Number=Plur",    True),
+    ],
+
+    # --- Other ---
+    "Other": [
+        ("Otro (Feat)",          "Other=Yes",      True),
+    ],
+
+    # --- Person ---
+    "Person": [
+        ("1ra Persona",          "Person=1",       True),
+        ("2da Persona",          "Person=2",       True),
+        ("3ra Persona",          "Person=3",       True),
+    ],
+
+    # --- Polarity ---
+    "Polarity": [
+        ("Negacion",             "Polarity=Neg",   True),
+    ],
+
+    # --- Poss ---
+    "Poss": [
+        ("Poseedor",             "Poss=Yes",       True),
+    ],
+
+    # --- PronType ---
+    "PronType": [
+        ("Demostrativo",         "PronType=Dem",   True),
+        ("Indefinido",           "PronType=Ind",   True),
+        ("Interrogativo (Pron)", "PronType=Int",   True),
+        ("Personal",             "PronType=Prs",   True),
+        ("Total",                "PronType=Tot",   True),
+    ],
+
+    # --- Reflex --- (no la usamos)
+    "Reflex": [
+        ("Reflexivo",            "Reflex=Yes",     False),
+    ],
+
+    # --- Tense ---
+    "Tense": [
+        ("Pasado",               "Tense=Past",     True),
+        ("Futuro",               "Tense=Fut",      True),
+        ("Futuro-Pasado",        "Tense=FutPast",  True),
+    ],
+
+    # --- Typo ---
+    "Typo": [
+        ("Errata",               "Typo=Yes",       True),
+    ],
+
+    # --- VerbForm ---
+    "VerbForm": [
+        ("Gerundio",             "VerbForm=Ger",   True),
+    ],
+
+    # --- Voice --- (no la usamos, no hay voz pasiva en guarani)
+    "Voice": [
+        ("Causativo",            "Voice=Cau",      False),
+        ("Comitativo",           "Voice=Com",      False),
+    ],
+
+    # -----------------------------------------------------------------
+    # Features especificos Tupi-Guarani (no estandar UD universal)
+    # -----------------------------------------------------------------
+
+    # --- Rel (Relacional) ---
+    "Rel": [
+        ("Rel. Absoluto",        "Rel=Abs",        True),
+        ("Rel. Contiguo",        "Rel=Cont",       True),
+        ("Rel. No-Contiguo",     "Rel=NCont",      True),
+    ],
+
+    # --- Nomzr (Nominalizadores) ---
+    "Nomzr": [
+        ("Agentivo (-sar)",          "Nomzr=Ag",       True),
+        ("Circunstancial (-sab)",    "Nomzr=Circ",     True),
+        ("Pasivo (-pyr)",            "Nomzr=Pas",      True),
+        ("C-Circunstancial",         "Nomzr=CCirc",    True),
+        ("Derivacion Pasiva",        "Nomzr=DevPass",  True),
+        ("Relativo (Nomzr)",         "Nomzr=Rel",      True),
+    ],
+
+    # --- Corf (Correferencia) ---
+    "Corf": [
+        ("Correferencia",        "Corf=Yes",       True),
+    ],
+
+    # --- Evident (Evidencialidad) --- (no la usamos)
+    "Evident": [
+        ("No-Primera Mano",     "Evident=Nfh",    False),
+    ],
+
+    # --- Emph ---
+    "Emph": [
+        ("Enfatico",             "Emph=Yes",       True),
+    ],
+
+    # --- Intens ---
+    "Intens": [
+        ("Intensificador",       "Intens=Yes",     True),
+    ],
+
+    # --- Priv (Privativo) ---
+    "Priv": [
+        ("Privativo",            "Priv=Yes",       True),
+    ],
+
+    # --- Red (Reduplicacion) ---
+    "Red": [
+        ("Reduplicacion",        "Red=Di",         True),
+    ],
+
+    # --- Int (Interrogativo morfologico) ---
+    "Int": [
+        ("Interrogativo",        "Int=Yes",        True),
+    ],
+}
+
+
+# =============================================================================
+# 3) ETIQUETAS DE DEPENDENCIA / DEPENDENCY RELATIONS
+# =============================================================================
+# Ref: https://universaldependencies.org/u/dep/
+#
+# Formato: (etiqueta_amigable, codigo_UD, activa)
+#
+# Todas las relaciones definidas por UD estan listadas.
+# Las marcadas con (*) son las que usamos en nuestros ejemplos hasta ahora.
+# =============================================================================
+
+DEPENDENCY_RELATIONS = [
+    # etiqueta amigable              UD            activa
+    ("CLAUSULA RELATIVA",            "acl",         True),
+    ("CLAUSULA ADVERBIAL",           "advcl",       True),
+    ("MODIFICADOR ADVERBIAL",        "advmod",      True),
+    ("MODIFICADOR ADJETIVAL",        "amod",        True),   # modificador adjetival
+    ("APOSICION",                    "appos",       True),
+    ("AUXILIAR (dep)",               "aux",         True),   # auxiliar
+    ("MARCADOR DE CASO",             "case",        True),   # (*) usado en ejemplos
+    ("CONJUNCION COORDINANTE",       "cc",          True),   # (*) usado en ejemplos
+    ("COMPLEMENTO CLAUSAL",          "ccomp",       True),   # (*) usado en ejemplos
+    ("CLASIFICADOR",                 "clf",         True),
+    ("PALABRA COMPUESTA",            "compound",    True),
+    ("CONJUNCION",                   "conj",        True),   # (*) usado en ejemplos
+    ("COPULA",                       "cop",         True),
+    ("SUJETO CLAUSAL",              "csubj",        True),
+    ("DEPENDENCIA (General)",        "dep",         True),
+    ("DETERMINANTE (dep)",           "det",         True),   # (*) usado en ejemplos
+    ("ELEMENTO DE DISCURSO",         "discourse",   True),
+    ("DISLOCADO",                    "dislocated",  True),
+    ("EXPLETIVO",                    "expl",        True),
+    ("EXPRESION FIJA",               "fixed",       True),
+    ("NOMBRE PLANO",                 "flat",        True),
+    ("VA-CON",                       "goeswith",    True),
+    ("OBJETO INDIRECTO",             "iobj",        True),   # objeto indirecto
+    ("LISTA",                        "list",        True),
+    ("MARCADOR",                     "mark",        True),
+    ("MODIFICADOR NOMINAL",          "nmod",        True),   # (*) usado en ejemplos
+    ("SUJETO NOMINAL",              "nsubj",        True),   # (*) sujeto nominal
+    ("MODIFICADOR NUMERICO",         "nummod",      True),
+    ("OBJETO DIRECTO",               "obj",         True),   # (*) usado en ejemplos
+    ("OBLICUO",                      "obl",         True),
+    ("HUERFANO",                     "orphan",      True),
+    ("PARATAXIS",                    "parataxis",   True),
+    ("PUNTUACION (dep)",             "punct",       True),   # (*) usado en ejemplos
+    ("REPARANDUM",                   "reparandum",  True),
+    ("RAIZ",                         "root",        True),   # raiz de la oracion
+    ("VOCATIVO",                     "vocative",    True),   # vocativo
+    ("COMPLEMENTO VERBAL",          "xcomp",        True),
+]
+
+
+# =============================================================================
+# 4) MORFEMAS (no estandar UD, para analisis morfologico)
+# =============================================================================
+
+MORPHEMES = [
+    ("Raiz",     "Root",    True),
+    ("Prefijo",  "Prefix",  True),
+    ("Sufijo",   "Suffix",  True),
+]
+
+
+# =============================================================================
+# 5) COLORES PARA UI (por grupo)
+# =============================================================================
+# Cambiar aca para modificar los colores en Prodigy.
+
+GROUP_COLORS = {
+    "pos-tags":     "#dc2626",   # rojo
+    "features":     "#8b5cf6",   # violeta
+    "relations":    "#22c55e",   # verde
+    "morfemas":     "#3b82f6",   # azul
+
+    # Subgrupos de features
+    "Abbr":         "#64748b",
+    "Aspect":       "#84cc16",
+    "Case":         "#f97316",
+    "Clusivity":    "#0ea5e9",
+    "Definite":     "#64748b",
+    "Foreign":      "#64748b",
+    "Mood":         "#14b8a6",
+    "Nasality":     "#14b8a6",
+    "Number":       "#06b6d4",
+    "Other":        "#64748b",
+    "Person":       "#8b5cf6",
+    "Polarity":     "#ef4444",
+    "Poss":         "#f59e0b",
+    "PronType":     "#64748b",
+    "Tense":        "#eab308",
+    "Typo":         "#64748b",
+    "VerbForm":     "#f472b6",
+    "Voice":        "#ec4899",
+    "Rel":          "#6366f1",
+    "Nomzr":        "#a855f7",
+    "Corf":         "#6366f1",
+    "Evident":      "#64748b",
+    "Emph":         "#64748b",
+    "Intens":       "#64748b",
+    "Priv":         "#64748b",
+    "Red":          "#64748b",
+    "Int":          "#64748b",
+    "Reflex":       "#6366f1",
+}
+
+# Colores individuales para relaciones de dependencia
+RELATION_COLORS = {
+    "RAIZ":                     "#dc2626",
+    "SUJETO NOMINAL":           "#2563eb",
+    "OBJETO DIRECTO":           "#16a34a",
+    "OBJETO INDIRECTO":         "#65a30d",
+    "OBLICUO":                  "#ca8a04",
+    "MODIFICADOR ADVERBIAL":    "#7c3aed",
+    "CLAUSULA ADVERBIAL":       "#a855f7",
+    "MODIFICADOR NOMINAL":      "#0891b2",
+    "DETERMINANTE (dep)":       "#64748b",
+    "MARCADOR DE CASO":         "#78716c",
+    "PALABRA COMPUESTA":        "#ea580c",
+    "APOSICION":                "#db2777",
+    "COMPLEMENTO VERBAL":       "#059669",
+    "ELEMENTO DE DISCURSO":     "#94a3b8",
+    "PARATAXIS":                "#f97316",
+    "MODIFICADOR NUMERICO":     "#0d9488",
+    "PUNTUACION (dep)":         "#d4d4d4",
+    "DEPENDENCIA (General)":    "#a1a1aa",
+    "CONJUNCION COORDINANTE":   "#78716c",
+    "COMPLEMENTO CLAUSAL":      "#059669",
+    "CONJUNCION":               "#78716c",
+    "AUXILIAR (dep)":           "#7c3aed",
+    "MODIFICADOR ADJETIVAL":    "#0891b2",
+    "CLAUSULA RELATIVA":        "#a855f7",
+    "VOCATIVO":                 "#db2777",
+}
+
+
+# =============================================================================
+# =============================================================================
+#  A PARTIR DE ACA NO DEBERIA SER NECESARIO EDITAR
+#  (se genera todo automaticamente a partir de las tablas de arriba)
+# =============================================================================
+# =============================================================================
+
+
+def _build_friendly_to_ud():
+    """Construye el diccionario FRIENDLY_TO_UD a partir de las tablas de config."""
+    mapping = {}
+
+    # Morfemas
+    for friendly, ud, active in MORPHEMES:
+        if active:
+            mapping[friendly] = ud
+
+    # Features (todos los grupos)
+    for _group_name, feat_list in FEATURES.items():
+        for friendly, ud, active in feat_list:
+            if active:
+                mapping[friendly] = ud
+
+    # POS tags
+    for friendly, ud, active in POS_TAGS:
+        if active:
+            mapping[friendly] = ud
+
+    # Relaciones de dependencia
+    for friendly, ud, active in DEPENDENCY_RELATIONS:
+        if active:
+            mapping[friendly] = ud
+
+    return mapping
+
+
+def _build_ud_to_friendly(fwd):
+    """Construye el mapeo inverso UD -> amigable."""
+    rev = {}
+    for friendly, ud in fwd.items():
+        rev[ud] = friendly
+    return rev
+
+
+# --- Diccionarios principales ---
+FRIENDLY_TO_UD = _build_friendly_to_ud()
+UD_TO_FRIENDLY = _build_ud_to_friendly(FRIENDLY_TO_UD)
+
+# --- Compatibilidad: aliases que pueden existir en datos viejos ---
+_ALIASES = {
+    # Aliases con tildes/caracteres especiales del mapper anterior
+    "Posposicion": "ADP",
+    "Posposición": "ADP",
+    "Interjeccion": "INTJ",
+    "Interjección": "INTJ",
+    "Particula": "PART",
+    "Partícula": "PART",
+    "Puntuacion": "PUNCT",
+    "Puntuación": "PUNCT",
+    "Simbolo": "SYM",
+    "Símbolo": "SYM",
+    "Negacion": "Polarity=Neg",
+    "Negación": "Polarity=Neg",
+    "Enfatico": "Emph=Yes",
     "Enfático": "Emph=Yes",
-    
-    # =========================================================================
-    # INTENSIFICADOR (Intens) - UD Feature
-    # =========================================================================
-    "Intensificador": "Intens=Yes",
-    
-    # =========================================================================
-    # PRIVATIVO (Priv) - UD Feature  
-    # https://universaldependencies.org/gn/feat/Priv.html
-    # =========================================================================
-    "Privativo": "Priv=Yes",       # Sin/ausencia de (documentado)
-    
-    # =========================================================================
-    # REDUPLICACIÓN (Red) - UD Feature
-    # =========================================================================
-    "Reduplicación": "Red=Di",     # Reduplicación distributiva (documentado)
-    
-    # =========================================================================
-    # INTERROGATIVO (Int) - UD Feature
-    # =========================================================================
-    "Interrogativo": "Int=Yes",
-    
-    # =========================================================================
-    # CORREFERENCIA (Corf) - UD Feature (Específico Tupí-Guaraní)
-    # =========================================================================
-    "Correferencia": "Corf=Yes",
-    
-    # =========================================================================
-    # CATEGORÍAS GRAMATICALES (UPOS)
-    # https://universaldependencies.org/u/pos/
-    # Solo los UPOS documentados en Old Guaraní:
-    #   ADP, ADV, DET, INTJ, NOUN, NUM, PART, PRON, PROPN, PUNCT, VERB
-    # =========================================================================
-    # UPOS DOCUMENTADOS EN OLD GUARANÍ:
-    "Verbo": "VERB",               # ✓ Documentado
-    "Sustantivo": "NOUN",          # ✓ Documentado
-    "Pronombre": "PRON",           # ✓ Documentado
-    "Adverbio": "ADV",             # ✓ Documentado
-    "Posposición": "ADP",          # ✓ Documentado (son posposiciones, no preposiciones)
-    "Determinante": "DET",         # ✓ Documentado
-    "Numeral": "NUM",              # ✓ Documentado
-    "Partícula": "PART",           # ✓ Documentado
-    "Interjección": "INTJ",        # ✓ Documentado
-    "Nombre Propio": "PROPN",      # ✓ Documentado
-    "Puntuación": "PUNCT",         # ✓ Documentado
-    
-    # UPOS NO USADOS EN OLD GUARANÍ (pero incluidos para completitud):
-    "Auxiliar": "AUX",             # ✗ No usado en Old Guaraní
-    "Conj. Coordinante": "CCONJ",  # ✗ No usado en Old Guaraní
-    "Conj. Subordinante": "SCONJ", # ✗ No usado en Old Guaraní
-    "Adjetivo": "ADJ",             # ✗ No existe en Guaraní clásico
-    "Símbolo": "SYM",              # ✗ No usado en Old Guaraní
-    "Otro": "X",                   # Para etiquetas no clasificables
-    
-    # =========================================================================
-    # RELACIONES SINTÁCTICAS (Deprel) - UD Relations
-    # https://universaldependencies.org/u/dep/
-    # Basado en Old Guaraní treebank
-    # =========================================================================
+    "Reduplicacion": "Red=Di",
+    "Reduplicación": "Red=Di",
+    "Abreviacion": "Abbr=Yes",
+    "Abreviación": "Abbr=Yes",
+    "Derivacion Pasiva": "Nomzr=DevPass",
+    "Derivación Pasiva": "Nomzr=DevPass",
+    "Raiz": "Root",
+    "Raíz": "Root",
+    "Posesivo": "Poss=Yes",
+    "Correferencial": "Reflex=Yes",
+    "Rel. Humano": "Rel=NCont",
+    "Habitual (-βor)": "Aspect=Hab",
+    "Circunstancial (-saβ)": "Nomzr=Circ",
+    "Pasivo (-pɨr)": "Nomzr=Pas",
+    # Relaciones con formato anterior
     "RAÍZ (Verbo Principal)": "root",
     "SUJETO": "nsubj",
-    "OBJETO DIRECTO": "obj",
-    "OBJETO INDIRECTO": "iobj",
-    "COMPLEMENTO OBLICUO": "obl",
     "OBLICUO-OBJETO": "obl:obj",
     "OBLICUO-SUJETO": "obl:subj",
-    "MODIFICADOR ADVERBIAL": "advmod",
     "CLÁUSULA ADVERBIAL": "advcl",
-    "MODIFICADOR NOMINAL": "nmod",
     "DETERMINANTE (Rel)": "det",
-    "MARCADOR DE CASO": "case",
-    "PALABRA COMPUESTA": "compound",
     "APOSICIÓN": "appos",
-    "COMPLEMENTO VERBAL": "xcomp",
-    "ELEMENTO DE DISCURSO": "discourse",
-    "PARATAXIS": "parataxis",
     "MODIFICADOR NUMÉRICO": "nummod",
     "PUNTUACIÓN (Rel)": "punct",
-    "DEPENDENCIA (General)": "dep",
+    "COMPLEMENTO OBLICUO": "obl",
 }
 
-# =============================================================================
-# MAPEO INVERSO: Universal Dependencies → Etiqueta Amigable
-# =============================================================================
-UD_TO_FRIENDLY = {v: k for k, v in FRIENDLY_TO_UD.items()}
+# Incorporar aliases al mapeo principal (sin sobreescribir los canonicos)
+for _alias, _ud_val in _ALIASES.items():
+    if _alias not in FRIENDLY_TO_UD:
+        FRIENDLY_TO_UD[_alias] = _ud_val
 
-# Agregar aliases inversos
-UD_TO_FRIENDLY.update({
-    # UPOS
-    "VERB": "Verbo",
-    "NOUN": "Sustantivo", 
-    "PRON": "Pronombre",
-    "ADV": "Adverbio",
-    "ADP": "Posposición",
-    "DET": "Determinante",
-    "NUM": "Numeral",
-    "PART": "Partícula",
-    "INTJ": "Interjección",
-    "PROPN": "Nombre Propio",
-    "PUNCT": "Puntuación",
-    "AUX": "Auxiliar",
-    "CCONJ": "Conj. Coordinante",
-    "SCONJ": "Conj. Subordinante",
-    "ADJ": "Adjetivo",
-    "SYM": "Símbolo",
-    "X": "Otro",
+# Asegurar que el inverso tenga las entradas canonicas
+for friendly, ud, active in POS_TAGS:
+    if active:
+        UD_TO_FRIENDLY[ud] = friendly
+for friendly, ud, active in MORPHEMES:
+    if active:
+        UD_TO_FRIENDLY[ud] = friendly
+
+
+# =============================================================================
+# VALID_UPOS y VALID_FEATURES (conjuntos para verificacion)
+# =============================================================================
+
+VALID_UPOS = {ud for _f, ud, active in POS_TAGS if active}
+
+VALID_FEATURES = set()
+for _group_name, _feat_list in FEATURES.items():
+    for _friendly, ud, active in _feat_list:
+        if active:
+            VALID_FEATURES.add(ud)
+# Agregar morfemas como features especiales
+for _friendly, ud, active in MORPHEMES:
+    if active:
+        VALID_FEATURES.add(ud)
+
+
+# =============================================================================
+# LABEL_FAMILIES (para UI agrupada)
+# =============================================================================
+
+def _build_label_families():
+    families = {}
+
     # Morfemas
-    "Root": "Raíz",
-    "Prefix": "Prefijo",
-    "Suffix": "Sufijo",
-})
+    active_morphemes = [f for f, _u, a in MORPHEMES if a]
+    if active_morphemes:
+        families["Morfemas"] = {
+            "description": "Componentes estructurales (no estandar UD)",
+            "color": GROUP_COLORS.get("morfemas", "#3b82f6"),
+            "labels": active_morphemes,
+        }
+
+    # Features agrupados por tipo
+    _feature_family_names = {
+        "Abbr":      "Abreviacion",
+        "Aspect":    "Aspecto",
+        "Case":      "Caso",
+        "Clusivity": "Clusividad",
+        "Definite":  "Definitud",
+        "Foreign":   "Extranjerismo",
+        "Mood":      "Modo",
+        "Nasality":  "Nasalidad",
+        "Number":    "Numero",
+        "Other":     "Otros",
+        "Person":    "Persona",
+        "Polarity":  "Polaridad",
+        "Poss":      "Posesion",
+        "PronType":  "Tipo de Pronombre",
+        "Tense":     "Tiempo",
+        "Typo":      "Erratas",
+        "VerbForm":  "Forma Verbal",
+        "Voice":     "Voz",
+        "Rel":       "Relacional",
+        "Nomzr":     "Nominalizadores",
+        "Corf":      "Correferencia",
+        "Evident":   "Evidencialidad",
+        "Emph":      "Enfasis",
+        "Intens":    "Intensificador",
+        "Priv":      "Privativo",
+        "Red":       "Reduplicacion",
+        "Int":       "Interrogativo",
+        "Reflex":    "Reflexivo",
+    }
+
+    for group_key, feat_list in FEATURES.items():
+        active = [f for f, _u, a in feat_list if a]
+        if active:
+            name = _feature_family_names.get(group_key, group_key)
+            families[name] = {
+                "description": f"{group_key} (UD Feature)",
+                "color": GROUP_COLORS.get(group_key, "#64748b"),
+                "labels": active,
+            }
+
+    # POS tags como familia
+    active_pos = [f for f, _u, a in POS_TAGS if a]
+    if active_pos:
+        families["Categoria (UPOS)"] = {
+            "description": "Universal POS Tags",
+            "color": GROUP_COLORS.get("pos-tags", "#dc2626"),
+            "labels": active_pos,
+        }
+
+    return families
+
+
+LABEL_FAMILIES = _build_label_families()
+
 
 # =============================================================================
-# LISTA DE UPOS VÁLIDOS (para verificación)
+# LABEL_COLORS (color por etiqueta individual)
 # =============================================================================
-VALID_UPOS = {
-    # Documentados en Old Guaraní
-    "ADP", "ADV", "DET", "INTJ", "NOUN", "NUM", "PART", 
-    "PRON", "PROPN", "PUNCT", "VERB",
-    # No documentados pero posibles
-    "ADJ", "AUX", "CCONJ", "SCONJ", "SYM", "X",
-}
 
-# =============================================================================
-# FEATURES VÁLIDOS DE OLD GUARANÍ (para verificación)
-# =============================================================================
-VALID_FEATURES = {
-    # Nominales
-    "Number=Sing", "Number=Plur",
-    "Case=Abl", "Case=All", "Case=Dat", "Case=Loc", "Case=Ref",
-    "Poss=Yes",
-    # Verbales
-    "Mood=Imp", "Mood=Perm",
-    "Tense=Fut", "Tense=FutPast", "Tense=Past",
-    "Voice=Cau", "Voice=Com",
-    "VerbForm=Ger",
-    "Polarity=Neg",
-    # Pronombres/Determinantes
-    "PronType=Dem", "PronType=Ind", "PronType=Int", "PronType=Prs", "PronType=Tot",
-    "Person=1", "Person=2", "Person=3",
-    "Reflex=Yes",
-    "NumType=Card",
-    # Específicos Tupí-Guaraní
-    "Clusivity=In", "Clusivity=Ex",
-    "Rel=Abs", "Rel=Cont", "Rel=NCont",
-    "Nomzr=Ag", "Nomzr=CCirc", "Nomzr=Circ", "Nomzr=DevPass", "Nomzr=Pas", "Nomzr=Rel",
-    "Corf=Yes",
-    "Evident=Nfh",
-    "Emph=Yes",
-    "Intens=Yes",
-    "Int=Yes",
-    "Priv=Yes",
-    "Red=Di",
-    # Aspecto (no documentado explícitamente pero posible)
-    "Aspect=Perf", "Aspect=Iter", "Aspect=Prosp", "Aspect=Hab",
-    # Morfemas (especiales, no UD estándar)
-    "Root", "Prefix", "Suffix",
-}
-
-# =============================================================================
-# FAMILIAS DE ETIQUETAS (para UI agrupada)
-# =============================================================================
-LABEL_FAMILIES = {
-    "📦 Morfemas": {
-        "description": "Componentes estructurales",
-        "color": "#3b82f6",
-        "labels": ["Raíz", "Prefijo", "Sufijo"],
-    },
-    "👤 Persona": {
-        "description": "Person (UD)",
-        "color": "#8b5cf6",
-        "labels": ["1ra Persona", "2da Persona", "3ra Persona"],
-    },
-    "🔢 Número": {
-        "description": "Number (UD)",
-        "color": "#06b6d4",
-        "labels": ["Singular", "Plural"],
-    },
-    "👥 Clusividad": {
-        "description": "Clusivity (UD) - 1ra plural",
-        "color": "#0ea5e9",
-        "labels": ["Inclusivo", "Exclusivo"],
-    },
-    "📍 Caso": {
-        "description": "Case (UD)",
-        "color": "#f97316",
-        "labels": ["Ablativo", "Alativo", "Locativo", "Dativo", "Referencial"],
-    },
-    "🔗 Relacional": {
-        "description": "Rel (UD) - Específico Tupí-Guaraní",
-        "color": "#6366f1",
-        "labels": ["Rel. Absoluto", "Rel. Contiguo", "Rel. No-Contiguo", "Correferencial"],
-    },
-    "⏰ Tiempo": {
-        "description": "Tense (UD)",
-        "color": "#eab308",
-        "labels": ["Pasado", "Futuro", "Futuro-Pasado"],
-    },
-    "🔄 Aspecto": {
-        "description": "Aspect (UD)",
-        "color": "#84cc16",
-        "labels": ["Completivo", "Iterativo", "Sucesivo", "Habitual"],
-    },
-    "💭 Modo": {
-        "description": "Mood (UD)",
-        "color": "#14b8a6",
-        "labels": ["Imperativo", "Permisivo"],
-    },
-    "🗣️ Voz": {
-        "description": "Voice (UD)",
-        "color": "#ec4899",
-        "labels": ["Causativo", "Comitativo"],
-    },
-    "📝 Forma Verbal": {
-        "description": "VerbForm (UD)",
-        "color": "#f472b6",
-        "labels": ["Gerundio"],
-    },
-    "🚫 Polaridad": {
-        "description": "Polarity (UD)",
-        "color": "#ef4444",
-        "labels": ["Negación"],
-    },
-    "🏠 Posesión": {
-        "description": "Poss (UD)",
-        "color": "#f59e0b",
-        "labels": ["Poseedor"],
-    },
-    "🔧 Nominalizadores": {
-        "description": "Nomzr (UD) - Específico Tupí-Guaraní",
-        "color": "#a855f7",
-        "labels": ["Agentivo (-sar)", "Circunstancial (-saβ)", "Pasivo (-pɨr)", 
-                   "C-Circunstancial", "Derivación Pasiva", "Relativo (Nomzr)"],
-    },
-    "✨ Otros Features": {
-        "description": "Otros rasgos morfológicos",
-        "color": "#64748b",
-        "labels": ["No-Primera Mano", "Enfático", "Intensificador", "Privativo", 
-                   "Reduplicación", "Interrogativo", "Correferencia", "Reflexivo"],
-    },
-    "📝 Categoría (UPOS)": {
-        "description": "Universal POS Tags",
-        "color": "#dc2626",
-        "labels": ["Verbo", "Sustantivo", "Pronombre", "Adverbio", "Posposición",
-                   "Determinante", "Numeral", "Partícula", "Interjección", 
-                   "Nombre Propio", "Puntuación"],
-    },
-}
-
-# =============================================================================
-# COLORES POR ETIQUETA
-# =============================================================================
 LABEL_COLORS = {}
-for family_name, family_data in LABEL_FAMILIES.items():
-    base_color = family_data["color"]
-    for label in family_data["labels"]:
-        LABEL_COLORS[label] = base_color
+for _family_name, _family_data in LABEL_FAMILIES.items():
+    _base_color = _family_data["color"]
+    for _label in _family_data["labels"]:
+        LABEL_COLORS[_label] = _base_color
+
+# Colores especificos para relaciones
+for _friendly, _ud, _active in DEPENDENCY_RELATIONS:
+    if _active and _friendly in RELATION_COLORS:
+        LABEL_COLORS[_friendly] = RELATION_COLORS[_friendly]
+
 
 # =============================================================================
-# FUNCIONES DE MAPEO
+# FAMILY_KEYS (claves cortas para CLI)
+# =============================================================================
+
+FAMILY_KEYS = {}
+_short_key_map = {
+    "Morfemas": "morfema",
+    "Persona": "persona",
+    "Numero": "numero",
+    "Clusividad": "clusividad",
+    "Caso": "caso",
+    "Relacional": "relacional",
+    "Tiempo": "tiempo",
+    "Aspecto": "aspecto",
+    "Modo": "modo",
+    "Voz": "voz",
+    "Forma Verbal": "forma",
+    "Polaridad": "polaridad",
+    "Posesion": "posesion",
+    "Nominalizadores": "nominalizador",
+    "Categoria (UPOS)": "categoria",
+    "Nasalidad": "nasalidad",
+    "Abreviacion": "abreviacion",
+    "Extranjerismo": "extranjerismo",
+    "Erratas": "errata",
+    "Correferencia": "correferencia",
+    "Evidencialidad": "evidencialidad",
+    "Enfasis": "enfasis",
+    "Intensificador": "intensificador",
+    "Privativo": "privativo",
+    "Reduplicacion": "reduplicacion",
+    "Interrogativo": "interrogativo",
+    "Reflexivo": "reflexivo",
+    "Tipo de Pronombre": "prontype",
+    "Otros": "otros",
+    "Definitud": "definitud",
+}
+
+for _family_name in LABEL_FAMILIES:
+    _short = _short_key_map.get(_family_name, _family_name.lower().replace(" ", "_"))
+    FAMILY_KEYS[_short] = _family_name
+
+
+# =============================================================================
+# SPECIALIZED_GROUPS (para los recipes de Prodigy)
+# =============================================================================
+
+def _build_specialized_groups():
+    groups = {}
+
+    # Grupo: POS Tags
+    active_pos = [(f, u) for f, u, a in POS_TAGS if a]
+    groups["pos-tags"] = {
+        "name": "POS Tags",
+        "description": "Categorias gramaticales (Universal POS Tags)",
+        "color": GROUP_COLORS.get("pos-tags", "#dc2626"),
+        "labels": [f for f, _u in active_pos],
+        "ud_mapping": {f: u for f, u in active_pos},
+    }
+
+    # Grupo: Features (todos los activos juntos)
+    feat_labels = []
+    feat_mapping = {}
+    for _gk, feat_list in FEATURES.items():
+        for friendly, ud, active in feat_list:
+            if active:
+                feat_labels.append(friendly)
+                feat_mapping[friendly] = ud
+
+    groups["features"] = {
+        "name": "Features",
+        "description": "Rasgos morfologicos (Morphological Features)",
+        "color": GROUP_COLORS.get("features", "#8b5cf6"),
+        "labels": feat_labels,
+        "ud_mapping": feat_mapping,
+    }
+
+    # Grupo: Relations
+    active_rels = [(f, u) for f, u, a in DEPENDENCY_RELATIONS if a]
+    rel_colors = {}
+    for f, _u in active_rels:
+        if f in RELATION_COLORS:
+            rel_colors[f] = RELATION_COLORS[f]
+
+    groups["relations"] = {
+        "name": "Relaciones Sintacticas",
+        "description": "Relaciones de dependencia (Dependency Relations)",
+        "color": GROUP_COLORS.get("relations", "#22c55e"),
+        "labels": [f for f, _u in active_rels],
+        "ud_mapping": {f: u for f, u in active_rels},
+        "colors": rel_colors,
+    }
+
+    # Grupo: Morfemas
+    active_morph = [(f, u) for f, u, a in MORPHEMES if a]
+    groups["morfemas"] = {
+        "name": "Morfemas",
+        "description": "Segmentacion morfologica (no estandar UD)",
+        "color": GROUP_COLORS.get("morfemas", "#3b82f6"),
+        "labels": [f for f, _u in active_morph],
+        "ud_mapping": {f: u for f, u in active_morph},
+    }
+
+    # Subgrupos de features para anotacion por partes
+    _subgroups = {
+        "features-persona-numero": {
+            "name": "Persona y Numero",
+            "description": "Person, Number, Clusivity",
+            "color": GROUP_COLORS.get("Person", "#8b5cf6"),
+            "feat_keys": ["Person", "Number", "Clusivity"],
+        },
+        "features-caso": {
+            "name": "Caso",
+            "description": "Case features",
+            "color": GROUP_COLORS.get("Case", "#f97316"),
+            "feat_keys": ["Case"],
+        },
+        "features-tam": {
+            "name": "Tiempo, Aspecto, Modo",
+            "description": "Tense, Aspect, Mood, VerbForm, Voice",
+            "color": GROUP_COLORS.get("Tense", "#eab308"),
+            "feat_keys": ["Tense", "Aspect", "Mood", "VerbForm", "Voice"],
+        },
+        "features-relacional": {
+            "name": "Relacional",
+            "description": "Rel (Tupi-Guarani especifico)",
+            "color": GROUP_COLORS.get("Rel", "#6366f1"),
+            "feat_keys": ["Rel"],
+        },
+        "features-nominalizadores": {
+            "name": "Nominalizadores",
+            "description": "Nomzr (Tupi-Guarani especifico)",
+            "color": GROUP_COLORS.get("Nomzr", "#a855f7"),
+            "feat_keys": ["Nomzr"],
+        },
+        "features-otros": {
+            "name": "Otros Features",
+            "description": "Polarity, Poss, Priv, etc.",
+            "color": GROUP_COLORS.get("Polarity", "#64748b"),
+            "feat_keys": [
+                "Polarity", "Poss", "Priv", "Red", "Reflex",
+                "Corf", "Emph", "Intens", "Evident", "Int",
+                "Nasality", "Abbr", "Foreign", "Typo", "Other",
+            ],
+        },
+    }
+
+    for sg_key, sg_conf in _subgroups.items():
+        labels = []
+        for fk in sg_conf["feat_keys"]:
+            if fk in FEATURES:
+                labels.extend([f for f, _u, a in FEATURES[fk] if a])
+        if labels:
+            groups[sg_key] = {
+                "name": sg_conf["name"],
+                "description": sg_conf["description"],
+                "color": sg_conf["color"],
+                "labels": labels,
+            }
+
+    return groups
+
+
+SPECIALIZED_GROUPS = _build_specialized_groups()
+
+UD_MAIN_GROUPS = {
+    "pos-tags":  SPECIALIZED_GROUPS["pos-tags"],
+    "features":  SPECIALIZED_GROUPS["features"],
+    "relations": SPECIALIZED_GROUPS["relations"],
+    "morfemas":  SPECIALIZED_GROUPS["morfemas"],
+}
+
+
+# =============================================================================
+# FUNCIONES PUBLICAS (no modificar firmas, las usan los recipes)
 # =============================================================================
 
 def map_label(label: str, direction: str = "to_ud") -> str:
-    """
-    Mapea una etiqueta entre formato amigable y UD.
-    
-    Args:
-        label: La etiqueta a mapear
-        direction: "to_ud" o "to_friendly"
-    
-    Returns:
-        La etiqueta mapeada, o "X"/"Otro" si no se encuentra
-    """
+    """Mapea una etiqueta entre formato amigable y UD."""
     if direction == "to_ud":
-        # Buscar exacto primero
         if label in FRIENDLY_TO_UD:
             return FRIENDLY_TO_UD[label]
         # Buscar case-insensitive
@@ -454,36 +777,25 @@ def map_label(label: str, direction: str = "to_ud") -> str:
         for friendly, ud in FRIENDLY_TO_UD.items():
             if friendly.lower() == label_lower:
                 return ud
-        # Si ya es UD válido, devolverlo
+        # Si ya es UD valido, devolverlo tal cual
         if label in VALID_UPOS or label in VALID_FEATURES:
             return label
         return "X"
     else:  # to_friendly
-        # Buscar exacto primero
         if label in UD_TO_FRIENDLY:
             return UD_TO_FRIENDLY[label]
-        # Si ya es amigable, devolverlo
         if label in FRIENDLY_TO_UD:
             return label
         return "Otro"
 
 
 def map_labels_batch(labels: list, direction: str = "to_ud") -> list:
-    """
-    Mapea múltiples etiquetas.
-    
-    Args:
-        labels: Lista de etiquetas a mapear
-        direction: "to_ud" o "to_friendly"
-    
-    Returns:
-        Lista de etiquetas mapeadas
-    """
+    """Mapea multiples etiquetas."""
     return [map_label(label, direction) for label in labels]
 
 
 def is_valid_ud(label: str) -> bool:
-    """Verifica si una etiqueta es un UPOS o Feature válido de UD."""
+    """Verifica si una etiqueta es un UPOS o Feature valido."""
     return label in VALID_UPOS or label in VALID_FEATURES
 
 
@@ -493,466 +805,39 @@ def get_all_friendly_labels() -> list:
 
 
 def get_all_ud_labels() -> list:
-    """Retorna todas las etiquetas UD."""
+    """Retorna todas las etiquetas UD (sin duplicados)."""
     return list(set(FRIENDLY_TO_UD.values()))
 
 
 def get_family_labels(family_key: str) -> list:
-    """
-    Obtiene las etiquetas de una familia por su clave.
-    
-    Args:
-        family_key: Clave corta (ej: "morfema", "persona", "caso")
-    
-    Returns:
-        Lista de etiquetas amigables de esa familia
-    """
-    # Mapeo de claves cortas a nombres de familia
-    _family_keys_map = {
-        "morfema": "📦 Morfemas",
-        "persona": "👤 Persona",
-        "numero": "🔢 Número",
-        "clusividad": "👥 Clusividad",
-        "caso": "📍 Caso",
-        "relacional": "🔗 Relacional",
-        "tiempo": "⏰ Tiempo",
-        "aspecto": "🔄 Aspecto",
-        "modo": "💭 Modo",
-        "voz": "🗣️ Voz",
-        "forma": "📝 Forma Verbal",
-        "polaridad": "🚫 Polaridad",
-        "posesion": "🏠 Posesión",
-        "nominalizador": "🔧 Nominalizadores",
-        "otros": "✨ Otros Features",
-        "categoria": "📝 Categoría (UPOS)",
-    }
-    
+    """Obtiene las etiquetas de una familia por su clave corta."""
     family_key_lower = family_key.lower()
-    
-    # Buscar en el mapeo de claves
-    if family_key_lower in _family_keys_map:
-        full_name = _family_keys_map[family_key_lower]
+
+    # Buscar por clave corta
+    if family_key_lower in FAMILY_KEYS:
+        full_name = FAMILY_KEYS[family_key_lower]
         if full_name in LABEL_FAMILIES:
             return LABEL_FAMILIES[full_name]["labels"]
-    
-    # Fallback: buscar en nombres de familia
+
+    # Fallback: buscar por nombre parcial
     for name, data in LABEL_FAMILIES.items():
         if family_key_lower in name.lower():
             return data["labels"]
     return []
 
 
-# =============================================================================
-# CLAVES DE FAMILIA PARA CLI
-# =============================================================================
-FAMILY_KEYS = {
-    "morfema": "Morfemas",
-    "persona": "Persona",
-    "numero": "Número",
-    "clusividad": "Clusividad",
-    "caso": "Caso",
-    "relacional": "Relacional",
-    "tiempo": "Tiempo",
-    "aspecto": "Aspecto",
-    "modo": "Modo",
-    "voz": "Voz",
-    "forma": "Forma Verbal",
-    "polaridad": "Polaridad",
-    "posesion": "Posesión",
-    "nominalizador": "Nominalizadores",
-    "otros": "Otros Features",
-    "categoria": "Categoría (UPOS)",
-}
-
-# =============================================================================
-# GRUPOS ESPECIALIZADOS PARA RECIPES DE ANOTACIÓN
-# =============================================================================
-# Organizados según Universal Dependencies:
-# https://universaldependencies.org/treebanks/gn_oldtudet/index.html
-# =============================================================================
-
-SPECIALIZED_GROUPS = {
-    # =========================================================================
-    # GRUPO PRINCIPAL 1: POS TAGS (UPOS)
-    # Categorías gramaticales principales
-    # =========================================================================
-    "pos-tags": {
-        "name": "POS Tags",
-        "description": "Categorías gramaticales (Universal POS Tags)",
-        "color": "#dc2626",
-        "emoji": "🏷️",
-        "labels": [
-            "Posposición",      # ADP
-            "Adverbio",         # ADV
-            "Determinante",     # DET
-            "Interjección",     # INTJ
-            "Sustantivo",       # NOUN
-            "Numeral",          # NUM
-            "Partícula",        # PART
-            "Pronombre",        # PRON
-            "Nombre Propio",    # PROPN
-            "Puntuación",       # PUNCT
-            "Verbo",            # VERB
-        ],
-        "ud_mapping": {
-            "Posposición": "ADP",
-            "Adverbio": "ADV",
-            "Determinante": "DET",
-            "Interjección": "INTJ",
-            "Sustantivo": "NOUN",
-            "Numeral": "NUM",
-            "Partícula": "PART",
-            "Pronombre": "PRON",
-            "Nombre Propio": "PROPN",
-            "Puntuación": "PUNCT",
-            "Verbo": "VERB",
-        },
-    },
-    
-    # =========================================================================
-    # GRUPO PRINCIPAL 2: FEATURES
-    # Rasgos morfológicos
-    # =========================================================================
-    "features": {
-        "name": "Features",
-        "description": "Rasgos morfológicos (Morphological Features)",
-        "color": "#8b5cf6",
-        "emoji": "⚙️",
-        "labels": [
-            # Case
-            "Ablativo", "Alativo", "Dativo", "Locativo", "Referencial",
-            # Clusivity
-            "Inclusivo", "Exclusivo",
-            # Corf (Correferentiality)
-            "Correferencial",
-            # Dev (Derivation) - No hay etiqueta amigable aún
-            # Emph
-            "Enfático",
-            # Evident
-            "No-Primera Mano",
-            # Int (Interrogative)
-            "Interrogativo",
-            # Intens
-            "Intensificador",
-            # Mood
-            "Imperativo", "Permisivo",
-            # Nomzr
-            "Agentivo (-sar)", "Circunstancial (-saβ)", "Pasivo (-pɨr)", 
-            "C-Circunstancial", "Derivación Pasiva", "Relativo (Nomzr)",
-            # Number
-            "Singular", "Plural",
-            # Number[psor] - Número del poseedor (se marca con Singular/Plural + contexto)
-            # Number[subj] - Número del sujeto (se marca con Singular/Plural + contexto)
-            # NumType
-            "Cardinal",
-            # Person
-            "1ra Persona", "2da Persona", "3ra Persona",
-            # Person[obj] - Persona del objeto (se marca con 1ra/2da/3ra + contexto)
-            # Person[psor] - Persona del poseedor (se marca con 1ra/2da/3ra + contexto)
-            # Person[subj] - Persona del sujeto (se marca con 1ra/2da/3ra + contexto)
-            # Polarity
-            "Negación",
-            # Poss
-            "Poseedor",
-            # Priv
-            "Privativo",
-            # PronType
-            "Demostrativo", "Indefinido", "Interrogativo (Pron)", "Personal", "Total",
-            # Red
-            "Reduplicación",
-            # Reflex
-            "Reflexivo",
-            # Rel
-            "Rel. Absoluto", "Rel. Contiguo", "Rel. No-Contiguo",
-            # Tense
-            "Pasado", "Futuro", "Futuro-Pasado",
-            # VerbForm
-            "Gerundio",
-            # Voice
-            "Causativo", "Comitativo",
-        ],
-        "ud_mapping": {
-            # Case
-            "Ablativo": "Case=Abl",
-            "Alativo": "Case=All",
-            "Dativo": "Case=Dat",
-            "Locativo": "Case=Loc",
-            "Referencial": "Case=Ref",
-            # Clusivity
-            "Inclusivo": "Clusivity=In",
-            "Exclusivo": "Clusivity=Ex",
-            # Corf
-            "Correferencial": "Corf=Yes",
-            # Emph
-            "Enfático": "Emph=Yes",
-            # Evident
-            "No-Primera Mano": "Evident=Nfh",
-            # Int
-            "Interrogativo": "Int=Yes",
-            # Intens
-            "Intensificador": "Intens=Yes",
-            # Mood
-            "Imperativo": "Mood=Imp",
-            "Permisivo": "Mood=Perm",
-            # Nomzr
-            "Agentivo (-sar)": "Nomzr=Ag",
-            "Circunstancial (-saβ)": "Nomzr=Circ",
-            "Pasivo (-pɨr)": "Nomzr=Pas",
-            "C-Circunstancial": "Nomzr=CCirc",
-            "Derivación Pasiva": "Nomzr=DevPass",
-            "Relativo (Nomzr)": "Nomzr=Rel",
-            # Number
-            "Singular": "Number=Sing",
-            "Plural": "Number=Plur",
-            # NumType
-            "Cardinal": "NumType=Card",
-            # Person
-            "1ra Persona": "Person=1",
-            "2da Persona": "Person=2",
-            "3ra Persona": "Person=3",
-            # Polarity
-            "Negación": "Polarity=Neg",
-            # Poss
-            "Poseedor": "Poss=Yes",
-            # Priv
-            "Privativo": "Priv=Yes",
-            # PronType
-            "Demostrativo": "PronType=Dem",
-            "Indefinido": "PronType=Ind",
-            "Interrogativo (Pron)": "PronType=Int",
-            "Personal": "PronType=Prs",
-            "Total": "PronType=Tot",
-            # Red
-            "Reduplicación": "Red=Di",
-            # Reflex
-            "Reflexivo": "Reflex=Yes",
-            # Rel
-            "Rel. Absoluto": "Rel=Abs",
-            "Rel. Contiguo": "Rel=Cont",
-            "Rel. No-Contiguo": "Rel=NCont",
-            # Tense
-            "Pasado": "Tense=Past",
-            "Futuro": "Tense=Fut",
-            "Futuro-Pasado": "Tense=FutPast",
-            # VerbForm
-            "Gerundio": "VerbForm=Ger",
-            # Voice
-            "Causativo": "Voice=Cau",
-            "Comitativo": "Voice=Com",
-        },
-    },
-    
-    # =========================================================================
-    # GRUPO PRINCIPAL 3: RELATIONS (Deprel)
-    # Relaciones sintácticas - Etiquetas amigables en español
-    # https://universaldependencies.org/u/dep/
-    # =========================================================================
-    "relations": {
-        "name": "Relaciones Sintácticas",
-        "description": "Relaciones de dependencia (Dependency Relations)",
-        "color": "#22c55e",
-        "emoji": "🔗",
-        "labels": [
-            "RAÍZ (Verbo Principal)",
-            "SUJETO",
-            "OBJETO DIRECTO",
-            "OBJETO INDIRECTO",
-            "COMPLEMENTO OBLICUO",
-            "OBLICUO-OBJETO",
-            "OBLICUO-SUJETO",
-            "MODIFICADOR ADVERBIAL",
-            "CLÁUSULA ADVERBIAL",
-            "MODIFICADOR NOMINAL",
-            "DETERMINANTE (Rel)",
-            "MARCADOR DE CASO",
-            "PALABRA COMPUESTA",
-            "APOSICIÓN",
-            "COMPLEMENTO VERBAL",
-            "ELEMENTO DE DISCURSO",
-            "PARATAXIS",
-            "MODIFICADOR NUMÉRICO",
-            "PUNTUACIÓN (Rel)",
-            "DEPENDENCIA (General)",
-        ],
-        "ud_mapping": {
-            "RAÍZ (Verbo Principal)": "root",
-            "SUJETO": "nsubj",
-            "OBJETO DIRECTO": "obj",
-            "OBJETO INDIRECTO": "iobj",
-            "COMPLEMENTO OBLICUO": "obl",
-            "OBLICUO-OBJETO": "obl:obj",
-            "OBLICUO-SUJETO": "obl:subj",
-            "MODIFICADOR ADVERBIAL": "advmod",
-            "CLÁUSULA ADVERBIAL": "advcl",
-            "MODIFICADOR NOMINAL": "nmod",
-            "DETERMINANTE (Rel)": "det",
-            "MARCADOR DE CASO": "case",
-            "PALABRA COMPUESTA": "compound",
-            "APOSICIÓN": "appos",
-            "COMPLEMENTO VERBAL": "xcomp",
-            "ELEMENTO DE DISCURSO": "discourse",
-            "PARATAXIS": "parataxis",
-            "MODIFICADOR NUMÉRICO": "nummod",
-            "PUNTUACIÓN (Rel)": "punct",
-            "DEPENDENCIA (General)": "dep",
-        },
-        "colors": {
-            "RAÍZ (Verbo Principal)": "#dc2626",
-            "SUJETO": "#2563eb",
-            "OBJETO DIRECTO": "#16a34a",
-            "OBJETO INDIRECTO": "#65a30d",
-            "COMPLEMENTO OBLICUO": "#ca8a04",
-            "OBLICUO-OBJETO": "#ca8a04",
-            "OBLICUO-SUJETO": "#ca8a04",
-            "MODIFICADOR ADVERBIAL": "#7c3aed",
-            "CLÁUSULA ADVERBIAL": "#a855f7",
-            "MODIFICADOR NOMINAL": "#0891b2",
-            "DETERMINANTE (Rel)": "#64748b",
-            "MARCADOR DE CASO": "#78716c",
-            "PALABRA COMPUESTA": "#ea580c",
-            "APOSICIÓN": "#db2777",
-            "COMPLEMENTO VERBAL": "#059669",
-            "ELEMENTO DE DISCURSO": "#94a3b8",
-            "PARATAXIS": "#f97316",
-            "MODIFICADOR NUMÉRICO": "#0d9488",
-            "PUNTUACIÓN (Rel)": "#d4d4d4",
-            "DEPENDENCIA (General)": "#a1a1aa",
-        },
-    },
-    
-    # =========================================================================
-    # GRUPO AUXILIAR: MORFEMAS (para análisis morfológico)
-    # No es estándar UD pero útil para segmentación
-    # =========================================================================
-    "morfemas": {
-        "name": "Morfemas",
-        "description": "Segmentación morfológica (no estándar UD)",
-        "color": "#3b82f6",
-        "emoji": "📦",
-        "labels": ["Raíz", "Prefijo", "Sufijo"],
-        "ud_mapping": {
-            "Raíz": "Root",
-            "Prefijo": "Prefix",
-            "Sufijo": "Suffix",
-        },
-    },
-    
-    # =========================================================================
-    # SUBGRUPOS DE FEATURES (para anotación por partes)
-    # =========================================================================
-    "features-persona-numero": {
-        "name": "Persona y Número",
-        "description": "Person, Number, Clusivity",
-        "color": "#8b5cf6",
-        "emoji": "👤",
-        "labels": [
-            "1ra Persona", "2da Persona", "3ra Persona",
-            "Singular", "Plural",
-            "Inclusivo", "Exclusivo",
-        ],
-    },
-    
-    "features-caso": {
-        "name": "Caso",
-        "description": "Case features",
-        "color": "#f97316",
-        "emoji": "📍",
-        "labels": ["Ablativo", "Alativo", "Dativo", "Locativo", "Referencial"],
-    },
-    
-    "features-tam": {
-        "name": "Tiempo, Aspecto, Modo",
-        "description": "Tense, Mood, VerbForm, Voice",
-        "color": "#eab308",
-        "emoji": "⏰",
-        "labels": [
-            "Pasado", "Futuro", "Futuro-Pasado",
-            "Imperativo", "Permisivo",
-            "Gerundio",
-            "Causativo", "Comitativo",
-        ],
-    },
-    
-    "features-relacional": {
-        "name": "Relacional",
-        "description": "Rel (Tupí-Guaraní specific)",
-        "color": "#6366f1",
-        "emoji": "🔗",
-        "labels": ["Rel. Absoluto", "Rel. Contiguo", "Rel. No-Contiguo"],
-    },
-    
-    "features-nominalizadores": {
-        "name": "Nominalizadores",
-        "description": "Nomzr (Tupí-Guaraní specific)",
-        "color": "#a855f7",
-        "emoji": "🔧",
-        "labels": [
-            "Agentivo (-sar)", "Circunstancial (-saβ)", "Pasivo (-pɨr)", 
-            "C-Circunstancial", "Derivación Pasiva", "Relativo (Nomzr)",
-        ],
-    },
-    
-    "features-otros": {
-        "name": "Otros Features",
-        "description": "Polarity, Poss, Priv, etc.",
-        "color": "#64748b",
-        "emoji": "✨",
-        "labels": [
-            "Negación", "Poseedor", "Privativo", "Reduplicación",
-            "Reflexivo", "Correferencial", "Enfático", "Intensificador",
-            "No-Primera Mano", "Interrogativo",
-        ],
-    },
-}
-
-# =============================================================================
-# UD_MAIN_GROUPS - Grupos principales de Universal Dependencies
-# Alias para facilitar el acceso a los grupos UD principales
-# =============================================================================
-UD_MAIN_GROUPS = {
-    "pos-tags": SPECIALIZED_GROUPS["pos-tags"],
-    "features": SPECIALIZED_GROUPS["features"],
-    "relations": SPECIALIZED_GROUPS["relations"],
-    "morfemas": SPECIALIZED_GROUPS["morfemas"],
-}
-
-
-def get_specialized_group(group_key: str) -> dict:
-    """
-    Obtiene información de un grupo especializado.
-    
-    Args:
-        group_key: Clave del grupo (ej: "morfemas-basicos", "categorias")
-    
-    Returns:
-        Diccionario con info del grupo o None si no existe
-    """
+def get_specialized_group(group_key: str) -> dict | None:
+    """Obtiene informacion de un grupo especializado."""
     return SPECIALIZED_GROUPS.get(group_key.lower())
 
 
-def get_ud_main_group(group_key: str) -> dict:
-    """
-    Obtiene información de un grupo UD principal.
-    
-    Args:
-        group_key: Clave del grupo (pos-tags, features, relations, morfemas)
-    
-    Returns:
-        Diccionario con info del grupo o None si no existe
-    """
+def get_ud_main_group(group_key: str) -> dict | None:
+    """Obtiene info de un grupo UD principal (pos-tags, features, relations, morfemas)."""
     return UD_MAIN_GROUPS.get(group_key.lower())
 
 
 def get_ud_main_labels(group_key: str) -> list:
-    """
-    Obtiene las etiquetas de un grupo UD principal.
-    
-    Args:
-        group_key: Clave del grupo UD (pos-tags, features, relations)
-    
-    Returns:
-        Lista de etiquetas de ese grupo
-    """
+    """Obtiene las etiquetas de un grupo UD principal."""
     group = UD_MAIN_GROUPS.get(group_key.lower())
     if group:
         return group.get("labels", [])
@@ -960,66 +845,31 @@ def get_ud_main_labels(group_key: str) -> list:
 
 
 def list_ud_main_groups() -> dict:
-    """
-    Lista todos los grupos UD principales disponibles.
-    
-    Returns:
-        Dict con {key: name} para cada grupo
-    """
+    """Lista todos los grupos UD principales: {key: name}."""
     return {key: group["name"] for key, group in UD_MAIN_GROUPS.items()}
 
 
 def get_all_ud_ordered_labels() -> list:
-    """
-    Obtiene todas las etiquetas ordenadas por grupo UD.
-    Útil para mostrar etiquetas agrupadas en la UI.
-    
-    Returns:
-        Lista ordenada: POS Tags primero, luego Features, luego Morfemas
-    """
+    """Obtiene todas las etiquetas ordenadas: POS -> Features -> Morfemas."""
     ordered = []
-    # 1. POS Tags
-    pos_group = UD_MAIN_GROUPS.get("pos-tags", {})
-    ordered.extend(pos_group.get("labels", []))
-    
-    # 2. Features
-    feat_group = UD_MAIN_GROUPS.get("features", {})
-    ordered.extend(feat_group.get("labels", []))
-    
-    # 3. Morfemas (auxiliar)
-    morf_group = UD_MAIN_GROUPS.get("morfemas", {})
-    ordered.extend(morf_group.get("labels", []))
-    
+    for key in ("pos-tags", "features", "morfemas"):
+        group = UD_MAIN_GROUPS.get(key, {})
+        ordered.extend(group.get("labels", []))
     return ordered
 
 
 def get_ud_label_colors() -> dict:
-    """
-    Genera colores para cada etiqueta según su grupo UD.
-    
-    Returns:
-        Dict de {label: color_hex} para todas las etiquetas UD
-    """
+    """Genera colores para cada etiqueta segun su grupo UD."""
     colors = {}
-    
-    for group_key, group in UD_MAIN_GROUPS.items():
+    for _key, group in UD_MAIN_GROUPS.items():
         group_color = group.get("color", "#6b7280")
         for label in group.get("labels", []):
             colors[label] = group_color
-    
     return colors
 
 
 def get_specialized_labels(group_key: str) -> list:
-    """
-    Obtiene las etiquetas de un grupo especializado.
-    
-    Args:
-        group_key: Clave del grupo (ej: "morfemas-basicos", "categorias")
-    
-    Returns:
-        Lista de etiquetas amigables de ese grupo
-    """
+    """Obtiene las etiquetas de un grupo especializado."""
     group = SPECIALIZED_GROUPS.get(group_key.lower())
     if group:
         return group["labels"]
@@ -1027,36 +877,44 @@ def get_specialized_labels(group_key: str) -> list:
 
 
 def list_specialized_groups() -> dict:
-    """Retorna todos los grupos especializados disponibles."""
+    """Retorna todos los grupos especializados: {key: name}."""
     return {key: group["name"] for key, group in SPECIALIZED_GROUPS.items()}
 
+
 # =============================================================================
-# EJEMPLO DE USO
+# TEST
 # =============================================================================
 if __name__ == "__main__":
     print("=" * 60)
-    print("UD Guaraní Mapper - Test")
+    print("UD Guarani Mapper - Test")
     print("=" * 60)
-    
-    # Test de mapeo
+
     test_labels = [
-        "Raíz", "Prefijo", "Pronombre", "Verbo",
+        "Raiz", "Prefijo", "Pronombre", "Verbo",
         "1ra Persona", "Locativo", "Imperativo"
     ]
-    
-    print("\n📋 Test de mapeo Amigable → UD:")
+
+    print("\nMapeo Amigable -> UD:")
     for label in test_labels:
         ud = map_label(label, "to_ud")
-        print(f"  {label:25} → {ud}")
-    
-    print("\n📋 Test de mapeo UD → Amigable:")
-    for ud in ["VERB", "NOUN", "Person=1", "Case=Loc"]:
-        friendly = map_label(ud, "to_friendly")
-        print(f"  {ud:25} → {friendly}")
-    
-    print("\n📋 Familias disponibles:")
+        print(f"  {label:25} -> {ud}")
+
+    print("\nMapeo UD -> Amigable:")
+    for ud_tag in ["VERB", "NOUN", "Person=1", "Case=Loc"]:
+        friendly = map_label(ud_tag, "to_friendly")
+        print(f"  {ud_tag:25} -> {friendly}")
+
+    print("\nFamilias disponibles:")
     for key, full_name in FAMILY_KEYS.items():
         labels = get_family_labels(key)
-        print(f"  {key:15} → {len(labels)} etiquetas")
-    
-    print("\n✅ Mapper funcionando correctamente!")
+        print(f"  {key:20} -> {len(labels)} etiquetas")
+
+    print("\nGrupos especializados:")
+    for key, name in list_specialized_groups().items():
+        labels = get_specialized_labels(key)
+        print(f"  {key:30} -> {name} ({len(labels)} etiquetas)")
+
+    print(f"\nTotal POS activos:      {len(VALID_UPOS)}")
+    print(f"Total Features activos: {len(VALID_FEATURES)}")
+    print(f"Total en FRIENDLY_TO_UD: {len(FRIENDLY_TO_UD)}")
+    print("\nMapper OK")

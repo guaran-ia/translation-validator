@@ -96,6 +96,16 @@ Write-Host "    Intervalo chequeo:    ${Interval}s"
 Write-Host "    Batch Monitor:        $(if ($NoMonitor) { 'Deshabilitado' } else { 'Habilitado' })"
 Write-Host ""
 
+# Desactivar cualquier venv activo para evitar conflictos con Prodigy
+if ($env:VIRTUAL_ENV) {
+    Write-Host "  [!] Venv activo detectado ($env:VIRTUAL_ENV) - desactivando..." -ForegroundColor $colors.Warning
+    # Quitar el venv del PATH
+    $venvScripts = Join-Path $env:VIRTUAL_ENV "Scripts"
+    $env:PATH = ($env:PATH -split ";" | Where-Object { $_ -ne $venvScripts }) -join ";"
+    Remove-Item Env:\VIRTUAL_ENV -ErrorAction SilentlyContinue
+    Remove-Item Env:\VIRTUAL_ENV_PROMPT -ErrorAction SilentlyContinue
+}
+
 # Cargar variables de entorno
 if (Test-Path ".env") {
     Get-Content ".env" | ForEach-Object {
@@ -108,25 +118,33 @@ if (Test-Path ".env") {
     Write-Step "0" "Variables de entorno cargadas" "OK"
 }
 
-# Verificar Python
+# Verificar Python - buscar uno que tenga prodigy instalado
 $pythonCmd = $null
 foreach ($cmd in @("python", "python3", "py")) {
     try {
         $version = & $cmd --version 2>&1
         if ($LASTEXITCODE -eq 0) {
-            $pythonCmd = $cmd
-            break
+            # Verificar que ESTE python tiene prodigy
+            & $cmd -c "import prodigy" 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $pythonCmd = $cmd
+                break
+            } else {
+                Write-Host "  [!] $cmd ($version) no tiene prodigy - probando otro..." -ForegroundColor $colors.Warning
+            }
         }
     } catch {}
 }
 
 if (-not $pythonCmd) {
-    Write-Step "1" "Python no encontrado" "FAIL"
+    Write-Step "1" "Python con prodigy no encontrado" "FAIL"
+    Write-Host "    Asegurate de que prodigy esta instalado: pip install prodigy" -ForegroundColor $colors.Error
     exit 1
 }
-Write-Step "1" "Python encontrado: $($pythonCmd)" "OK"
+$pythonExe = (& $pythonCmd -c "import sys; print(sys.executable)" 2>$null)
+Write-Step "1" "Python encontrado: $pythonExe" "OK"
 
-# Verificar Prodigy
+# Verificar Prodigy (ya verificado arriba, doble check)
 try {
     & $pythonCmd -m prodigy --help | Out-Null
     Write-Step "2" "Prodigy disponible" "OK"
