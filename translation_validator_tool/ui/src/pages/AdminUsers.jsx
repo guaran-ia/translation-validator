@@ -6,12 +6,13 @@ import { toast } from 'react-toastify';
 
 const AdminUsers = () => {
   const { user } = useAuth();
+  const isAdmin = !!user && (user.is_superuser || user.role === 'admin');
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmUser, setConfirmUser] = useState(null);
 
   useEffect(() => {
-    if (!user || !user.is_superuser) return;
+    if (!isAdmin) return;
     const load = async () => {
       setLoading(true);
       try {
@@ -24,7 +25,7 @@ const AdminUsers = () => {
       }
     };
     load();
-  }, [user]);
+  }, [isAdmin]);
 
   const handleApproveClick = (id) => {
     const u = pending.find(p => p.id === id);
@@ -46,7 +47,7 @@ const AdminUsers = () => {
     }
   };
 
-  if (!user || !user.is_superuser) {
+  if (!isAdmin) {
     return (
       <div>
         <Navbar />

@@ -1,12 +1,16 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel, EmailStr, ConfigDict
+
+
+UserRole = Literal["admin", "validador", "traductor"]
 
 
 # Base schemas
 class UserBase(BaseModel):
     email: EmailStr
     username: str
+    role: UserRole = "validador"
     is_active: bool = True
     is_superuser: bool = False
 

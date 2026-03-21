@@ -8,8 +8,9 @@ import os
 from pathlib import Path
 import subprocess
 
-# Add API directory to Python path to import models
-api_path = Path(__file__).parent.parent / "api"
+# Add API directory to Python path to import app package
+project_root = Path(__file__).resolve().parent.parent
+api_path = project_root / "api"
 sys.path.insert(0, str(api_path))
 
 # Set working directory to API for .env file loading

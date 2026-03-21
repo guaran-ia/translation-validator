@@ -5,16 +5,29 @@ import LoginForm from '../components/auth/LoginForm';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+
+  const getUserRole = (u) => {
+    if (!u) return null;
+    if (u.role) return u.role;
+    return u.is_superuser ? 'admin' : 'validador';
+  };
+
+  const redirectByRole = (u) => {
+    const role = getUserRole(u);
+    if (role === 'admin') return '/admin/users';
+    if (role === 'traductor') return '/translator';
+    return '/validator';
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/validator', { replace: true });
+      navigate(redirectByRole(user), { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
-  const handleLoginSuccess = () => {
-    navigate('/validator');
+  const handleLoginSuccess = (loggedUser) => {
+    navigate(redirectByRole(loggedUser));
   };
 
   // Show optional notice passed from registration redirect

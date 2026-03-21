@@ -12,9 +12,9 @@ import os
 from pathlib import Path
 
 # Add API directory to Python path
-current_dir = Path(__file__).parent
-api_dir = current_dir.parent / "api"
-sys.path.insert(0, str(api_dir))
+current_dir = Path(__file__).resolve().parent
+project_root = current_dir.parent
+sys.path.insert(0, str(project_root))
 
 try:
     from init_db import initialize_database, reset_database, drop_all_tables, test_database_connection

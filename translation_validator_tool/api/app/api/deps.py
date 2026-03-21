@@ -51,6 +51,7 @@ async def get_current_active_superuser(
     """Require current user to be an active superuser."""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    if not getattr(current_user, 'is_superuser', False):
+    is_admin = getattr(current_user, 'is_superuser', False) or getattr(current_user, 'role', None) == 'admin'
+    if not is_admin:
         raise HTTPException(status_code=403, detail="Insufficient privileges")
     return current_user

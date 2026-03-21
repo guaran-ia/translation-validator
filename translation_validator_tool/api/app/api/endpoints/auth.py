@@ -14,6 +14,23 @@ from app.config import settings
 router = APIRouter()
 
 
+def _normalize_role(role: str) -> str:
+    role_map = {
+        "admin": "admin",
+        "validador": "validador",
+        "validator": "validador",
+        "traductor": "traductor",
+        "translator": "traductor",
+    }
+    normalized = role_map.get(str(role).strip().lower())
+    if not normalized:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rol inválido. Valores permitidos: admin, validador, traductor"
+        )
+    return normalized
+
+
 @router.post("/login", response_model=Token)
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -66,6 +83,7 @@ async def register(
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
+        role="validador",
         is_active=False
     )
     
@@ -233,15 +251,22 @@ async def admin_update_user(
             detail="Usuario no encontrado"
         )
     
-    # Allow updating: email, username, is_active, is_superuser
+    # Allow updating: email, username, is_active, is_superuser, role
     if 'email' in updates:
         target_user.email = updates['email']
     if 'username' in updates:
         target_user.username = updates['username']
     if 'is_active' in updates:
         target_user.is_active = updates['is_active']
+    role_updated = False
+    if 'role' in updates:
+        target_user.role = _normalize_role(updates['role'])
+        target_user.is_superuser = target_user.role == 'admin'
+        role_updated = True
     if 'is_superuser' in updates:
         target_user.is_superuser = updates['is_superuser']
+        if not role_updated:
+            target_user.role = 'admin' if updates['is_superuser'] else 'validador'
     
     db.add(target_user)
     db.commit()

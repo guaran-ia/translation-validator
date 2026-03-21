@@ -5,6 +5,11 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const role = !user ? null : (user.role || (user.is_superuser ? 'admin' : 'validador'));
+  const isAdmin = role === 'admin';
+  const isValidator = role === 'validador';
+  const isTranslator = role === 'traductor';
+  const canSeeHistory = isValidator || isTranslator;
 
   return (
     <nav className="bg-white shadow-lg">
@@ -22,11 +27,17 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-6">
             {user ? (
               <>
-                <a href="/" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Validar</a>
-                <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
-                <a href="/prodigy" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Prodigy</a>
+                {isValidator && (
+                  <a href="/validator" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Validar</a>
+                )}
+                {isTranslator && (
+                  <a href="/translator" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Traducir</a>
+                )}
+                {canSeeHistory && (
+                  <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
+                )}
 
-                {user.is_superuser && (
+                {isAdmin && (
                   // Compact admin menu: one label that reveals two explicit admin links
                   <div className="relative">
                     <button
@@ -96,11 +107,18 @@ const Navbar = () => {
       {mobileOpen && (
         <div className="md:hidden bg-white border-t border-gray-100">
           <div className="px-4 pt-4 pb-3 space-y-2">
-            <a href="/" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Validar</a>
                 {user ? (
                   <>
-                    <a href="/history" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Historial</a>
-                    {user.is_superuser && (
+                    {isValidator && (
+                      <a href="/validator" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Validar</a>
+                    )}
+                    {isTranslator && (
+                      <a href="/translator" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducir</a>
+                    )}
+                    {canSeeHistory && (
+                      <a href="/history" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Historial</a>
+                    )}
+                    {isAdmin && (
                       <div className="pt-2">
                         <div className="text-sm font-medium text-gray-700">Admin</div>
                         <a href="/admin/users" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Usuarios</a>
@@ -118,6 +136,7 @@ const Navbar = () => {
                   </>
                 ) : (
                   <>
+                    <a href="/" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Inicio</a>
                     <a href="/register" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Registro</a>
                     <a href="/login" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Iniciar sesión</a>
                   </>

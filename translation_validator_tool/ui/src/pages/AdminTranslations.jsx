@@ -10,6 +10,7 @@ const truncate = (s, n = 80) => (s && s.length > n ? s.slice(0, n) + '…' : s);
 
 const AdminTranslations = () => {
   const { user } = useAuth();
+  const isAdmin = !!user && (user.is_superuser || user.role === 'admin');
   const navigate = useNavigate();
   const [idInput, setIdInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,9 +38,9 @@ const AdminTranslations = () => {
   });
 
   useEffect(() => {
-    if (user && user.is_superuser) loadTable(0);
+    if (isAdmin) loadTable(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [isAdmin]);
 
   const loadTable = async (newSkip = 0) => {
     setTableLoading(true);
@@ -132,7 +133,7 @@ const AdminTranslations = () => {
     }
   };
 
-  if (!user || !user.is_superuser) return (
+  if (!isAdmin) return (
     <div>
       <Navbar />
       <div className="p-6">No autorizado</div>

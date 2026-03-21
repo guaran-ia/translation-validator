@@ -11,21 +11,13 @@ import RegisterPage from './pages/RegisterPage';
 import AdminUsers from './pages/AdminUsers';
 import AdminUsersList from './pages/AdminUsersList';
 import AdminTranslations from './pages/AdminTranslations';
-import ProdigyPage from './pages/ProdigyPage';
+import TranslatorPage from './pages/TranslatorPage';
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+const getUserRole = (user) => {
+  if (!user) return null;
+  if (user.role) return user.role;
+  return user.is_superuser ? 'admin' : 'validador';
 };
 
 const AdminRoute = ({ children }) => {
@@ -35,9 +27,54 @@ const AdminRoute = ({ children }) => {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  if (!user?.is_superuser) return <Navigate to="/validator" replace />;
+  const isAdmin = getUserRole(user) === 'admin';
+  if (!isAdmin) return <Navigate to="/" replace />;
 
   return children;
+};
+
+const ValidatorRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (getUserRole(user) !== 'validador') return <Navigate to="/" replace />;
+
+  return children;
+};
+
+const TranslatorRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (getUserRole(user) !== 'traductor') return <Navigate to="/" replace />;
+
+  return children;
+};
+
+const HistoryRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  const role = getUserRole(user);
+  if (role !== 'validador' && role !== 'traductor') return <Navigate to="/" replace />;
+
+  return children;
+};
+
+const HomeRedirect = () => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  const role = getUserRole(user);
+  if (role === 'admin') return <Navigate to="/admin/users" replace />;
+  if (role === 'traductor') return <Navigate to="/translator" replace />;
+  return <Navigate to="/validator" replace />;
 };
 
 // App Component
@@ -53,25 +90,25 @@ const App = () => {
             <Route 
               path="/validator" 
               element={
-                <ProtectedRoute>
+                <ValidatorRoute>
                   <ValidatorPage />
-                </ProtectedRoute>
+                </ValidatorRoute>
               } 
+            />
+            <Route
+              path="/translator"
+              element={
+                <TranslatorRoute>
+                  <TranslatorPage />
+                </TranslatorRoute>
+              }
             />
             <Route 
               path="/history" 
               element={
-                <ProtectedRoute>
+                <HistoryRoute>
                   <HistoryPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/prodigy" 
-              element={
-                <ProtectedRoute>
-                  <ProdigyPage />
-                </ProtectedRoute>
+                </HistoryRoute>
               } 
             />
             <Route
@@ -98,8 +135,8 @@ const App = () => {
                 </AdminRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/validator" replace />} />
-            <Route path="*" element={<Navigate to="/validator" replace />} />
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="*" element={<HomeRedirect />} />
           </Routes>
         </div>
       </Router>
