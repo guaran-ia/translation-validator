@@ -111,6 +111,7 @@ def create_default_admin():
                 username="admin",
                 email="admin@translation-validator.com",
                 hashed_password=hashed_password,
+                role="admin",
                 is_active=True,
                 is_superuser=True
             )

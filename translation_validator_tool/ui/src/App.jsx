@@ -10,7 +10,8 @@ import HistoryPage from './pages/HistoryPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminUsers from './pages/AdminUsers';
 import AdminUsersList from './pages/AdminUsersList';
-import AdminTranslations from './pages/AdminTranslations';
+ {/*import AdminTranslations from './pages/AdminTranslations';*/}
+import AdminAnnotations from './pages/AdminAnnotations';
 import TranslatorPage from './pages/TranslatorPage';
 
 
@@ -127,11 +128,19 @@ const App = () => {
                 </AdminRoute>
               }
             />
-            <Route
+            {/*<Route
               path="/admin/translations"
               element={
                 <AdminRoute>
                   <AdminTranslations />
+                </AdminRoute>
+              }
+            />*/}
+            <Route
+              path="/admin/annotations"
+              element={
+                <AdminRoute>
+                  <AdminAnnotations />
                 </AdminRoute>
               }
             />

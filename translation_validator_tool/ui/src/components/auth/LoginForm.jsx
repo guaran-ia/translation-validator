@@ -48,7 +48,7 @@ const LoginForm = ({ onSuccess }) => {
             Iniciar sesión
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Translation Validator - Guaraní ↔ Español
+            Mbo'ehara Digital - Español ↔ Guaraní
           </p>
         </div>
         

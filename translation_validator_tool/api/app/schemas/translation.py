@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class TranslationBase(BaseModel):
-    guarani_text: str
+    guarani_text: Optional[str] = None  # Allow null for sentences without guarani translation
     spanish_text: Optional[str] = None  # Allow null for sentences without translation
     source: str = "jojajovai"
 
@@ -15,11 +15,11 @@ class TranslationCreate(TranslationBase):
 
 
 class TranslationAdminCreate(BaseModel):
-    """Schema for admin to create translations (allows sentences without spanish translation)"""
-    guarani_text: str
-    spanish_text: Optional[str] = None  # Optional for sentences without translation
-    source: str = "admin"
-    direction: str = "gn-sp"  # Default for guarani sentences
+    """Schema for admin to create translations (spanish is primary, guarani is optional)"""
+    spanish_text: str  # Spanish text is now required/primary
+    guarani_text: Optional[str] = None  # Optional guarani translation
+    source: str = "GuaranIA"
+    direction: str = "sp-gn"  # Default: Spanish to Guarani (spanish is original)
     is_original: bool = True
 
 

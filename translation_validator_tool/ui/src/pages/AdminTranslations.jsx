@@ -32,7 +32,7 @@ const AdminTranslations = () => {
   const [formData, setFormData] = useState({
     guarani_text: '',
     spanish_text: '',
-    source: 'admin',
+    source: 'GuaranIA',
     direction: 'sp-gn', // Por defecto español->guaraní (español original)
     is_original: true
   });
@@ -91,8 +91,8 @@ const AdminTranslations = () => {
 
   const handleCreateTranslation = async (e) => {
     e.preventDefault();
-    if (!formData.guarani_text.trim()) {
-      setError('El texto en guaraní es obligatorio');
+    if (!formData.spanish_text.trim()) {
+      setError('El texto en español es obligatorio');
       return;
     }
     
@@ -100,10 +100,10 @@ const AdminTranslations = () => {
     setError(null);
     
     try {
-      // Prepare data, remove empty spanish_text to make it null
+      // Prepare data, remove empty guarani_text to make it null
       const dataToSend = {
         ...formData,
-        spanish_text: formData.spanish_text.trim() || null
+        guarani_text: formData.guarani_text.trim() || null
       };
       
       const res = await translationsAPI.adminCreate(dataToSend);
@@ -113,7 +113,7 @@ const AdminTranslations = () => {
       setFormData({
         guarani_text: '',
         spanish_text: '',
-        source: 'admin',
+        source: 'GuaranIA',
         direction: 'sp-gn',
         is_original: true
       });
@@ -278,33 +278,33 @@ const AdminTranslations = () => {
               <form onSubmit={handleCreateTranslation} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Texto en Guaraní *
-                  </label>
-                  <textarea
-                    value={formData.guarani_text}
-                    onChange={(e) => setFormData({...formData, guarani_text: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                    required
-                    placeholder="Ingresa el texto original en guaraní..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Texto en Español (opcional)
+                    Texto en Español *
                   </label>
                   <textarea
                     value={formData.spanish_text}
                     onChange={(e) => setFormData({...formData, spanish_text: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                    placeholder="Si no tiene traducción, dejar en blanco para que sea sugerida..."
+                    required
+                    placeholder="Ingresa el texto original en español..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Texto en Guaraní (opcional)
+                  </label>
+                  <textarea
+                    value={formData.guarani_text}
+                    onChange={(e) => setFormData({...formData, guarani_text: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Traducción sugerida al guaraní (dejar en blanco para permitir sugerencias de usuarios)"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Si se deja vacío, los usuarios podrán sugerir traducciones para esta oración. 
-                    {!formData.spanish_text.trim() && formData.guarani_text.trim() && 
-                      " Se creará solo una entrada (gn-sp) hasta que se agregue la primera traducción."
+                    {!formData.guarani_text.trim() && formData.spanish_text.trim() && 
+                      " Se creará solo una entrada (sp-gn) hasta que se agregue la primera traducción."
                     }
                   </p>
                 </div>
@@ -312,7 +312,7 @@ const AdminTranslations = () => {
 
 
                 {/* Dirección de traducción - solo si ambos textos están presentes */}
-                {formData.guarani_text.trim() && formData.spanish_text.trim() && (
+                {formData.spanish_text.trim() && formData.guarani_text.trim() && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Dirección de traducción
@@ -332,7 +332,7 @@ const AdminTranslations = () => {
                           <span className="font-medium">Español → Guaraní</span> (español es el original)
                         </label>
                       </div>
-                      <div className="flex items-center">
+                      <div className="flex items-center opacity-50">
                         <input
                           type="radio"
                           id="direction_gn_sp"
@@ -340,9 +340,10 @@ const AdminTranslations = () => {
                           value="gn-sp"
                           checked={formData.direction === 'gn-sp'}
                           onChange={(e) => setFormData({...formData, direction: e.target.value})}
-                          className="mr-2"
+                          disabled
+                          className="mr-2 cursor-not-allowed"
                         />
-                        <label htmlFor="direction_gn_sp" className="text-sm">
+                        <label htmlFor="direction_gn_sp" className="text-sm cursor-not-allowed">
                           <span className="font-medium">Guaraní → Español</span> (guaraní es el original)
                         </label>
                       </div>
@@ -360,9 +361,8 @@ const AdminTranslations = () => {
                   <input
                     type="text"
                     value={formData.source}
-                    onChange={(e) => setFormData({...formData, source: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Fuente del texto (ej: admin, corpus, etc.)"
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
                 </div>
 
@@ -375,7 +375,7 @@ const AdminTranslations = () => {
                       setFormData({
                         guarani_text: '',
                         spanish_text: '',
-                        source: 'admin',
+                        source: 'GuaranIA',
                         direction: 'sp-gn',
                         is_original: true
                       });

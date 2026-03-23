@@ -10,8 +10,8 @@ class Translation(Base):
     __tablename__ = "translations"
     
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    guarani_text: Mapped[str] = mapped_column(Text)
-    spanish_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Allow null for sentences without translation
+    spanish_text: Mapped[str] = mapped_column(Text, nullable=False)  # Spanish text is required
+    guarani_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Guarani translation is optional
     source: Mapped[str] = mapped_column(String(255), default="jojajovai")
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -23,3 +23,5 @@ class User(Base):
     # Relationships - using string names to avoid circular imports
     validations = relationship("Validation", back_populates="user", cascade="all, delete-orphan")
     suggestions = relationship("TranslationSuggestion", back_populates="user", cascade="all, delete-orphan")
+    annotation_validations = relationship("AnnotationValidation", back_populates="user", cascade="all, delete-orphan")
+    annotation_suggestions = relationship("AnnotationSuggestion", back_populates="user", cascade="all, delete-orphan")

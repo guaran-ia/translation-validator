@@ -1027,8 +1027,10 @@ async def admin_create_translation(
     current_user: User = Depends(get_current_active_user)
 ):
     """Admin endpoint to create new translations.
-    - If both guarani_text and spanish_text are provided: creates 2 paired entries (sp-gn and gn-sp)
-    - If only guarani_text is provided: creates single entry (gn-sp), pair will be created later when spanish_text is added
+    - Spanish text is required (primary language)
+    - Guarani text is optional
+    - If both texts provided: creates 2 paired entries (sp-gn and gn-sp)
+    - If only spanish_text provided: creates single entry (sp-gn), pair will be created later when guarani_text is added
     Only accessible to superusers.
     """
     # Check if user is superuser
@@ -1041,7 +1043,7 @@ async def admin_create_translation(
     
     try:
         # Case 1: Both texts provided - create paired entries
-        if translation_data.guarani_text and translation_data.spanish_text:
+        if translation_data.spanish_text and translation_data.guarani_text:
             # Create original translation (direction from form)
             original_translation = Translation(
                 guarani_text=translation_data.guarani_text,
@@ -1076,13 +1078,13 @@ async def admin_create_translation(
             
             return TranslationResponse.model_validate(original_translation)
             
-        # Case 2: Only guarani_text provided - create single entry (gn-sp)
+        # Case 2: Only spanish_text provided - create single entry (sp-gn)
         else:
             db_translation = Translation(
-                guarani_text=translation_data.guarani_text,
-                spanish_text=None,
+                guarani_text=None,
+                spanish_text=translation_data.spanish_text,
                 source=translation_data.source,
-                direction="gn-sp",  # Force gn-sp for Guaraní-only entries
+                direction="sp-gn",  # Force sp-gn for Spanish-only entries
                 is_original=True
             )
             

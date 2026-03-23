@@ -129,4 +129,24 @@ export const suggestionsAPI = {
     api.delete(`/suggestions/${suggestionId}`),
 };
 
+// Annotations API
+export const annotationsAPI = {
+  getAll: (skip = 0, limit = 20, q = '') =>
+    api.get(`/annotations?skip=${skip}&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`),
+  getById: (id) => 
+    api.get(`/annotations/${id}`),
+  create: (data) =>
+    api.post('/annotations', data),
+  update: (id, data) =>
+    api.put(`/annotations/${id}`, data),
+  delete: (id) =>
+    api.delete(`/annotations/${id}`),
+  validate: (id, data) =>
+    api.post(`/annotations/${id}/validate`, data),
+  suggest: (id, data) =>
+    api.post(`/annotations/${id}/suggest`, data),
+  getStats: () =>
+    api.get('/annotations/stats'),
+};
+
 export default api;

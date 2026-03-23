@@ -18,9 +18,9 @@ const Navbar = () => {
           {/* Logo and title */}
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-gray-900">Translation Validator</h1>
+              <h1 className="text-xl font-bold text-gray-900">Mbo'ehara Digital</h1>
             </div>
-            <div className="ml-4 text-sm text-gray-600 hidden sm:block">Guaraní ↔ Español</div>
+            <div className="ml-4 text-sm text-gray-600 hidden sm:block">Español ↔ Guaraní</div>
           </div>
 
           {/* Desktop Navigation Links */}
@@ -55,7 +55,8 @@ const Navbar = () => {
                       <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow-lg z-20">
                         <a href="/admin/users" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Usuarios</a>
                         <a href="/admin/pending" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Registros Pendientes</a>
-                        <a href="/admin/translations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Traducciones</a>
+                        <a href="/admin/annotations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Anotaciones</a>
+                        {/*<a href="/admin/translations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Traducciones</a>*/}
                       </div>
                     )}
                   </div>
