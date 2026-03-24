@@ -83,9 +83,9 @@ def load_annotations_from_excel(file_path: str):
                 print(f"✓ Reached end of data at row {row_num}")
                 break
             
-            # Skip rows without required fields
-            if not question_es or not answer_es:
-                print(f"⚠️  Skipping row {row_num}: missing question_es or answer_es")
+            # Skip rows without at least one field (question_es OR answer_es)
+            if not question_es and not answer_es:
+                print(f"⚠️  Skipping row {row_num}: no question_es or answer_es data")
                 skipped_count += 1
                 row_num += 1
                 continue
@@ -106,14 +106,24 @@ def load_annotations_from_excel(file_path: str):
             
             equation_solution = str(equation_solution).strip() if equation_solution else None
             
-            # Check for duplicates
-            exists = db.query(Annotation).filter(
-                Annotation.question_es == question_es,
-                Annotation.answer_es == answer_es
-            ).first()
+            # Check for duplicates (at least question_es OR answer_es must match)
+            query = db.query(Annotation)
+            
+            if question_es and answer_es:
+                # If both exist, check for both matching
+                exists = query.filter(
+                    Annotation.question_es == question_es,
+                    Annotation.answer_es == answer_es
+                ).first()
+            elif question_es:
+                # If only question, check only question
+                exists = query.filter(Annotation.question_es == question_es).first()
+            else:
+                # If only answer, check only answer
+                exists = query.filter(Annotation.answer_es == answer_es).first()
             
             if exists:
-                print(f"⚠️  Row {row_num}: annotation already exists (question_es, answer_es), skipping")
+                print(f"⚠️  Row {row_num}: annotation already exists, skipping")
                 skipped_count += 1
                 row_num += 1
                 continue

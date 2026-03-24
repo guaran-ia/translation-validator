@@ -16,7 +16,7 @@ const LoginPage = () => {
   const redirectByRole = (u) => {
     const role = getUserRole(u);
     if (role === 'admin') return '/admin/users';
-    if (role === 'traductor') return '/translator';
+    if (role === 'traductor') return '/translator-annotations';
     return '/validator';
   };
 

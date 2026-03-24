@@ -31,7 +31,7 @@ const Navbar = () => {
                   <a href="/validator" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Validar</a>
                 )}
                 {isTranslator && (
-                  <a href="/translator" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Traducir</a>
+                      <a href="/translator-annotations" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Traducir</a>
                 )}
                 {canSeeHistory && (
                   <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
@@ -114,7 +114,7 @@ const Navbar = () => {
                       <a href="/validator" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Validar</a>
                     )}
                     {isTranslator && (
-                      <a href="/translator" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducir</a>
+                         <a href="/translator-annotations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducir</a>
                     )}
                     {canSeeHistory && (
                       <a href="/history" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Historial</a>
@@ -124,7 +124,7 @@ const Navbar = () => {
                         <div className="text-sm font-medium text-gray-700">Admin</div>
                         <a href="/admin/users" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Usuarios</a>
                         <a href="/admin/pending" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Registros Pendientes</a>
-                        <a href="/admin/translations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducciones</a>
+                        <a href="/admin/annotations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Anotaciones</a>
                       </div>
                     )}
 

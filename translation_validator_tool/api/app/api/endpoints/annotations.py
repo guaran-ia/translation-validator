@@ -1,13 +1,14 @@
 """
 Endpoints for managing annotations (question-answer pairs with translations).
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
 
 from app.database import get_db
 from app.models.user import User
 from app.models.annotation import Annotation
+from app.services.excel_loader import get_excel_sheets, load_annotations_from_excel_bytes
 from app.models.annotation_validation import AnnotationValidation
 from app.models.annotation_suggestion import AnnotationSuggestion
 from app.schemas.annotation import (
@@ -17,6 +18,7 @@ from app.schemas.annotation import (
     AnnotationWithStats,
     AnnotationValidationCreate,
     AnnotationSuggestionCreate,
+    AnnotationAssignCreate,
 )
 from app.api.deps import get_current_active_user
 
@@ -32,10 +34,21 @@ async def list_annotations(
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    List all annotations with optional search query.
+    List annotations.
+    - Admins see all annotations (or filtered by search)
+    - Translators see only annotations assigned to them that haven't been translated yet
     Returns paginated results with total count.
     """
     query = db.query(Annotation)
+    
+    # Translators only see annotations assigned to them AND not yet translated
+    if current_user.role == "traductor":
+        query = query.filter(
+            and_(
+                Annotation.assigned_to_user_id == current_user.id,
+                Annotation.translated == False
+            )
+        )
     
     if q:
         search_term = f"%{q}%"
@@ -112,11 +125,19 @@ async def create_annotation(
     """
     Create a new annotation.
     Only admins can create annotations.
+    At least one of question_es or answer_es must be provided.
     """
     if current_user.role != "admin" and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can create annotations",
+        )
+    
+    # Validate that at least one of question_es or answer_es is provided
+    if not annotation_data.question_es and not annotation_data.answer_es:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one of 'question_es' or 'answer_es' must be provided",
         )
     
     # Create new annotation
@@ -146,14 +167,9 @@ async def update_annotation(
 ):
     """
     Update an annotation's translations.
-    Only admins can update annotations.
+    - Admins can update any annotation
+    - Translators can update only annotations assigned to them
     """
-    if current_user.role != "admin" and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can update annotations",
-        )
-    
     annotation = db.query(Annotation).filter(Annotation.id == annotation_id).first()
     
     if not annotation:
@@ -162,11 +178,27 @@ async def update_annotation(
             detail="Annotation not found",
         )
     
+    # Check permissions
+    is_admin = current_user.role == "admin" or current_user.is_superuser
+    is_assigned_translator = (
+        current_user.role == "traductor" and 
+        annotation.assigned_to_user_id == current_user.id
+    )
+    
+    if not (is_admin or is_assigned_translator):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins or the assigned translator can update annotations",
+        )
+    
     # Update allowed fields
     if annotation_data.question_gn is not None:
         annotation.question_gn = annotation_data.question_gn
     if annotation_data.answer_gn is not None:
         annotation.answer_gn = annotation_data.answer_gn
+    
+    # Mark as translated if at least one translation is provided (question_gn OR answer_gn)
+    annotation.translated = bool(annotation.question_gn or annotation.answer_gn)
     
     db.commit()
     db.refresh(annotation)
@@ -314,3 +346,125 @@ async def get_annotation_stats(
         "annotated_with_guarani": annotated_with_guarani,
         "pending_translation": total_annotations - annotated_with_guarani,
     }
+
+
+@router.put("/{annotation_id}/assign", response_model=AnnotationResponse)
+async def assign_annotation(
+    annotation_id: int,
+    assign_data: AnnotationAssignCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Assign an annotation to a translator.
+    Only admins can assign annotations.
+    """
+    if current_user.role != "admin" and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can assign annotations",
+        )
+    
+    annotation = db.query(Annotation).filter(Annotation.id == annotation_id).first()
+    
+    if not annotation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Annotation not found",
+        )
+    
+    # If assigned_to_user_id is provided, verify the user exists and is a translator
+    if assign_data.assigned_to_user_id is not None:
+        user = db.query(User).filter(User.id == assign_data.assigned_to_user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        if user.role != "traductor":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User must be a translator (role='traductor')",
+            )
+    
+    annotation.assigned_to_user_id = assign_data.assigned_to_user_id
+    db.commit()
+    db.refresh(annotation)
+    
+    return AnnotationResponse.model_validate(annotation)
+
+
+@router.post("/upload/sheets")
+async def list_excel_sheets(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get list of sheet names from an Excel file.
+    Only admins can use this endpoint.
+    """
+    if current_user.role != "admin" and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can upload annotations",
+        )
+    
+    try:
+        file_bytes = await file.read()
+        sheets = get_excel_sheets(file_bytes)
+        return {"sheets": sheets, "filename": file.filename}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error reading Excel file: {str(e)}",
+        )
+
+
+@router.post("/upload/bulk")
+async def bulk_upload_annotations(
+    file: UploadFile = File(...),
+    sheet: str = Form(..., description="Sheet name to process"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Bulk upload annotations from Excel file.
+    Expected columns:
+    - Column B: question_es
+    - Column D: answer_es
+    - Column F: answer_number
+    - Column G: equation_solution
+    
+    Only admins can use this endpoint.
+    """
+    if current_user.role != "admin" and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can upload annotations",
+        )
+    
+    try:
+        file_bytes = await file.read()
+        result = load_annotations_from_excel_bytes(
+            file_bytes=file_bytes,
+            sheet_name=sheet,
+            db=db,
+            skip_duplicates=True
+        )
+        
+        return {
+            "success": result["added_count"] > 0 or len(result["errors"]) == 0,
+            "filename": file.filename,
+            "sheet": sheet,
+            "added_count": result["added_count"],
+            "skipped_count": result["skipped_count"],
+            "errors": result["errors"],
+            "details": result["details"]
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error processing Excel file: {str(e)}",
+        )
+

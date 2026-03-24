@@ -12,7 +12,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminUsersList from './pages/AdminUsersList';
  {/*import AdminTranslations from './pages/AdminTranslations';*/}
 import AdminAnnotations from './pages/AdminAnnotations';
-import TranslatorPage from './pages/TranslatorPage';
+import TranslatorAnnotationsPage from './pages/TranslatorAnnotationsPage';
 
 
 const getUserRole = (user) => {
@@ -74,7 +74,7 @@ const HomeRedirect = () => {
 
   const role = getUserRole(user);
   if (role === 'admin') return <Navigate to="/admin/users" replace />;
-  if (role === 'traductor') return <Navigate to="/translator" replace />;
+  if (role === 'traductor') return <Navigate to="/translator-annotations" replace />;
   return <Navigate to="/validator" replace />;
 };
 
@@ -97,10 +97,10 @@ const App = () => {
               } 
             />
             <Route
-              path="/translator"
+              path="/translator-annotations"
               element={
                 <TranslatorRoute>
-                  <TranslatorPage />
+                  <TranslatorAnnotationsPage />
                 </TranslatorRoute>
               }
             />

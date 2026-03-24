@@ -8,8 +8,8 @@ from pydantic import BaseModel, ConfigDict
 
 class AnnotationBase(BaseModel):
     """Base schema for annotation data."""
-    question_es: str
-    answer_es: str
+    question_es: Optional[str] = None
+    answer_es: Optional[str] = None
     answer_number: Optional[int] = None
     equation_solution: Optional[str] = None
     source: str = "GuaranIA"
@@ -32,6 +32,7 @@ class AnnotationResponse(AnnotationBase):
     id: int
     question_gn: Optional[str] = None
     answer_gn: Optional[str] = None
+    assigned_to_user_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -61,3 +62,8 @@ class AnnotationSuggestionCreate(BaseModel):
     suggested_question_gn: Optional[str] = None
     suggested_answer_gn: Optional[str] = None
     reason: Optional[str] = None
+
+
+class AnnotationAssignCreate(BaseModel):
+    """Schema for assigning annotation to a user."""
+    assigned_to_user_id: Optional[int] = None

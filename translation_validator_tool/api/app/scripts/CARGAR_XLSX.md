@@ -14,10 +14,12 @@ Script para cargar anotaciones desde un archivo Excel en formato `.xlsx`.
 | Columna | Nombre del Campo | Tipo | Obligatorio |
 |---------|------------------|------|------------|
 | A | ID | (ignorada) | No |
-| B | question_es | Text | ✅ Sí |
-| D | answer_es | Text | ✅ Sí |
+| B | question_es | Text | ⚠️ Al menos uno |
+| D | answer_es | Text | ⚠️ Al menos uno |
 | F | answer_number | Integer | No |
 | G | equation_solution | Text | No |
+
+**Nota**: Debe haber al menos `question_es` O `answer_es`. No pueden estar ambos vacíos.
 
 
 ```

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { annotationsAPI } from '../services/api';
+import { annotationsAPI, authAPI } from '../services/api';
+import api from '../services/api';
+import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
 
 const AdminAnnotations = () => {
@@ -34,10 +36,37 @@ const AdminAnnotations = () => {
     source: 'GuaranIA'
   });
 
+  // States for Excel upload
+  const [showExcelUpload, setShowExcelUpload] = useState(false);
+  const [excelFile, setExcelFile] = useState(null);
+  const [excelSheets, setExcelSheets] = useState([]);
+  const [selectedSheet, setSelectedSheet] = useState('');
+  const [excelLoading, setExcelLoading] = useState(false);
+  const [excelResult, setExcelResult] = useState(null);
+
+  // States for assignment
+  const [translators, setTranslators] = useState([]);
+  const [selectedTranslator, setSelectedTranslator] = useState(null);
+  const [assignLoading, setAssignLoading] = useState(false);
+
   useEffect(() => {
-    if (isAdmin) loadTable(0);
+    if (isAdmin) {
+      loadTable(0);
+      loadTranslators();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
+
+  const loadTranslators = async () => {
+    try {
+      const res = await authAPI.getAllUsers();
+      const allUsers = res?.data || res;
+      const translators = allUsers.filter(u => u.role === 'traductor');
+      setTranslators(translators);
+    } catch (err) {
+      console.error('Failed to load translators', err);
+    }
+  };
 
   const loadTable = async (newSkip = 0) => {
     setTableLoading(true);
@@ -78,12 +107,10 @@ const AdminAnnotations = () => {
 
   const handleCreateAnnotation = async (e) => {
     e.preventDefault();
-    if (!formData.question_es.trim()) {
-      setError('La pregunta en español es obligatoria');
-      return;
-    }
-    if (!formData.answer_es.trim()) {
-      setError('La respuesta en español es obligatoria');
+    
+    // Validar que al menos uno de los dos campos esté presente
+    if (!formData.question_es.trim() && !formData.answer_es.trim()) {
+      setError('Debes ingresar al menos una pregunta o una respuesta en español');
       return;
     }
     
@@ -93,9 +120,9 @@ const AdminAnnotations = () => {
     try {
       // Preparar datos
       const dataToSend = {
-        question_es: formData.question_es.trim(),
+        question_es: formData.question_es.trim() || null,
         question_gn: formData.question_gn.trim() || null,
-        answer_es: formData.answer_es.trim(),
+        answer_es: formData.answer_es.trim() || null,
         answer_gn: formData.answer_gn.trim() || null,
         answer_number: formData.answer_number ? parseInt(formData.answer_number) : null,
         equation_solution: formData.equation_solution.trim() || null,
@@ -131,6 +158,119 @@ const AdminAnnotations = () => {
     }
   };
 
+  const handleExcelFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setExcelFile(file);
+    setSelectedSheet('');
+    setExcelSheets([]);
+    setExcelResult(null);
+    setError(null);
+
+    // Get available sheets
+    setExcelLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post('/annotations/upload/sheets', formData);
+
+      setExcelSheets(response.data.sheets || []);
+      if (response.data.sheets?.length > 0) {
+        setSelectedSheet(response.data.sheets[0]);
+      }
+    } catch (err) {
+      console.error('Error reading Excel file:', err);
+      setError(err.response?.data?.detail || 'Error al leer el archivo Excel');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
+  const handleExcelUpload = async () => {
+    if (!excelFile || !selectedSheet) {
+      setError('Selecciona un archivo y una hoja');
+      return;
+    }
+
+    setExcelLoading(true);
+    setError(null);
+    setExcelResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', excelFile);
+      formData.append('sheet', selectedSheet);
+
+      const response = await api.post('/annotations/upload/bulk', formData);
+
+      setExcelResult(response.data);
+
+      if (response.data.added_count > 0) {
+        toast.success(`✅ ${response.data.added_count} anotaciones cargadas exitosamente`);
+        // Recargar tabla después de un pequeño delay
+        setTimeout(() => {
+          loadTable(0);
+          setShowExcelUpload(false);
+          setExcelFile(null);
+          setSelectedSheet('');
+          setExcelSheets([]);
+        }, 1000);
+      }
+    } catch (err) {
+      console.error('Excel upload failed:', err);
+      setError(err.response?.data?.detail || 'Error al cargar el archivo');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
+  const handleAssignAnnotation = async () => {
+    if (!annotation || !selectedTranslator) {
+      toast.error('Selecciona un traductor');
+      return;
+    }
+
+    setAssignLoading(true);
+    try {
+      const res = await annotationsAPI.assign(annotation.id, {
+        assigned_to_user_id: selectedTranslator
+      });
+      const updatedAnnotation = res?.data || res;
+      setAnnotation(updatedAnnotation);
+      toast.success(`Anotación asignada a ${translators.find(t => t.id === selectedTranslator)?.username}`);
+      setSelectedTranslator(null);
+      loadTable(skip);
+    } catch (err) {
+      console.error('Assign failed', err);
+      toast.error(err.response?.data?.detail || 'Error al asignar anotación');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
+  const handleUnassignAnnotation = async () => {
+    if (!annotation) return;
+
+    setAssignLoading(true);
+    try {
+      const res = await annotationsAPI.assign(annotation.id, {
+        assigned_to_user_id: null
+      });
+      const updatedAnnotation = res?.data || res;
+      setAnnotation(updatedAnnotation);
+      toast.success('Anotación desasignada');
+      setSelectedTranslator(null);
+      loadTable(skip);
+    } catch (err) {
+      console.error('Unassign failed', err);
+      toast.error(err.response?.data?.detail || 'Error al desasignar anotación');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
+
   if (!isAdmin) return (
     <div>
       <Navbar />
@@ -148,12 +288,20 @@ const AdminAnnotations = () => {
             <h1 className="text-2xl font-bold">Administración de Anotaciones</h1>
             <p className="text-sm text-gray-600">Crea, edita y explora anotaciones (preguntas y respuestas) para traducción.</p>
           </div>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
-          >
-            + Agregar Anotación
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowExcelUpload(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              📁 Cargar Excel
+            </button>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
+            >
+              + Agregar Anotación
+            </button>
+          </div>
         </div>
 
         {/* Búsqueda por ID */}
@@ -195,22 +343,30 @@ const AdminAnnotations = () => {
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-medium text-gray-500">Pregunta (Español)</label>
-                <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.question_es}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500">Pregunta (Guaraní)</label>
-                <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.question_gn || '(No traducida)'}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500">Respuesta (Español)</label>
-                <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.answer_es}</p>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-500">Respuesta (Guaraní)</label>
-                <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.answer_gn || '(No traducida)'}</p>
-              </div>
+              {annotation.question_es && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Pregunta (Español)</label>
+                  <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.question_es}</p>
+                </div>
+              )}
+              {annotation.question_gn && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Pregunta (Guaraní)</label>
+                  <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.question_gn}</p>
+                </div>
+              )}
+              {annotation.answer_es && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Respuesta (Español)</label>
+                  <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.answer_es}</p>
+                </div>
+              )}
+              {annotation.answer_gn && (
+                <div>
+                  <label className="text-xs font-medium text-gray-500">Respuesta (Guaraní)</label>
+                  <p className="text-sm text-gray-700 mt-1 p-2 bg-gray-50 rounded">{annotation.answer_gn}</p>
+                </div>
+              )}
               {annotation.answer_number && (
                 <div>
                   <label className="text-xs font-medium text-gray-500">Número de Respuesta</label>
@@ -226,6 +382,55 @@ const AdminAnnotations = () => {
             </div>
             <div className="mt-4 text-xs text-gray-500">
               <p>Creada: {new Date(annotation.created_at).toLocaleString('es-ES')}</p>
+            </div>
+
+            {/* Assignment Section */}
+            <div className="mt-6 border-t pt-6">
+              <h4 className="text-sm font-semibold mb-4">Asignación</h4>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <p className="text-sm mb-3">
+                  <strong>Asignado a:</strong>{' '}
+                  {annotation.assigned_to_user_id ? (
+                    <span className="text-blue-700 font-medium">
+                      {translators.find(t => t.id === annotation.assigned_to_user_id)?.username || `Usuario #${annotation.assigned_to_user_id}`}
+                    </span>
+                  ) : (
+                    <span className="text-gray-600">Sin asignar</span>
+                  )}
+                </p>
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Selecciona un traductor</label>
+                    <select
+                      value={selectedTranslator || ''}
+                      onChange={(e) => setSelectedTranslator(e.target.value ? parseInt(e.target.value) : null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+                      disabled={assignLoading}
+                    >
+                      <option value="">-- Selecciona traductor --</option>
+                      {translators.map(t => (
+                        <option key={t.id} value={t.id}>{t.username}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleAssignAnnotation}
+                    disabled={assignLoading || !selectedTranslator}
+                    className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {assignLoading ? 'Asignando...' : 'Asignar'}
+                  </button>
+                  {annotation.assigned_to_user_id && (
+                    <button
+                      onClick={handleUnassignAnnotation}
+                      disabled={assignLoading}
+                      className="px-4 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                    >
+                      Desasignar
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -252,7 +457,7 @@ const AdminAnnotations = () => {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">ID</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Pregunta</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Respuesta</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Nº Respuesta</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Asignado a</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Acciones</th>
               </tr>
             </thead>
@@ -265,9 +470,19 @@ const AdminAnnotations = () => {
                 items.map(a => (
                   <tr key={a.id}>
                     <td className="px-4 py-3 text-sm text-gray-700">{a.id}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.question_es.substring(0, 60)}...</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.answer_es.substring(0, 60)}...</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.answer_number || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{a.question_es ? a.question_es.substring(0, 40) + '...' : '(sin pregunta)'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">{a.answer_es ? a.answer_es.substring(0, 40) + '...' : '(sin respuesta)'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {a.assigned_to_user_id ? (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                          {translators.find(t => t.id === a.assigned_to_user_id)?.username || `#${a.assigned_to_user_id}`}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                          Sin asignar
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
                       <div className="flex gap-2">
                         <button 
@@ -321,14 +536,13 @@ const AdminAnnotations = () => {
                 {/* PREGUNTA EN ESPAÑOL */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pregunta en Español *
+                    Pregunta en Español (al menos uno de los dos es obligatorio)
                   </label>
                   <textarea
                     value={formData.question_es}
                     onChange={(e) => setFormData({...formData, question_es: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={4}
-                    required
                     placeholder="Ingresa la pregunta en español..."
                   />
                 </div>
@@ -350,14 +564,13 @@ const AdminAnnotations = () => {
                 {/* RESPUESTA EN ESPAÑOL */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Respuesta en Español *
+                    Respuesta en Español (opcional)
                   </label>
                   <textarea
                     value={formData.answer_es}
                     onChange={(e) => setFormData({...formData, answer_es: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={4}
-                    required
                     placeholder="Ingresa la respuesta en español..."
                   />
                 </div>
@@ -438,6 +651,161 @@ const AdminAnnotations = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Excel Upload Modal */}
+        {showExcelUpload && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">📁 Cargar Anotaciones desde Excel</h3>
+                <button
+                  onClick={() => {
+                    setShowExcelUpload(false);
+                    setError(null);
+                    setExcelFile(null);
+                    setSelectedSheet('');
+                    setExcelSheets([]);
+                    setExcelResult(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Instrucciones */}
+                <div className="bg-blue-50 border border-blue-200 rounded p-4">
+                  <h4 className="font-semibold text-sm text-blue-900 mb-2">Formato esperado:</h4>
+                  <ul className="text-xs text-blue-800 space-y-1">
+                    <li>• <strong>Columna B:</strong> question_es (Pregunta en español)</li>
+                    <li>• <strong>Columna D:</strong> answer_es (Respuesta en español)</li>
+                    <li>• <strong>Columna F:</strong> answer_number (Número de respuesta - opcional)</li>
+                    <li>• <strong>Columna G:</strong> equation_solution (Ecuación/Solución - opcional)</li>
+                    <li>• Los datos deben comenzar desde la fila 2</li>
+                  </ul>
+                </div>
+
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Selecciona archivo Excel (.xlsx)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleExcelFileSelect}
+                    disabled={excelLoading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  />
+                  {excelFile && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      📄 {excelFile.name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Sheet Selection */}
+                {excelSheets.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Selecciona la hoja a procesar
+                    </label>
+                    <select
+                      value={selectedSheet}
+                      onChange={(e) => setSelectedSheet(e.target.value)}
+                      disabled={excelLoading}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    >
+                      <option value="">-- Selecciona una hoja --</option>
+                      {excelSheets.map((sheet, idx) => (
+                        <option key={idx} value={sheet}>{sheet}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Results */}
+                {excelResult && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-4 space-y-3">
+                    <h4 className="font-semibold text-sm">Resultados de la carga:</h4>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-green-50 p-3 rounded border border-green-200">
+                        <p className="text-xs text-gray-600">Anotaciones agregadas</p>
+                        <p className="text-lg font-bold text-green-700">{excelResult.added_count}</p>
+                      </div>
+                      <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                        <p className="text-xs text-gray-600">Filas omitidas</p>
+                        <p className="text-lg font-bold text-yellow-700">{excelResult.skipped_count}</p>
+                      </div>
+                    </div>
+
+                    {excelResult.errors.length > 0 && (
+                      <div>
+                        <h5 className="text-xs font-semibold text-red-700 mb-2">❌ Errores encontrados:</h5>
+                        <div className="bg-red-50 p-2 rounded max-h-32 overflow-y-auto">
+                          {excelResult.errors.map((err, idx) => (
+                            <p key={idx} className="text-xs text-red-700 mb-1">{err}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {excelResult.details.length > 0 && (
+                      <div>
+                        <h5 className="text-xs font-semibold text-gray-700 mb-2">✅ Primeras anotaciones agregadas:</h5>
+                        <div className="bg-white p-2 rounded border border-gray-200 max-h-32 overflow-y-auto space-y-2">
+                          {excelResult.details.slice(0, 3).map((detail, idx) => (
+                            <div key={idx} className="text-xs bg-gray-50 p-2 rounded">
+                              <p className="font-medium">ID: {detail.id}</p>
+                              {detail.question_es && <p className="text-gray-600">Q: {detail.question_es}</p>}
+                              {detail.answer_es && <p className="text-gray-600">A: {detail.answer_es}</p>}
+                            </div>
+                          ))}
+                          {excelResult.details.length > 3 && (
+                            <p className="text-xs text-gray-500">... y {excelResult.details.length - 3} más</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Buttons */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      setShowExcelUpload(false);
+                      setError(null);
+                      setExcelFile(null);
+                      setSelectedSheet('');
+                      setExcelSheets([]);
+                      setExcelResult(null);
+                    }}
+                    className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50"
+                    disabled={excelLoading}
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    onClick={handleExcelUpload}
+                    disabled={!excelFile || !selectedSheet || excelLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {excelLoading ? 'Cargando...' : 'Cargar Anotaciones'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

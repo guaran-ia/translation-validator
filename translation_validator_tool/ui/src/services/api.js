@@ -16,6 +16,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // No forzar Content-Type para FormData - dejar que el navegador lo configure
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -141,6 +147,8 @@ export const annotationsAPI = {
     api.put(`/annotations/${id}`, data),
   delete: (id) =>
     api.delete(`/annotations/${id}`),
+  assign: (id, data) =>
+    api.put(`/annotations/${id}/assign`, data),
   validate: (id, data) =>
     api.post(`/annotations/${id}/validate`, data),
   suggest: (id, data) =>
