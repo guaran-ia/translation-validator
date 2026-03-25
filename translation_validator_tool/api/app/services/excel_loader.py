@@ -154,9 +154,7 @@ def load_annotations_from_excel_bytes(
             try:
                 annotation = Annotation(
                     question_es=question_es,
-                    question_gn=None,  # No guaraní translation yet
                     answer_es=answer_es,
-                    answer_gn=None,  # No guaraní translation yet
                     answer_number=answer_number,
                     equation_solution=equation_solution,
                     source="GuaranIA"

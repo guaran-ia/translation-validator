@@ -31,9 +31,12 @@ const Navbar = () => {
                   <a href="/validator" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Validar</a>
                 )}
                 {isTranslator && (
-                      <a href="/translator-annotations" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Traducir</a>
+                      <a href="/translator-annotations" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Mis pendientes</a>
                 )}
-                {canSeeHistory && (
+                {isTranslator && (
+                      <a href="/pending-translations" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Traducciones pendientes</a>
+                )}
+                {isValidator && (
                   <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
                 )}
 
@@ -114,9 +117,12 @@ const Navbar = () => {
                       <a href="/validator" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Validar</a>
                     )}
                     {isTranslator && (
-                         <a href="/translator-annotations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducir</a>
+                         <a href="/translator-annotations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Mis pendientes</a>
                     )}
-                    {canSeeHistory && (
+                    {isTranslator && (
+                         <a href="/pending-translations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducciones pendientes</a>
+                    )}
+                    {isValidator && (
                       <a href="/history" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Historial</a>
                     )}
                     {isAdmin && (

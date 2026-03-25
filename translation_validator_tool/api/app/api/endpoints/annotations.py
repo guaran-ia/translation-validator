@@ -4,25 +4,32 @@ Endpoints for managing annotations (question-answer pairs with translations).
 from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_
+import logging
 
 from app.database import get_db
 from app.models.user import User
 from app.models.annotation import Annotation
 from app.services.excel_loader import get_excel_sheets, load_annotations_from_excel_bytes
 from app.models.annotation_validation import AnnotationValidation
-from app.models.annotation_suggestion import AnnotationSuggestion
 from app.schemas.annotation import (
     AnnotationCreate,
     AnnotationUpdate,
     AnnotationResponse,
     AnnotationWithStats,
     AnnotationValidationCreate,
-    AnnotationSuggestionCreate,
     AnnotationAssignCreate,
 )
 from app.api.deps import get_current_active_user
 
 router = APIRouter()
+# Use the uvicorn error logger so logs are visible in the server output
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=dict)
@@ -36,19 +43,36 @@ async def list_annotations(
     """
     List annotations.
     - Admins see all annotations (or filtered by search)
-    - Translators see only annotations assigned to them that haven't been translated yet
+    - Translators see only annotations that are NOT marked as translated, NOT translated by them, and NOT assigned to them
     Returns paginated results with total count.
     """
     query = db.query(Annotation)
     
-    # Translators only see annotations assigned to them AND not yet translated
+    # Translators see ONLY non-translated annotations EXCEPT those they already translated or that are assigned to them
     if current_user.role == "traductor":
-        query = query.filter(
-            and_(
-                Annotation.assigned_to_user_id == current_user.id,
-                Annotation.translated == False
-            )
-        )
+        from app.models.annotation_assignment import AnnotationAssignment
+        from app.models.annotation_translation import AnnotationTranslation
+
+        # Collect annotation IDs the user has translated
+        translated_rows = db.query(AnnotationTranslation.annotation_id).filter(
+            AnnotationTranslation.user_id == current_user.id
+        ).all()
+        translated_ids = {r[0] for r in translated_rows}
+
+        # Collect annotation IDs the user is assigned to
+        assigned_rows = db.query(AnnotationAssignment.annotation_id).filter(
+            AnnotationAssignment.user_id == current_user.id
+        ).all()
+        assigned_ids = {r[0] for r in assigned_rows}
+
+        exclude_ids = translated_ids.union(assigned_ids)
+
+        # Base: only not-yet-marked-as-translated annotations
+        query = query.filter(Annotation.translated == False)
+
+        # Exclude those the user already interacted with (translated by him OR assigned to him)
+        if exclude_ids:
+            query = query.filter(~Annotation.id.in_(list(exclude_ids)))
     
     if q:
         search_term = f"%{q}%"
@@ -60,6 +84,9 @@ async def list_annotations(
                 Annotation.answer_gn.ilike(search_term),
             )
         )
+
+    # Order by id ascending for consistency
+    query = query.order_by(Annotation.id.asc())
     
     total = query.count()
     items = query.offset(skip).limit(limit).all()
@@ -69,7 +96,6 @@ async def list_annotations(
             {
                 **AnnotationResponse.model_validate(a).model_dump(),
                 "validation_count": len(a.validations),
-                "suggestion_count": len(a.suggestions),
             }
             for a in items
         ],
@@ -77,6 +103,217 @@ async def list_annotations(
         "skip": skip,
         "limit": limit,
         "has_next": (skip + limit) < total,
+    }
+
+
+@router.get("/stats", response_model=dict)
+async def get_annotation_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get annotation statistics."""
+    total_annotations = db.query(Annotation).count()
+    annotated_with_guarani = db.query(Annotation).filter(
+        Annotation.question_gn.isnot(None),
+        Annotation.answer_gn.isnot(None)
+    ).count()
+    
+    return {
+        "total_annotations": total_annotations,
+        "annotated_with_guarani": annotated_with_guarani,
+        "pending_translation": total_annotations - annotated_with_guarani,
+    }
+
+
+@router.get("/my-assignments", response_model=dict)
+async def get_my_assignments(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get annotations assigned to the current user.
+    Only for translators.
+    
+    Returns the actual Annotation objects (with all details) that are assigned to the current user.
+    No filtering applied - just show what's assigned.
+    """
+    if current_user.role != "traductor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only translators can view their assignments",
+        )
+
+    from app.models.annotation_assignment import AnnotationAssignment
+
+    # Get UNIQUE annotation IDs assigned to the user (use distinct, efficient query)
+    assigned_annotation_rows = db.query(AnnotationAssignment.annotation_id).filter(
+        AnnotationAssignment.user_id == current_user.id
+    ).distinct().all()
+    
+    logger.debug(f"DEBUG: User ID: {current_user.id}")
+    # Fallback: print to stdout so uvicorn always shows the debug info
+    print(f"DEBUG: User ID: {current_user.id}")
+    logger.debug(f"DEBUG: Raw assignment rows (annotation_id tuples): {assigned_annotation_rows}")
+    print(f"DEBUG: Raw assignment rows (annotation_id tuples): {assigned_annotation_rows}")
+    logger.debug(f"DEBUG: Number of assignment rows: {len(assigned_annotation_rows)}")
+    print(f"DEBUG: Number of assignment rows: {len(assigned_annotation_rows)}")
+    # assigned_annotation_rows is a list of 1-tuples (annotation_id,), extract values
+    annotation_ids = [row[0] for row in assigned_annotation_rows]
+    logger.debug(f"DEBUG: Extracted annotation_ids: {annotation_ids}")
+    print(f"DEBUG: Extracted annotation_ids: {annotation_ids}")
+
+    if not annotation_ids:
+        logger.warning("DEBUG: No annotation IDs found, returning empty list")
+        print("DEBUG: No annotation IDs found, returning empty list")
+        return {
+            "items": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "has_next": False,
+        }
+
+    # Get the actual annotations
+    query = db.query(Annotation).filter(Annotation.id.in_(annotation_ids))
+    
+    logger.info(f"DEBUG: Query SQL: {query}")
+    print(f"DEBUG: Query SQL: {query}")
+    
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    
+    logger.info(f"DEBUG: Total annotations found: {total}")
+    print(f"DEBUG: Total annotations found: {total}")
+    logger.info(f"DEBUG: Items returned: {len(items)}")
+    print(f"DEBUG: Items returned: {len(items)}")
+    for item in items:
+        logger.info(f"  - Annotation ID {item.id}: {item.question_es[:50] if item.question_es else 'No question'}")
+        print(f"  - Annotation ID {item.id}: {item.question_es[:50] if item.question_es else 'No question'}")
+    return {
+        "items": [
+            {
+                **AnnotationResponse.model_validate(a).model_dump(),
+                "validation_count": len(a.validations),
+            }
+            for a in items
+        ],
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_next": (skip + limit) < total,
+    }
+
+
+@router.get("/my-translations", response_model=dict)
+async def get_my_translations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get translations submitted by the current user.
+    Only for translators.
+    """
+    if current_user.role != "traductor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only translators can view their translations",
+        )
+    
+    from app.models.annotation_translation import AnnotationTranslation
+    
+    translations = db.query(AnnotationTranslation).filter(
+        AnnotationTranslation.user_id == current_user.id
+    ).all()
+    
+    return {
+        "items": [
+            {
+                "id": t.id,
+                "annotation_id": t.annotation_id,
+                "user_id": t.user_id,
+                "question_gn": t.question_gn,
+                "answer_gn": t.answer_gn,
+                "created_at": t.created_at
+            }
+            for t in translations
+        ],
+        "total": len(translations)
+    }
+
+
+@router.get("/available-for-translation", response_model=dict)
+async def get_available_for_translation(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    TEMP MODE: Return annotations ordered by smallest ID first (for debugging/QA).
+    Previous complex filters are commented out temporarily.
+    """
+    if current_user.role != "traductor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only translators can view available annotations",
+        )
+
+    # --- Reintroduce filters: hide completed, hide annotations assigned to the user, and those the user already translated ---
+    from app.models.annotation_assignment import AnnotationAssignment
+    from app.models.annotation_translation import AnnotationTranslation
+
+    # IDs the user already translated
+    translated_rows = db.query(AnnotationTranslation.annotation_id).filter(
+        AnnotationTranslation.user_id == current_user.id
+    ).all()
+    translated_ids = {r[0] for r in translated_rows}
+
+    # IDs the user is assigned to
+    assigned_rows = db.query(AnnotationAssignment.annotation_id).filter(
+        AnnotationAssignment.user_id == current_user.id
+    ).all()
+    assigned_ids = {r[0] for r in assigned_rows}
+
+    exclude_ids = translated_ids.union(assigned_ids)
+
+    # Build query over Annotation with translation counts and filters
+    q = db.query(Annotation, func.count(AnnotationTranslation.id).label('translation_count'))
+    q = q.outerjoin(AnnotationTranslation, AnnotationTranslation.annotation_id == Annotation.id)
+    # Exclude annotations already marked as translated/completed
+    q = q.filter(Annotation.translated == False)
+
+    if exclude_ids:
+        q = q.filter(~Annotation.id.in_(list(exclude_ids)))
+
+    q = q.group_by(Annotation.id)
+    # Only include items with fewer than 3 translations
+    q = q.having(func.count(AnnotationTranslation.id) < 3)
+
+    # Deterministic ordering
+    q = q.order_by(Annotation.id.asc())
+
+    # Derive total using a subquery of matched ids
+    ids_subq = q.with_entities(Annotation.id).subquery()
+    total = db.query(func.count()).select_from(ids_subq).scalar() or 0
+
+    rows = q.offset(skip).limit(limit).all()
+
+    items = []
+    for ann, trans_count in rows:
+        item = AnnotationResponse.model_validate(ann).model_dump()
+        item.update({
+            'translation_count': int(trans_count or 0),
+        })
+        items.append(item)
+
+    return {
+        'items': items,
+        'total': total,
+        'skip': skip,
+        'limit': limit,
+        'has_next': (skip + limit) < total,
     }
 
 
@@ -100,17 +337,10 @@ async def get_annotation(
         AnnotationValidation.user_id == current_user.id,
     ).first() is not None
     
-    user_suggested = db.query(AnnotationSuggestion).filter(
-        AnnotationSuggestion.annotation_id == annotation_id,
-        AnnotationSuggestion.user_id == current_user.id,
-    ).first() is not None
-    
     result = AnnotationResponse.model_validate(annotation).model_dump()
     result.update({
         "validation_count": len(annotation.validations),
-        "suggestion_count": len(annotation.suggestions),
         "user_has_validated": user_validated,
-        "user_has_suggested": user_suggested,
     })
     
     return result
@@ -280,118 +510,71 @@ async def create_validation(
     }
 
 
-@router.post("/{annotation_id}/suggest", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def create_suggestion(
+@router.post("/{annotation_id}/assign", response_model=dict)
+async def assign_to_me(
     annotation_id: int,
-    suggestion_data: AnnotationSuggestionCreate,
+    user_id: int = Query(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Submit a translation suggestion for an annotation.
+    Translator self-assigns to an annotation.
+    Creates an assignment if not already assigned.
     """
-    annotation = db.query(Annotation).filter(Annotation.id == annotation_id).first()
-    
-    if not annotation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Annotation not found",
-        )
-    
-    # Create suggestion record
-    suggestion = AnnotationSuggestion(
-        annotation_id=annotation_id,
-        user_id=current_user.id,
-        part_type=suggestion_data.part_type,
-        suggested_question_gn=suggestion_data.suggested_question_gn,
-        suggested_answer_gn=suggestion_data.suggested_answer_gn,
-        reason=suggestion_data.reason,
-    )
-    
-    db.add(suggestion)
-    db.commit()
-    db.refresh(suggestion)
-    
-    return {
-        "id": suggestion.id,
-        "annotation_id": annotation_id,
-        "user_id": current_user.id,
-        "part_type": suggestion.part_type,
-        "suggested_question_gn": suggestion.suggested_question_gn,
-        "suggested_answer_gn": suggestion.suggested_answer_gn,
-        "reason": suggestion.reason,
-        "created_at": suggestion.created_at,
-    }
-
-
-@router.get("/stats", response_model=dict)
-async def get_annotation_stats(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get statistics about annotations."""
-    total_annotations = db.query(func.count(Annotation.id)).scalar() or 0
-    total_validations = db.query(func.count(AnnotationValidation.id)).scalar() or 0
-    total_suggestions = db.query(func.count(AnnotationSuggestion.id)).scalar() or 0
-    
-    annotated_with_guarani = db.query(func.count(Annotation.id)).filter(
-        Annotation.answer_gn.isnot(None),
-        Annotation.question_gn.isnot(None)
-    ).scalar() or 0
-    
-    return {
-        "total_annotations": total_annotations,
-        "total_validations": total_validations,
-        "total_suggestions": total_suggestions,
-        "annotated_with_guarani": annotated_with_guarani,
-        "pending_translation": total_annotations - annotated_with_guarani,
-    }
-
-
-@router.put("/{annotation_id}/assign", response_model=AnnotationResponse)
-async def assign_annotation(
-    annotation_id: int,
-    assign_data: AnnotationAssignCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    Assign an annotation to a translator.
-    Only admins can assign annotations.
-    """
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if current_user.role != "traductor":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can assign annotations",
+            detail="Only translators can self-assign",
+        )
+    
+    if user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Can only assign to yourself",
         )
     
     annotation = db.query(Annotation).filter(Annotation.id == annotation_id).first()
-    
     if not annotation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Annotation not found",
         )
     
-    # If assigned_to_user_id is provided, verify the user exists and is a translator
-    if assign_data.assigned_to_user_id is not None:
-        user = db.query(User).filter(User.id == assign_data.assigned_to_user_id).first()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-            )
-        if user.role != "traductor":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User must be a translator (role='traductor')",
-            )
+    from app.models.annotation_assignment import AnnotationAssignment
     
-    annotation.assigned_to_user_id = assign_data.assigned_to_user_id
+    # Check if already assigned
+    existing = db.query(AnnotationAssignment).filter(
+        and_(
+            AnnotationAssignment.annotation_id == annotation_id,
+            AnnotationAssignment.user_id == current_user.id
+        )
+    ).first()
+    
+    if existing:
+        return {
+            "success": False,
+            "message": "Already assigned to this annotation"
+        }
+    
+    # Create new assignment
+    assignment = AnnotationAssignment(
+        annotation_id=annotation_id,
+        user_id=current_user.id
+    )
+    db.add(assignment)
     db.commit()
-    db.refresh(annotation)
+    db.refresh(assignment)
     
-    return AnnotationResponse.model_validate(annotation)
+    return {
+        "success": True,
+        "message": "Assigned successfully",
+        "assignment": {
+            "id": assignment.id,
+            "annotation_id": assignment.annotation_id,
+            "user_id": assignment.user_id,
+            "assigned_at": assignment.assigned_at
+        }
+    }
 
 
 @router.post("/upload/sheets")
@@ -467,4 +650,42 @@ async def bulk_upload_annotations(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Error processing Excel file: {str(e)}",
         )
+
+
+@router.get("/{annotation_id}/translations/{user_id}", response_model=dict)
+async def get_translation_by_user(
+    annotation_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get a translation for an annotation by a specific user.
+    """
+    from app.models.annotation_translation import AnnotationTranslation
+    
+    translation = db.query(AnnotationTranslation).filter(
+        AnnotationTranslation.annotation_id == annotation_id,
+        AnnotationTranslation.user_id == user_id
+    ).first()
+    
+    if not translation:
+        return {
+            "id": None,
+            "annotation_id": annotation_id,
+            "user_id": user_id,
+            "question_gn": None,
+            "answer_gn": None,
+            "created_at": None
+        }
+    
+    return {
+        "id": translation.id,
+        "annotation_id": translation.annotation_id,
+        "user_id": translation.user_id,
+        "question_gn": translation.question_gn,
+        "answer_gn": translation.answer_gn,
+        "created_at": translation.created_at
+    }
+
 

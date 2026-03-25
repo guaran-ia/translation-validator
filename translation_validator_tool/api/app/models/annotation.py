@@ -1,14 +1,13 @@
 """
-Annotation model for storing question-answer pairs with translations.
-Each annotation consists of:
-- A question in Spanish (question_es) that can be translated to Guaraní (question_gn)
-- An answer in Spanish (answer_es) that can be translated to Guaraní (answer_gn)
-- Metadata: answer_number, equation_solution
-- Assignment: assigned_to_user_id (translator assigned to this annotation)
+Annotation model for storing question-answer pairs.
+Translations are now stored separately in AnnotationTranslation table to support
+multiple translations per annotation (up to 3 from different users).
+Assignments are now stored in AnnotationAssignment table to support many-to-many
+relationship between annotations and translators.
 """
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Text, Integer, Boolean, ForeignKey
+from sqlalchemy import String, Text, Integer, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
@@ -18,13 +17,11 @@ class Annotation(Base):
     
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     
-    # Question fields (optional for translation)
+    # Question fields (original, in Spanish)
     question_es: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Original question in Spanish
-    question_gn: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Translated question in Guaraní
     
-    # Answer fields (optional for translation)
+    # Answer fields (original, in Spanish)
     answer_es: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Original answer in Spanish
-    answer_gn: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Translated answer in Guaraní
     
     # Metadata fields
     answer_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Numeric answer (e.g., 18)
@@ -33,10 +30,7 @@ class Annotation(Base):
     # Source information
     source: Mapped[str] = mapped_column(String(255), default="GuaranIA")
     
-    # Assignment: which translator is assigned to this annotation
-    assigned_to_user_id: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"), nullable=True)
-    
-    # Translation status: whether both question_gn and answer_gn have been filled
+    # Translation status: true when annotation has 3 translations (one from each of 3 users)
     translated: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # Timestamps
@@ -46,4 +40,7 @@ class Annotation(Base):
     # Relationships - using string names to avoid circular imports
     validations = relationship("AnnotationValidation", back_populates="annotation", cascade="all, delete-orphan")
     suggestions = relationship("AnnotationSuggestion", back_populates="annotation", cascade="all, delete-orphan")
-    assigned_to_user = relationship("User", back_populates="assigned_annotations")
+    
+    # Many-to-many relationships with users
+    assignments = relationship("AnnotationAssignment", back_populates="annotation", cascade="all, delete-orphan")
+    translations = relationship("AnnotationTranslation", back_populates="annotation", cascade="all, delete-orphan")

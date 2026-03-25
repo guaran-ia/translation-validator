@@ -49,21 +49,71 @@ const TranslatorAnnotationsPage = () => {
   const loadAnnotations = async () => {
     setLoading(true);
     try {
-      const res = await annotationsAPI.getAll(0, 100, '');
-      const data = res?.data || res;
+      // Usar el nuevo endpoint para obtener solo las anotaciones asignadas al usuario actual
+      const res = await annotationsAPI.getMyAssignments();
+      const annotationsData = res?.data?.items || res?.data || [];
+      console.log('DEBUG: annotationsData from API:', annotationsData);
       
-      if (data.items && data.items.length > 0) {
-        setAllAnnotations(data.items);
-        setCurrentIndex(0);
-        setCurrentAnnotation(data.items[0]);
-        resetForm();
+      if (annotationsData && annotationsData.length > 0) {
+        // Las anotaciones ya vienen completas del backend
+        // Solo verificar si el usuario ya tradujo cada una
+        const annotationsWithDetails = await Promise.all(
+          annotationsData.map(async (ann) => {
+            try {
+              // Obtener si el usuario ya tradujo esta anotación
+              let existingTranslation = null;
+              try {
+                const translRes = await annotationsAPI.getTranslationByUser(ann.id, user.id);
+                existingTranslation = translRes?.data || null;
+                console.log(`DEBUG: user translation for ${ann.id}:`, existingTranslation);
+              } catch (tErr) {
+                // If 404, user hasn't translated yet - treat as no translation.
+                if (tErr?.response?.status === 404) {
+                  console.log(`DEBUG: no translation for ${ann.id} (404 - expected)`);
+                  existingTranslation = null;
+                } else {
+                  console.error(`Error fetching translation for annotation ${ann.id}:`, tErr);
+                  existingTranslation = null;
+                }
+              }
+
+              return {
+                ...ann,
+                existing_translation: existingTranslation
+              };
+            } catch (err) {
+              console.error(`Error loading annotation ${ann.id}:`, err);
+              return null;
+            }
+          })
+        );
+        
+        console.log('DEBUG: annotationsWithDetails:', annotationsWithDetails);
+        
+        // Filtrar anotaciones válidas (mostrar todo lo asignado al usuario; no excluimos las ya traducidas)
+        const validAnnotations = annotationsWithDetails
+          .filter(a => a !== null);
+        
+        console.log('DEBUG: validAnnotations after filter:', validAnnotations);
+        
+        if (validAnnotations.length > 0) {
+          setAllAnnotations(validAnnotations);
+          setCurrentIndex(0);
+          setCurrentAnnotation(validAnnotations[0]);
+          resetForm();
+        } else {
+          console.log('DEBUG: No valid annotations found');
+          setCurrentAnnotation(null);
+          setAllAnnotations([]);
+        }
       } else {
+        console.log('DEBUG: No assignments found');
         setCurrentAnnotation(null);
         setAllAnnotations([]);
       }
     } catch (err) {
       console.error('Error loading annotations:', err);
-      toast.error('Error al cargar anotaciones');
+      toast.error('Error al cargar anotaciones asignadas');
     } finally {
       setLoading(false);
     }
@@ -150,13 +200,39 @@ const TranslatorAnnotationsPage = () => {
     }
   };
 
-  const handleSaveLocal = () => {
-    // Guardar localmente sin enviar al servidor
-    setSavedData({
-      question_gn: formData.question_gn,
-      answer_gn: formData.answer_gn
-    });
-    toast.success('Traducción guardada localmente');
+  const handleIgnore = async () => {
+    if (!currentAnnotation) return;
+    
+    setSubmitting(true);
+    try {
+      // Desasignar al usuario de esta anotación
+      await annotationsAPI.unassignUser(currentAnnotation.id, user.id);
+      toast.info('Anotación ignorada y desasignada');
+      
+      // Remover la anotación actual del buffer
+      const updatedAnnotations = allAnnotations.filter((_, idx) => idx !== currentIndex);
+      
+      if (updatedAnnotations.length > 0) {
+        setAllAnnotations(updatedAnnotations);
+        let newIndex = currentIndex;
+        if (currentIndex >= updatedAnnotations.length) {
+          newIndex = updatedAnnotations.length - 1;
+        }
+        setCurrentIndex(newIndex);
+        setCurrentAnnotation(updatedAnnotations[newIndex]);
+        setSavedData({ question_gn: '', answer_gn: '' });
+        resetForm();
+      } else {
+        setCurrentIndex(0);
+        setCurrentAnnotation(null);
+        setAllAnnotations([]);
+      }
+    } catch (err) {
+      console.error('Error ignoring annotation:', err);
+      toast.error('Error al ignorar anotación');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSendTranslation = async () => {
@@ -178,7 +254,48 @@ const TranslatorAnnotationsPage = () => {
         answer_gn: formData.answer_gn.trim() || null
       };
 
-      await annotationsAPI.update(currentAnnotation.id, payload);
+      // Verificar si ya existen 3 traducciones para esta anotación
+      try {
+        const translationsRes = await annotationsAPI.getTranslations(currentAnnotation.id);
+        const translationsList = translationsRes?.data?.items || translationsRes?.data || [];
+        
+        if (translationsList.length >= 3) {
+          // Desasignar al usuario y remover la anotación del buffer
+          try {
+            await annotationsAPI.unassignUser(currentAnnotation.id, user.id);
+            toast.info('La anotación ya tiene 3 traducciones; te hemos desasignado.');
+          } catch (uErr) {
+            console.error('Error al desasignar:', uErr);
+            toast.error('No se pudo desasignar la anotación.');
+          }
+
+          // Remover la anotación actual del buffer
+          const updatedAnnotations = allAnnotations.filter((_, idx) => idx !== currentIndex);
+          if (updatedAnnotations.length > 0) {
+            setAllAnnotations(updatedAnnotations);
+            let newIndex = currentIndex;
+            if (currentIndex >= updatedAnnotations.length) {
+              newIndex = updatedAnnotations.length - 1;
+            }
+            setCurrentIndex(newIndex);
+            setCurrentAnnotation(updatedAnnotations[newIndex]);
+            setSavedData({ question_gn: '', answer_gn: '' });
+            resetForm();
+          } else {
+            setCurrentIndex(0);
+            setCurrentAnnotation(null);
+            setAllAnnotations([]);
+          }
+
+          return;
+        }
+      } catch (checkErr) {
+        console.error('Error verificando count de traducciones:', checkErr);
+        // Si falla la comprobación, seguimos intentando guardar la traducción
+      }
+
+      // Si hay menos de 3 traducciones, crear la traducción normalmente
+      await annotationsAPI.createTranslation(currentAnnotation.id, payload);
       toast.success('¡Traducción enviada correctamente!');
       
       // Remover la anotación actual del buffer
@@ -263,18 +380,18 @@ const TranslatorAnnotationsPage = () => {
           <div className="text-6xl mb-4">🎉</div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">¡Felicidades!</h2>
           <p className="text-xl text-gray-600 mb-2">Ya no tienes traducciones pendientes</p>
-          <p className="text-gray-500 mb-8">Pronto recibirás más preguntas para traducir.</p>
           
           <div className="mt-8 p-6 bg-blue-50 rounded-lg border border-blue-200 max-w-md mx-auto">
             <p className="text-blue-800">
               <strong>¿Quieres más preguntas?</strong>
             </p>
             <p className="text-blue-700 text-sm mt-2">
-              Contáctanos en nuestros canales de soporte
+              Visita la página de
+              <a href="/pending-translations" className="font-semibold underline"> Traducciones pendientes</a>
             </p>
           </div>
           
-          <button onClick={loadAnnotations} className="mt-6 btn btn-primary">Recargar</button>
+          <button onClick={() => window.location.href = '/pending-translations'} className="mt-6 btn btn-primary">Ver Traducciones Pendientes</button>
         </div>
       </div>
     </div>
@@ -309,7 +426,7 @@ const TranslatorAnnotationsPage = () => {
 
         {/* Main Content */}
         <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Traduce las siguientes oraciones:</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">📋 Mis pendientes - Traduce las siguientes oraciones:</h1>
 
           {/* Preguntas */}
           {currentAnnotation.question_es && (
@@ -480,11 +597,11 @@ const TranslatorAnnotationsPage = () => {
           <div className="border-t pt-6">
             <div className="flex gap-3 justify-end">
               <button
-                onClick={handleSaveLocal}
-                disabled={loading || submitting || (!formData.question_gn.trim() && !formData.answer_gn.trim())}
-                className="px-6 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50 font-medium"
+                onClick={handleIgnore}
+                disabled={loading || submitting}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium"
               >
-                💾 Guardar traducción
+                ⊘ Ignorar
               </button>
               <button
                 onClick={handleSendTranslation}

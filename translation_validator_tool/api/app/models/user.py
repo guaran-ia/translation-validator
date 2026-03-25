@@ -25,4 +25,7 @@ class User(Base):
     suggestions = relationship("TranslationSuggestion", back_populates="user", cascade="all, delete-orphan")
     annotation_validations = relationship("AnnotationValidation", back_populates="user", cascade="all, delete-orphan")
     annotation_suggestions = relationship("AnnotationSuggestion", back_populates="user", cascade="all, delete-orphan")
-    assigned_annotations = relationship("Annotation", back_populates="assigned_to_user")
+    
+    # Many-to-many relationships with annotations
+    annotation_assignments = relationship("AnnotationAssignment", back_populates="user", cascade="all, delete-orphan")
+    annotation_translations = relationship("AnnotationTranslation", back_populates="user", cascade="all, delete-orphan")

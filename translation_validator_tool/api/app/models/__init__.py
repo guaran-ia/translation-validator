@@ -6,6 +6,8 @@ from .suggestion import TranslationSuggestion
 from .annotation import Annotation
 from .annotation_validation import AnnotationValidation
 from .annotation_suggestion import AnnotationSuggestion
+from .annotation_assignment import AnnotationAssignment
+from .annotation_translation import AnnotationTranslation
 
 __all__ = [
     "User",
@@ -15,4 +17,6 @@ __all__ = [
     "Annotation",
     "AnnotationValidation",
     "AnnotationSuggestion",
+    "AnnotationAssignment",
+    "AnnotationTranslation",
 ]

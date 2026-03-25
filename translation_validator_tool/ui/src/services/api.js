@@ -141,6 +141,8 @@ export const annotationsAPI = {
     api.get(`/annotations?skip=${skip}&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`),
   getById: (id) => 
     api.get(`/annotations/${id}`),
+  getAvailableForTranslation: (skip = 0, limit = 20) =>
+    api.get(`/annotations/available-for-translation?skip=${skip}&limit=${limit}`),
   create: (data) =>
     api.post('/annotations', data),
   update: (id, data) =>
@@ -155,6 +157,34 @@ export const annotationsAPI = {
     api.post(`/annotations/${id}/suggest`, data),
   getStats: () =>
     api.get('/annotations/stats'),
+  
+  // Multi-user assignment endpoints
+  getAssignments: (annotationId) =>
+    api.get(`/annotations/${annotationId}/assignments`),
+  assignUser: (annotationId, userId) =>
+    api.post(`/annotations/${annotationId}/assign?user_id=${userId}`),
+  unassignUser: (annotationId, userId) =>
+    api.delete(`/annotations/${annotationId}/assign/${userId}`),
+  bulkAssign: (data) =>
+    api.post('/annotations/assign/bulk', data),
+  
+  // Multi-user translation endpoints
+  getTranslations: (annotationId) =>
+    api.get(`/annotations/${annotationId}/translations`),
+  getTranslationByUser: (annotationId, userId) =>
+    api.get(`/annotations/${annotationId}/translations/${userId}`),
+  createTranslation: (annotationId, data) =>
+    api.post(`/annotations/${annotationId}/translations`, data),
+  updateTranslation: (annotationId, translationId, data) =>
+    api.put(`/annotations/${annotationId}/translations/${translationId}`, data),
+  deleteTranslation: (annotationId, translationId) =>
+    api.delete(`/annotations/${annotationId}/translations/${translationId}`),
+  bulkCreateTranslations: (data) =>
+    api.post('/annotations/translations/bulk', data),
+  getMyAssignments: () =>
+    api.get('/annotations/my-assignments'),
+  getMyTranslations: () =>
+    api.get('/annotations/my-translations'),
 };
 
 export default api;

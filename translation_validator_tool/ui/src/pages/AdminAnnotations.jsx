@@ -73,7 +73,44 @@ const AdminAnnotations = () => {
     try {
       const res = await annotationsAPI.getAll(newSkip, limit, query);
       const data = res?.data || res;
-      setItems(data.items || []);
+      
+      // Enriquecer cada anotación con información de asignaciones y traducciones
+      const enrichedItems = await Promise.all(
+        (data.items || []).map(async (item) => {
+          try {
+            // Obtener asignaciones
+            const assignRes = await api.get(`/annotations/${item.id}/assignments`);
+            const assignments = assignRes?.data || [];
+
+            // Obtener traducciones (normalizar distintas formas de respuesta)
+            const translRes = await api.get(`/annotations/${item.id}/translations`);
+            let translations = [];
+            if (translRes?.data) {
+              if (Array.isArray(translRes.data)) translations = translRes.data;
+              else if (Array.isArray(translRes.data.items)) translations = translRes.data.items;
+            }
+
+            return {
+              ...item,
+              assignments_count: assignments.length,
+              translations_count: translations.length,
+              assignments: assignments,
+              translations: translations
+            };
+          } catch (err) {
+            console.error(`Error loading details for annotation ${item.id}:`, err);
+            return {
+              ...item,
+              assignments_count: 0,
+              translations_count: 0,
+              assignments: [],
+              translations: []
+            };
+          }
+        })
+      );
+      
+      setItems(enrichedItems);
       setSkip(newSkip);
       setTotal(data.total || 0);
       setHasNext(data.has_next || false);
@@ -95,8 +132,8 @@ const AdminAnnotations = () => {
     }
     setLoading(true);
     try {
-      const res = await annotationsAPI.getById(id);
-      setAnnotation(res?.data || res);
+      // Ensure we load the enriched details (assignments/translations)
+      await loadAnnotationDetails(id);
     } catch (err) {
       console.error('Search failed', err);
       setError(err.response?.data?.detail || 'No se encontró la anotación');
@@ -271,6 +308,39 @@ const AdminAnnotations = () => {
     }
   };
 
+  const loadAnnotationDetails = async (annotationId) => {
+    try {
+      setLoading(true);
+      // Fetch base annotation
+      const res = await annotationsAPI.getById(annotationId);
+      const base = res?.data || res;
+
+      // Fetch assignments and translations (handle different response shapes)
+      const assignRes = await api.get(`/annotations/${annotationId}/assignments`);
+      const assignments = assignRes?.data || [];
+
+      const translRes = await api.get(`/annotations/${annotationId}/translations`);
+      let translations = [];
+      if (translRes?.data) {
+        if (Array.isArray(translRes.data)) translations = translRes.data;
+        else if (Array.isArray(translRes.data.items)) translations = translRes.data.items;
+      }
+
+      setAnnotation({
+        ...base,
+        assignments_count: assignments.length,
+        translations_count: translations.length,
+        assignments,
+        translations,
+      });
+    } catch (err) {
+      console.error('Error loading annotation details:', err);
+      toast.error('Error al cargar detalles de la anotación');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isAdmin) return (
     <div>
       <Navbar />
@@ -386,21 +456,28 @@ const AdminAnnotations = () => {
 
             {/* Assignment Section */}
             <div className="mt-6 border-t pt-6">
-              <h4 className="text-sm font-semibold mb-4">Asignación</h4>
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <h4 className="text-sm font-semibold mb-4">Gestión de Asignaciones</h4>
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
                 <p className="text-sm mb-3">
-                  <strong>Asignado a:</strong>{' '}
-                  {annotation.assigned_to_user_id ? (
-                    <span className="text-blue-700 font-medium">
-                      {translators.find(t => t.id === annotation.assigned_to_user_id)?.username || `Usuario #${annotation.assigned_to_user_id}`}
-                    </span>
-                  ) : (
-                    <span className="text-gray-600">Sin asignar</span>
-                  )}
+                  <strong>👥 Personas Asignadas:</strong> <span className="text-blue-700 font-medium text-lg">{annotation.assignments_count || 0}</span>
                 </p>
+                {annotation.assignments && annotation.assignments.length > 0 && (
+                  <div className="mb-3">
+                    <ul className="list-disc list-inside">
+                      {annotation.assignments.map(a => (
+                        <li key={a.id} className="text-sm text-gray-700">
+                          {translators.find(t => t.id === a.user_id)?.username || `Usuario #${a.user_id}`}
+                          <span className="text-xs text-gray-500 ml-2">
+                            ({new Date(a.assigned_at).toLocaleDateString('es-ES')})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Selecciona un traductor</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Asignar a otro traductor</label>
                     <select
                       value={selectedTranslator || ''}
                       onChange={(e) => setSelectedTranslator(e.target.value ? parseInt(e.target.value) : null)}
@@ -420,16 +497,45 @@ const AdminAnnotations = () => {
                   >
                     {assignLoading ? 'Asignando...' : 'Asignar'}
                   </button>
-                  {annotation.assigned_to_user_id && (
-                    <button
-                      onClick={handleUnassignAnnotation}
-                      disabled={assignLoading}
-                      className="px-4 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50"
-                    >
-                      Desasignar
-                    </button>
-                  )}
                 </div>
+              </div>
+            </div>
+
+            {/* Translations Section */}
+            <div className="mt-6 border-t pt-6">
+              <h4 className="text-sm font-semibold mb-4">Traducciones Completadas</h4>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <p className="text-sm mb-4">
+                  <strong>✏️ Total de Traducciones:</strong> <span className="text-green-700 font-medium text-lg">{annotation.translations_count || 0}/3</span>
+                </p>
+                {annotation.translations && annotation.translations.length > 0 ? (
+                  <div className="space-y-3">
+                    {annotation.translations.map((trans, idx) => (
+                      <div key={trans.id} className="bg-white p-3 rounded border border-green-200">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">
+                          Traducción #{idx + 1} - Por: {translators.find(t => t.id === trans.user_id)?.username || `Usuario #${trans.user_id}`}
+                          <span className="text-gray-500 ml-2">
+                            ({new Date(trans.created_at).toLocaleDateString('es-ES')})
+                          </span>
+                        </p>
+                        {trans.question_gn && (
+                          <div className="mb-2">
+                            <label className="text-xs font-medium text-gray-600">Pregunta (Guaraní):</label>
+                            <p className="text-sm text-gray-700 p-1 bg-gray-50 rounded mt-1">{trans.question_gn}</p>
+                          </div>
+                        )}
+                        {trans.answer_gn && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-600">Respuesta (Guaraní):</label>
+                            <p className="text-sm text-gray-700 p-1 bg-gray-50 rounded mt-1">{trans.answer_gn}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 italic">No hay traducciones completadas aún.</p>
+                )}
               </div>
             </div>
           </div>
@@ -457,39 +563,55 @@ const AdminAnnotations = () => {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">ID</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Pregunta</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Respuesta</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Asignado a</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">👥 Asignados</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">✏️ Traducciones</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Estado</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Acciones</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {tableLoading ? (
-                  <tr><td colSpan={5} className="px-4 py-6 text-center">Cargando...</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-6 text-center">Cargando...</td></tr>
                 ) : items.length === 0 ? (
-                  <tr><td colSpan={5} className="px-4 py-6 text-center">No hay anotaciones.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-6 text-center">No hay anotaciones.</td></tr>
                 ) : (
                 items.map(a => (
                   <tr key={a.id}>
-                    <td className="px-4 py-3 text-sm text-gray-700">{a.id}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 font-medium">{a.id}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{a.question_es ? a.question_es.substring(0, 40) + '...' : '(sin pregunta)'}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{a.answer_es ? a.answer_es.substring(0, 40) + '...' : '(sin respuesta)'}</td>
-                    <td className="px-4 py-3 text-sm">
-                      {a.assigned_to_user_id ? (
+                    <td className="px-4 py-3 text-center">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                        {a.assignments_count || 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        (a.translations_count || 0) >= 3 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {a.translations_count || 0}/3
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {a.translated ? (
                         <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
-                          {translators.find(t => t.id === a.assigned_to_user_id)?.username || `#${a.assigned_to_user_id}`}
+                          ✓ Completada
                         </span>
                       ) : (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                          Sin asignar
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+                          ⏳ Pendiente
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
                       <div className="flex gap-2">
                         <button 
-                          onClick={() => setAnnotation(a)}
-                          className="text-sm text-indigo-600 hover:underline font-medium"
+                          onClick={() => loadAnnotationDetails(a.id)}
+                          className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
                         >
-                          Ver
+                          Ver Detalles
                         </button>
                       </div>
                     </td>
@@ -660,7 +782,10 @@ const AdminAnnotations = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">📁 Cargar Anotaciones desde Excel</h3>
+                <div>
+                  <h3 className="text-lg font-semibold">📁 Cargar Anotaciones desde Excel</h3>
+                  <p className="text-xs text-gray-500 mt-1">Sistema Multi-Usuario v2.0</p>
+                </div>
                 <button
                   onClick={() => {
                     setShowExcelUpload(false);
@@ -683,17 +808,28 @@ const AdminAnnotations = () => {
               )}
 
               <div className="space-y-4">
-                {/* Instrucciones */}
+                {/* Instrucciones - Actualizado */}
                 <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                  <h4 className="font-semibold text-sm text-blue-900 mb-2">Formato esperado:</h4>
-                  <ul className="text-xs text-blue-800 space-y-1">
-                    <li>• <strong>Columna B:</strong> question_es (Pregunta en español)</li>
-                    <li>• <strong>Columna D:</strong> answer_es (Respuesta en español)</li>
-                    <li>• <strong>Columna F:</strong> answer_number (Número de respuesta - opcional)</li>
-                    <li>• <strong>Columna G:</strong> equation_solution (Ecuación/Solución - opcional)</li>
-                    <li>• Los datos deben comenzar desde la fila 2</li>
-                  </ul>
+                  <h4 className="font-semibold text-sm text-blue-900 mb-3">✅ Formato esperado:</h4>
+                  <div className="space-y-2">
+                    <div className="bg-white p-2 rounded text-xs">
+                      <p className="font-semibold text-blue-900 mb-1">Columnas REQUERIDAS:</p>
+                      <ul className="space-y-1 text-blue-800 ml-2">
+                        <li>• <strong>Columna B:</strong> Pregunta en español</li>
+                        <li>• <strong>Columna D:</strong> Respuesta en español</li>
+                      </ul>
+                    </div>
+                    <div className="bg-white p-2 rounded text-xs">
+                      <p className="font-semibold text-blue-900 mb-1">Columnas OPCIONALES:</p>
+                      <ul className="space-y-1 text-blue-800 ml-2">
+                        <li>• <strong>Columna F:</strong> Número de respuesta</li>
+                        <li>• <strong>Columna G:</strong> Ecuación/Solución</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
+
+
 
                 {/* File Upload */}
                 <div>
@@ -737,17 +873,26 @@ const AdminAnnotations = () => {
                 {/* Results */}
                 {excelResult && (
                   <div className="bg-gray-50 border border-gray-200 rounded p-4 space-y-3">
-                    <h4 className="font-semibold text-sm">Resultados de la carga:</h4>
+                    <h4 className="font-semibold text-sm">📊 Resultados de la carga:</h4>
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-green-50 p-3 rounded border border-green-200">
-                        <p className="text-xs text-gray-600">Anotaciones agregadas</p>
+                        <p className="text-xs text-gray-600">Anotaciones creadas</p>
                         <p className="text-lg font-bold text-green-700">{excelResult.added_count}</p>
                       </div>
                       <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
                         <p className="text-xs text-gray-600">Filas omitidas</p>
                         <p className="text-lg font-bold text-yellow-700">{excelResult.skipped_count}</p>
                       </div>
+                    </div>
+
+                    {/* Nuevo: Recordatorio post-carga */}
+                    <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                      <p className="text-xs font-semibold text-blue-900 mb-1">✅ Próximo paso:</p>
+                      <p className="text-xs text-blue-800">
+                        Las anotaciones se han creado sin traducciones. 
+                        <strong> Ve a la tabla, haz click en "Ver Detalles" y asigna traductores.</strong>
+                      </p>
                     </div>
 
                     {excelResult.errors.length > 0 && (
@@ -767,9 +912,9 @@ const AdminAnnotations = () => {
                         <div className="bg-white p-2 rounded border border-gray-200 max-h-32 overflow-y-auto space-y-2">
                           {excelResult.details.slice(0, 3).map((detail, idx) => (
                             <div key={idx} className="text-xs bg-gray-50 p-2 rounded">
-                              <p className="font-medium">ID: {detail.id}</p>
-                              {detail.question_es && <p className="text-gray-600">Q: {detail.question_es}</p>}
-                              {detail.answer_es && <p className="text-gray-600">A: {detail.answer_es}</p>}
+                              <p className="font-medium">📌 ID: {detail.id}</p>
+                              {detail.question_es && <p className="text-gray-600 truncate">❓ {detail.question_es}</p>}
+                              {detail.answer_es && <p className="text-gray-600 truncate">✏️ {detail.answer_es}</p>}
                             </div>
                           ))}
                           {excelResult.details.length > 3 && (
@@ -800,9 +945,9 @@ const AdminAnnotations = () => {
                   <button
                     onClick={handleExcelUpload}
                     disabled={!excelFile || !selectedSheet || excelLoading}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                   >
-                    {excelLoading ? 'Cargando...' : 'Cargar Anotaciones'}
+                    {excelLoading ? '⏳ Cargando...' : '📤 Cargar Anotaciones'}
                   </button>
                 </div>
               </div>

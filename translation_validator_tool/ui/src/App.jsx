@@ -13,6 +13,7 @@ import AdminUsersList from './pages/AdminUsersList';
  {/*import AdminTranslations from './pages/AdminTranslations';*/}
 import AdminAnnotations from './pages/AdminAnnotations';
 import TranslatorAnnotationsPage from './pages/TranslatorAnnotationsPage';
+import PendingTranslationsPage from './pages/PendingTranslationsPage';
 
 
 const getUserRole = (user) => {
@@ -101,6 +102,14 @@ const App = () => {
               element={
                 <TranslatorRoute>
                   <TranslatorAnnotationsPage />
+                </TranslatorRoute>
+              }
+            />
+            <Route
+              path="/pending-translations"
+              element={
+                <TranslatorRoute>
+                  <PendingTranslationsPage />
                 </TranslatorRoute>
               }
             />
