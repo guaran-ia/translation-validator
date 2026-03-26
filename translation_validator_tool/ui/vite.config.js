@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true
+    host: '0.0.0.0',
+    allowedHosts: ['dylan-drill-organised-missed.trycloudflare.com']
   },
   build: {
     outDir: 'dist',

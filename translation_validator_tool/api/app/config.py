@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     PROJECT_NAME: str = "Translation Validator"
     VERSION: str = "1.0.0"
-    CORS_ORIGINS: str = '["http://localhost:5173","http://192.168.20.242:5173"]'
+    #CORS_ORIGINS: str = '["http://localhost:5173","http://192.168.20.242:5173"]'
+    CORS_ORIGINS: str = '["http://localhost:5173", "https://dylan-drill-organised-missed.trycloudflare.com"]'
     # Prodigy configuration
     PRODIGY_HOST: str = "localhost"
     PRODIGY_PORT: int = 8082

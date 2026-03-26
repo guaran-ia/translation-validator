@@ -42,17 +42,12 @@ api.interceptors.response.use(
 // Authentication API
 export const authAPI = {
   login: (username, password) => {
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-    // Use plain axios to avoid the global 401 interceptor which would force a full-page
-    // redirect to /login on unauthorized responses. We want the login form to handle
-    // invalid credentials inline without reloading.
-    return axios.post(`${API_URL}/auth/login`, formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
+    const params = new URLSearchParams();
+      params.append('username', username);
+      params.append('password', password);
+      return axios.post(`${API_URL}/auth/login`, params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
   },
   register: (userData) => 
     api.post('/auth/register', userData),
