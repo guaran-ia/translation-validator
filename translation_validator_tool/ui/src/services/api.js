@@ -136,8 +136,8 @@ export const annotationsAPI = {
     api.get(`/annotations?skip=${skip}&limit=${limit}${q ? `&q=${encodeURIComponent(q)}` : ''}`),
   getById: (id) => 
     api.get(`/annotations/${id}`),
-  getAvailableForTranslation: (skip = 0, limit = 20) =>
-    api.get(`/annotations/available-for-translation?skip=${skip}&limit=${limit}`),
+  getAvailableForTranslation: (skip = 0, limit = 20, random = false) =>
+    api.get(`/annotations/available-for-translation?skip=${skip}&limit=${limit}${random ? `&random=1` : ''}`),
   create: (data) =>
     api.post('/annotations', data),
   update: (id, data) =>

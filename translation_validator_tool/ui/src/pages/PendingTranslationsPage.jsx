@@ -4,6 +4,15 @@ import { annotationsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
 
+// Fisher-Yates shuffle
+const shuffleArray = (arr) => {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 const PendingTranslationsPage = () => {
   const { user } = useAuth();
   const [annotations, setAnnotations] = useState([]);
@@ -23,9 +32,13 @@ const PendingTranslationsPage = () => {
     setLoading(true);
     try {
       // Obtener anotaciones disponibles para traducir con paginación
-      const res = await annotationsAPI.getAvailableForTranslation(currentPage * itemsPerPage, itemsPerPage);
-      const allAnnotations = res?.data?.items || [];
-      
+      const res = await annotationsAPI.getAvailableForTranslation(currentPage * itemsPerPage, itemsPerPage, true);
+      let allAnnotations = res?.data?.items || [];
+      // Randomizar orden antes de mostrar
+      if (allAnnotations.length > 1) {
+        allAnnotations = shuffleArray(allAnnotations.slice());
+      }
+
       setAnnotations(allAnnotations);
     } catch (error) {
       console.error('Error loading pending annotations:', error);

@@ -247,6 +247,7 @@ async def get_my_translations(
 async def get_available_for_translation(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    random: bool = Query(False, description="If true, return items in random order"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -291,8 +292,16 @@ async def get_available_for_translation(
     # Only include items with fewer than 3 translations
     q = q.having(func.count(AnnotationTranslation.id) < 3)
 
-    # Deterministic ordering
-    q = q.order_by(Annotation.id.asc())
+    # Ordering: deterministic by id or random if requested
+    if random:
+        # Use DB random ordering
+        try:
+            q = q.order_by(func.random())
+        except Exception:
+            # Fallback to SQL-level random function name for some DBs
+            q = q.order_by(func.rand())
+    else:
+        q = q.order_by(Annotation.id.asc())
 
     # Derive total using a subquery of matched ids
     ids_subq = q.with_entities(Annotation.id).subquery()
