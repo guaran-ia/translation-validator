@@ -57,7 +57,7 @@ const Navbar = () => {
                     {adminOpen && (
                       <div className="absolute right-0 mt-2 w-56 bg-white border rounded shadow-lg z-20">
                         <a href="/admin/users" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Usuarios</a>
-                        <a href="/admin/pending" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Registros Pendientes</a>
+                        {/*<a href="/admin/pending" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Registros Pendientes</a>*/}
                         <a href="/admin/annotations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Anotaciones</a>
                         {/*<a href="/admin/translations" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Traducciones</a>*/}
                       </div>

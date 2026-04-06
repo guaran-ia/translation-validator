@@ -454,7 +454,7 @@ const AdminAnnotations = () => {
               <p>Creada: {new Date(annotation.created_at).toLocaleString('es-ES')}</p>
             </div>
 
-            {/* Assignment Section */}
+            {/* Assignment Section 
             <div className="mt-6 border-t pt-6">
               <h4 className="text-sm font-semibold mb-4">Gestión de Asignaciones</h4>
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
@@ -499,7 +499,7 @@ const AdminAnnotations = () => {
                   </button>
                 </div>
               </div>
-            </div>
+            </div>*/}
 
             {/* Translations Section */}
             <div className="mt-6 border-t pt-6">

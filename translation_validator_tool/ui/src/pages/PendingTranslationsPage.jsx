@@ -95,7 +95,7 @@ const PendingTranslationsPage = () => {
                         )}
                         {annotation.answer_number && (
                           <div>
-                            <p className="text-sm font-medium text-gray-600">Número:</p>
+                            <p className="text-sm font-medium text-gray-600">Número de respuesta:</p>
                             <p className="text-gray-900">{annotation.answer_number}</p>
                           </div>
                         )}
