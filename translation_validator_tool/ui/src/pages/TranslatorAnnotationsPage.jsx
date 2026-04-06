@@ -236,9 +236,51 @@ const TranslatorAnnotationsPage = () => {
   };
 
   const handleSendTranslation = async () => {
-    if (!currentAnnotation || (!formData.question_gn.trim() && !formData.answer_gn.trim())) {
-      toast.error('Por favor ingresa al menos una traducción');
+    if (!currentAnnotation) {
+      toast.error('Error: no hay anotación cargada');
       return;
+    }
+
+    // Determinar qué campos fuente existen
+    const hasQuestion = !!currentAnnotation.question_es;
+    const hasAnswer = !!currentAnnotation.answer_es;
+
+    // Validar que se completen TODOS los campos que tienen fuente
+    if (hasQuestion && !formData.question_gn.trim()) {
+      toast.error('La pregunta es obligatoria');
+      return;
+    }
+    if (hasAnswer && !formData.answer_gn.trim()) {
+      toast.error('La respuesta es obligatoria');
+      return;
+    }
+
+    // Función de validación de longitud
+    const validateLengthRatio = (sourceText, translatedText) => {
+      const s = sourceText.trim().length;
+      const t = translatedText.trim().length;
+      if (s === 0) return true;
+      const min = Math.ceil(s * 0.5);
+      const max = Math.floor(s * 1.7);
+      return { valid: t >= min && t <= max, min, max };
+    };
+
+    // Validar longitud de la pregunta si aplicable
+    if (hasQuestion && formData.question_gn.trim()) {
+      const result = validateLengthRatio(currentAnnotation.question_es, formData.question_gn);
+      if (!result.valid) {
+        toast.error(`En la pregunta la longitud es inválida. El texto traducido es demasiado corto o demasiado largo.`);
+        return;
+      }
+    }
+
+    // Validar longitud de la respuesta si aplicable
+    if (hasAnswer && formData.answer_gn.trim()) {
+      const result = validateLengthRatio(currentAnnotation.answer_es, formData.answer_gn);
+      if (!result.valid) {
+        toast.error(`En la respuesta la longitud es inválida. El texto traducido es demasiado corto o demasiado largo.`);
+        return;
+      }
     }
 
     // Abrir modal de confirmación

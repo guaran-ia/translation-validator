@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '0.0.0.0',
-    allowedHosts: ['dylan-drill-organised-missed.trycloudflare.com']
+    allowedHosts: ['people-leg-gates-trips.trycloudflare.com']
   },
   build: {
     outDir: 'dist',

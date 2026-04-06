@@ -498,11 +498,28 @@ async def get_my_assignments(
             "has_next": False,
         }
 
-    # Get annotations that are assigned to this user (no extra filtering)
-    # Previously we excluded annotations that the user had already translated; per request
-    # we should show everything assigned to the user.
+    # Exclude annotations that this user already translated (we want only pending)
+    translated_ids = db.query(AnnotationTranslation.annotation_id).filter(
+        and_(
+            AnnotationTranslation.user_id == current_user.id,
+            AnnotationTranslation.annotation_id.in_(annotation_ids),
+        )
+    ).all()
+    translated_ids = [t[0] for t in translated_ids]
+    pending_ids = [aid for aid in annotation_ids if aid not in translated_ids]
+
+    if not pending_ids:
+        return {
+            "items": [],
+            "total": 0,
+            "skip": skip,
+            "limit": limit,
+            "has_next": False,
+        }
+
+    # Get annotations that are assigned to this user and not yet translated by them
     query = db.query(Annotation).filter(
-        Annotation.id.in_(annotation_ids)
+        Annotation.id.in_(pending_ids)
     ).order_by(Annotation.id.asc())
     print(f"Query for assigned annotations: {query}")
     
