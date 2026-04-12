@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import HelpModal from './HelpModal';
+import guaraniaLogoNoBG from '../../images/guaraniaLogoNoBG.png';
 
 const LoginForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -8,6 +10,7 @@ const LoginForm = ({ onSuccess }) => {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const { login, error, clearError } = useAuth();
 
@@ -44,7 +47,14 @@ const LoginForm = ({ onSuccess }) => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          {/*<div className="flex justify-center mb-6">
+            <img 
+              src={guaraniaLogoNoBG} 
+              alt="Mbo'ehara Digital Logo" 
+              className="h-50 w-auto"
+            />
+          </div>*/}
+          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
             Iniciar sesión
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
@@ -110,9 +120,15 @@ const LoginForm = ({ onSuccess }) => {
           </div>
         </form>
 
-        <div className="text-sm text-center text-gray-600">
+        {/*<div className="text-sm text-center text-gray-600">
           ¿No tienes cuenta? <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-700">Crear cuenta</Link>
+        </div>*/}
+
+        <div className="text-sm text-center text-gray-600">
+            ¿Necesitas ayuda? <button type="button" className="font-medium text-indigo-600 hover:text-indigo-700" onClick={() => setShowHelp(true)}>Haz click aquí.</button>
         </div>
+
+        <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import logging
 from app.database import get_db
 from app.models.user import User
 from app.models.annotation import Annotation
-from app.services.excel_loader import get_excel_sheets, load_annotations_from_excel_bytes
+from app.services.excel_loader import get_excel_sheets, get_excel_preview, load_annotations_from_excel_bytes
 from app.models.annotation_validation import AnnotationValidation
 from app.schemas.annotation import (
     AnnotationCreate,
@@ -613,21 +613,16 @@ async def list_excel_sheets(
         )
 
 
-@router.post("/upload/bulk")
-async def bulk_upload_annotations(
+@router.post("/upload/preview")
+async def preview_excel_sheet(
     file: UploadFile = File(...),
-    sheet: str = Form(..., description="Sheet name to process"),
+    sheet: str = Form(..., description="Sheet name to preview"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Bulk upload annotations from Excel file.
-    Expected columns:
-    - Column B: question_es
-    - Column D: answer_es
-    - Column F: answer_number
-    - Column G: equation_solution
-    
+    Get columns and first row preview from an Excel sheet.
+    Helps user map columns to annotation fields.
     Only admins can use this endpoint.
     """
     if current_user.role != "admin" and not current_user.is_superuser:
@@ -638,9 +633,49 @@ async def bulk_upload_annotations(
     
     try:
         file_bytes = await file.read()
+        result = get_excel_preview(
+            file_bytes=file_bytes,
+            sheet_name=sheet
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error reading Excel preview: {str(e)}",
+        )
+
+
+@router.post("/upload/bulk")
+async def bulk_upload_annotations(
+    file: UploadFile = File(...),
+    sheet: str = Form(..., description="Sheet name to process"),
+    column_mapping: str = Form(..., description="JSON mapping of columns to fields"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Bulk upload annotations from Excel file using column mapping.
+    column_mapping should be JSON with keys: question_es, answer_es, answer_number, equation_solution
+    values are column names from the Excel sheet.
+    
+    Only admins can use this endpoint.
+    """
+    if current_user.role != "admin" and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can upload annotations",
+        )
+    
+    try:
+        import json
+        # Parse the column mapping from JSON string
+        mapping = json.loads(column_mapping)
+        
+        file_bytes = await file.read()
         result = load_annotations_from_excel_bytes(
             file_bytes=file_bytes,
             sheet_name=sheet,
+            column_mapping=mapping,
             db=db,
             skip_duplicates=True
         )

@@ -5,6 +5,7 @@ import { annotationsAPI, authAPI } from '../services/api';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
+import ColumnMappingModal from '../components/admin/ColumnMappingModal';
 
 const AdminAnnotations = () => {
   const { user } = useAuth();
@@ -43,6 +44,12 @@ const AdminAnnotations = () => {
   const [selectedSheet, setSelectedSheet] = useState('');
   const [excelLoading, setExcelLoading] = useState(false);
   const [excelResult, setExcelResult] = useState(null);
+  
+  // States for column mapping
+  const [showColumnMapping, setShowColumnMapping] = useState(false);
+  const [availableColumns, setAvailableColumns] = useState([]);
+  const [previewData, setPreviewData] = useState(null);
+  const [columnMapping, setColumnMapping] = useState(null);
 
   // States for assignment
   const [translators, setTranslators] = useState([]);
@@ -204,6 +211,9 @@ const AdminAnnotations = () => {
     setExcelSheets([]);
     setExcelResult(null);
     setError(null);
+    setColumnMapping(null);
+    setAvailableColumns([]);
+    setPreviewData(null);
 
     // Get available sheets
     setExcelLoading(true);
@@ -225,9 +235,35 @@ const AdminAnnotations = () => {
     }
   };
 
+  const handleSheetSelect = async (sheet) => {
+    setSelectedSheet(sheet);
+    setColumnMapping(null);
+    setAvailableColumns([]);
+    setPreviewData(null);
+
+    // Get columns and preview from selected sheet
+    setExcelLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', excelFile);
+      formData.append('sheet', sheet);
+
+      const response = await api.post('/annotations/upload/preview', formData);
+
+      setAvailableColumns(response.data.columns || []);
+      setPreviewData(response.data.preview_row || {});
+      setShowColumnMapping(true);
+    } catch (err) {
+      console.error('Error reading sheet preview:', err);
+      setError(err.response?.data?.detail || 'Error al leer la hoja');
+    } finally {
+      setExcelLoading(false);
+    }
+  };
+
   const handleExcelUpload = async () => {
-    if (!excelFile || !selectedSheet) {
-      setError('Selecciona un archivo y una hoja');
+    if (!excelFile || !selectedSheet || !columnMapping) {
+      setError('Completa el mapeo de columnas antes de cargar');
       return;
     }
 
@@ -239,6 +275,7 @@ const AdminAnnotations = () => {
       const formData = new FormData();
       formData.append('file', excelFile);
       formData.append('sheet', selectedSheet);
+      formData.append('column_mapping', JSON.stringify(columnMapping));
 
       const response = await api.post('/annotations/upload/bulk', formData);
 
@@ -253,6 +290,9 @@ const AdminAnnotations = () => {
           setExcelFile(null);
           setSelectedSheet('');
           setExcelSheets([]);
+          setColumnMapping(null);
+          setAvailableColumns([]);
+          setPreviewData(null);
         }, 1000);
       }
     } catch (err) {
@@ -285,6 +325,11 @@ const AdminAnnotations = () => {
     } finally {
       setAssignLoading(false);
     }
+  };
+
+  const handleColumnMappingConfirm = (mapping) => {
+    setColumnMapping(mapping);
+    setShowColumnMapping(false);
   };
 
   const handleUnassignAnnotation = async () => {
@@ -810,22 +855,22 @@ const AdminAnnotations = () => {
               <div className="space-y-4">
                 {/* Instrucciones - Actualizado */}
                 <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                  <h4 className="font-semibold text-sm text-blue-900 mb-3">✅ Formato esperado:</h4>
-                  <div className="space-y-2">
-                    <div className="bg-white p-2 rounded text-xs">
-                      <p className="font-semibold text-blue-900 mb-1">Columnas REQUERIDAS:</p>
-                      <ul className="space-y-1 text-blue-800 ml-2">
-                        <li>• <strong>Columna B:</strong> Pregunta en español</li>
-                        <li>• <strong>Columna D:</strong> Respuesta en español</li>
-                      </ul>
-                    </div>
-                    <div className="bg-white p-2 rounded text-xs">
-                      <p className="font-semibold text-blue-900 mb-1">Columnas OPCIONALES:</p>
-                      <ul className="space-y-1 text-blue-800 ml-2">
-                        <li>• <strong>Columna F:</strong> Número de respuesta</li>
-                        <li>• <strong>Columna G:</strong> Ecuación/Solución</li>
-                      </ul>
-                    </div>
+                  <h4 className="font-semibold text-sm text-blue-900 mb-3">✅ Cómo cargar anotaciones:</h4>
+                  <div className="space-y-2 text-sm text-blue-800">
+                    <p>1. Selecciona un archivo Excel (.xlsx o .xls)</p>
+                    <p>2. Elige la hoja a procesar</p>
+                    <p>3. Mapea las columnas de tu Excel con los campos requeridos</p>
+                    <p>4. Revisa la vista previa y confirma</p>
+                    <p>5. Haz click en "Cargar Anotaciones"</p>
+                  </div>
+                  <div className="mt-3 bg-white p-2 rounded text-xs border border-blue-100">
+                    <p className="font-semibold text-blue-900 mb-1">📌 Campos disponibles para mapeo:</p>
+                    <ul className="space-y-1 text-blue-800 ml-2">
+                      <li>• Pregunta (ES) - Requerida</li>
+                      <li>• Respuesta (ES) - Requerida</li>
+                      <li>• Número - Opcional</li>
+                      <li>• Ecuación - Opcional</li>
+                    </ul>
                   </div>
                 </div>
 
@@ -858,7 +903,7 @@ const AdminAnnotations = () => {
                     </label>
                     <select
                       value={selectedSheet}
-                      onChange={(e) => setSelectedSheet(e.target.value)}
+                      onChange={(e) => handleSheetSelect(e.target.value)}
                       disabled={excelLoading}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
@@ -867,6 +912,25 @@ const AdminAnnotations = () => {
                         <option key={idx} value={sheet}>{sheet}</option>
                       ))}
                     </select>
+                  </div>
+                )}
+
+                {/* Column Mapping Status */}
+                {columnMapping && (
+                  <div className="bg-green-50 border border-green-200 rounded p-4">
+                    <h4 className="font-semibold text-sm text-green-900 mb-3">✅ Mapeo de columnas confirmado:</h4>
+                    <div className="space-y-2 text-sm text-green-800">
+                      {columnMapping.question_es && <p>📋 Pregunta: <strong>{columnMapping.question_es}</strong></p>}
+                      {columnMapping.answer_es && <p>📝 Respuesta: <strong>{columnMapping.answer_es}</strong></p>}
+                      {columnMapping.answer_number && <p>🔢 Número: <strong>{columnMapping.answer_number}</strong></p>}
+                      {columnMapping.equation_solution && <p>📐 Ecuación: <strong>{columnMapping.equation_solution}</strong></p>}
+                    </div>
+                    <button
+                      onClick={() => handleSheetSelect(selectedSheet)}
+                      className="mt-3 text-sm text-green-700 hover:text-green-900 font-medium"
+                    >
+                      Cambiar mapeo...
+                    </button>
                   </div>
                 )}
 
@@ -954,6 +1018,15 @@ const AdminAnnotations = () => {
             </div>
           </div>
         )}
+
+        {/* Column Mapping Modal */}
+        <ColumnMappingModal
+          isOpen={showColumnMapping}
+          onClose={() => setShowColumnMapping(false)}
+          onConfirm={handleColumnMappingConfirm}
+          availableColumns={availableColumns}
+          previewData={previewData}
+        />
       </div>
     </div>
   );

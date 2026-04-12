@@ -14,6 +14,7 @@ import AdminUsersList from './pages/AdminUsersList';
 import AdminAnnotations from './pages/AdminAnnotations';
 import TranslatorAnnotationsPage from './pages/TranslatorAnnotationsPage';
 import PendingTranslationsPage from './pages/PendingTranslationsPage';
+import HelpPage from './pages/HelpPage';
 
 
 const getUserRole = (user) => {
@@ -110,6 +111,14 @@ const App = () => {
               element={
                 <TranslatorRoute>
                   <PendingTranslationsPage />
+                </TranslatorRoute>
+              }
+            />
+            <Route
+              path="/help"
+              element={
+                <TranslatorRoute>
+                  <HelpPage />
                 </TranslatorRoute>
               }
             />

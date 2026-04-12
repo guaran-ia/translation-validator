@@ -37,26 +37,72 @@ def get_excel_sheets(file_bytes: bytes) -> List[str]:
         raise ValueError(f"Invalid Excel file: {str(e)}")
 
 
+def get_excel_preview(file_bytes: bytes, sheet_name: str) -> Dict[str, any]:
+    """
+    Get columns and first data row from an Excel sheet for preview/mapping.
+    
+    Args:
+        file_bytes: Excel file as bytes
+        sheet_name: Name of the sheet to preview
+        
+    Returns:
+        Dictionary with:
+        - columns: List of column names (from first row)
+        - preview_row: Dictionary of first data row (row 2) with column names as keys
+    """
+    if not openpyxl:
+        raise ImportError("openpyxl is required for Excel support")
+    
+    try:
+        workbook = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
+        
+        if sheet_name not in workbook.sheetnames:
+            raise ValueError(f"Sheet '{sheet_name}' not found")
+        
+        sheet = workbook[sheet_name]
+        
+        # Get headers from first row
+        headers = []
+        for col_idx in range(1, sheet.max_column + 1):
+            header = sheet.cell(row=1, column=col_idx).value
+            if header:
+                headers.append(str(header).strip())
+        
+        # Get first data row (row 2)
+        preview_row = {}
+        for col_idx, header in enumerate(headers, 1):
+            value = sheet.cell(row=2, column=col_idx).value
+            preview_row[header] = str(value).strip() if value else ""
+        
+        return {
+            "columns": headers,
+            "preview_row": preview_row
+        }
+    except Exception as e:
+        raise ValueError(f"Error reading Excel preview: {str(e)}")
+
+
 def load_annotations_from_excel_bytes(
     file_bytes: bytes,
     sheet_name: str,
     db: Session,
+    column_mapping: Optional[Dict[str, str]] = None,
     skip_duplicates: bool = True
 ) -> Dict[str, any]:
     """
-    Load annotations from Excel file bytes.
-    
-    Expected Excel format:
-    - Column B (2): question_es
-    - Column D (4): answer_es
-    - Column F (6): answer_number
-    - Column G (7): equation_solution
-    - Data starts from row 2
+    Load annotations from Excel file bytes using column mapping.
     
     Args:
         file_bytes: Excel file as bytes
         sheet_name: Name of the sheet to process
         db: Database session
+        column_mapping: Dictionary mapping field names to column names:
+                       {
+                           "question_es": "column_name",
+                           "answer_es": "column_name",
+                           "answer_number": "column_name" (optional),
+                           "equation_solution": "column_name" (optional)
+                       }
         skip_duplicates: Whether to skip duplicate entries
         
     Returns:
@@ -76,6 +122,15 @@ def load_annotations_from_excel_bytes(
         "details": []
     }
     
+    # Use default hardcoded mapping if not provided (backward compatibility)
+    if not column_mapping:
+        column_mapping = {
+            "question_es": "B",
+            "answer_es": "D",
+            "answer_number": "F",
+            "equation_solution": "G"
+        }
+    
     try:
         # Load workbook
         try:
@@ -93,43 +148,73 @@ def load_annotations_from_excel_bytes(
         
         sheet = workbook[sheet_name]
         
-        # Extract data from columns B, D, F, G starting from row 2
+        # Build column index map from header row
+        headers = {}
+        for col_idx in range(1, sheet.max_column + 1):
+            header_val = sheet.cell(row=1, column=col_idx).value
+            if header_val:
+                headers[str(header_val).strip()] = col_idx
+        
+        # Get column indices for each field
+        col_indices = {}
+        required_fields = {"question_es", "answer_es"}
+        
+        for field, col_name in column_mapping.items():
+            if col_name:
+                # Handle both column letter format (A, B, C) and column name format
+                if len(col_name) == 1 and col_name.isalpha():
+                    # Column letter format (A=1, B=2, etc.) - only if single character
+                    col_indices[field] = ord(col_name.upper()) - ord('A') + 1
+                elif col_name in headers:
+                    # Column name format
+                    col_indices[field] = headers[col_name]
+                else:
+                    # Column not found
+                    if field in required_fields:
+                        # Only report error for required fields
+                        result["errors"].append(f"Column '{col_name}' not found in sheet")
+                    # For optional fields, silently skip them if not found
+        
+        # Validate required fields have mappings
+        if not col_indices.get("question_es") and not col_indices.get("answer_es"):
+            result["errors"].append("At least one of 'question_es' or 'answer_es' must be mapped")
+            return result
+        
+        # Process data rows starting from row 2
         row_num = 2
         
         while True:
-            # Try to read row
-            question_es = sheet.cell(row=row_num, column=2).value  # Column B
-            answer_es = sheet.cell(row=row_num, column=4).value     # Column D
-            answer_number = sheet.cell(row=row_num, column=6).value # Column F
-            equation_solution = sheet.cell(row=row_num, column=7).value  # Column G
+            # Read values from mapped columns
+            question_es = None
+            answer_es = None
+            answer_number = None
+            equation_solution = None
+            
+            if "question_es" in col_indices:
+                val = sheet.cell(row=row_num, column=col_indices["question_es"]).value
+                question_es = str(val).strip() if val else None
+            
+            if "answer_es" in col_indices:
+                val = sheet.cell(row=row_num, column=col_indices["answer_es"]).value
+                answer_es = str(val).strip() if val else None
             
             # Check if row is empty
             if not question_es and not answer_es:
                 break
             
-            # Skip rows without at least one field (question_es OR answer_es)
-            if not question_es and not answer_es:
-                result["skipped_count"] += 1
-                row_num += 1
-                continue
+            if "answer_number" in col_indices:
+                val = sheet.cell(row=row_num, column=col_indices["answer_number"]).value
+                if val:
+                    try:
+                        answer_number = int(val)
+                    except (ValueError, TypeError):
+                        result["errors"].append(
+                            f"Row {row_num}: answer_number '{val}' is not a valid integer"
+                        )
             
-            # Clean up values
-            question_es = str(question_es).strip() if question_es else None
-            answer_es = str(answer_es).strip() if answer_es else None
-            
-            # Convert answer_number to int if present
-            try:
-                if answer_number:
-                    answer_number = int(answer_number)
-                else:
-                    answer_number = None
-            except (ValueError, TypeError):
-                result["errors"].append(
-                    f"Row {row_num}: answer_number '{answer_number}' is not a valid integer"
-                )
-                answer_number = None
-            
-            equation_solution = str(equation_solution).strip() if equation_solution else None
+            if "equation_solution" in col_indices:
+                val = sheet.cell(row=row_num, column=col_indices["equation_solution"]).value
+                equation_solution = str(val).strip() if val else None
             
             # Check for duplicates if skip_duplicates is True
             if skip_duplicates:

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 const Navbar = () => {
@@ -35,6 +36,9 @@ const Navbar = () => {
                 )}
                 {isTranslator && (
                       <a href="/pending-translations" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Traducciones pendientes</a>
+                )}
+                {isTranslator && (
+                    <Link to="/help" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Ayuda</Link>
                 )}
                 {isValidator && (
                   <a href="/history" className="text-gray-700 hover:text-blue-600 px-3 py-2 text-sm font-medium">Historial</a>
@@ -117,10 +121,13 @@ const Navbar = () => {
                       <a href="/validator" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Validar</a>
                     )}
                     {isTranslator && (
-                         <a href="/translator-annotations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Mis pendientes</a>
+                      <a href="/translator-annotations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Mis pendientes</a>
                     )}
                     {isTranslator && (
                          <a href="/pending-translations" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Traducciones pendientes</a>
+                    )}
+                     {isTranslator && (
+                      <Link to="/help" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Ayuda</Link>
                     )}
                     {isValidator && (
                       <a href="/history" className="block text-gray-700 px-3 py-2 rounded-md text-base font-medium hover:bg-gray-50">Historial</a>
