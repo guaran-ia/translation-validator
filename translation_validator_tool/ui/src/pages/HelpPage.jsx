@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Navbar from '../components/common/Navbar';
+import instructivoVideo from '../videos/Instructivo.mp4';
 
 const HelpPage = () => {
   const { user } = useAuth();
@@ -30,13 +31,12 @@ const HelpPage = () => {
           
           <div className="w-full bg-gray-900 rounded-lg overflow-hidden">
             <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
-              <iframe
-                src="https://www.youtube.com/embed/VIDEO_ID"
+              <video
+                src={instructivoVideo}
                 title="Video instructivo"
                 className="absolute inset-0 w-full h-full border-0"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
+                controls
+                style={{ width: '100%', height: '100%' }}
               />
             </div>
           </div>
@@ -44,7 +44,7 @@ const HelpPage = () => {
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="font-semibold text-blue-900 mb-2">Instrucciones principales:</h3>
             <ul className="text-sm text-blue-800 space-y-2">
-             <li>• Todas las enunciados pendientes se muestran en un listado en la seccion de "Traducciones pendientes".</li>
+             <li>• Todas las enunciados pendientes se muestran en un listado en la sección de "Traducciones pendientes".</li>
              <li>• Para traducir el enunciado seleccionado, haz click en el botón "Traducir" situado a la derecha de cada enunciado.</li>
               <li>• Posteriormente, revisa cuidadosamente cada enunciado.</li>
               <li>• Traduce al guaraní de manera precisa y natural.</li>
@@ -52,7 +52,7 @@ const HelpPage = () => {
               <li>• La traduccion debe tener una longintud similar a la oración en español.</li>
               <li>• No se podrán enviar traducciones vacías o incompletas.</li>
               <li>• Una vez traducido, presiona el botón "Enviar traduccion".</li>
-              <li>• Si descartar la traducción, haz click en "Ignorar".</li>
+              <li>• Si deseas descartar la traducción, haz click en "Ignorar".</li>
               <li>• Los enunciados traducidos o ignorados, ya no se encontra disponibles en la sección "Traducciones pendientes", ni tampoco en la sección "Mis pendientes".</li>
             </ul>
           </div>
