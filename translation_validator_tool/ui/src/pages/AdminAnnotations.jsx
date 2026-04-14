@@ -408,7 +408,7 @@ const AdminAnnotations = () => {
               onClick={() => setShowExcelUpload(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium"
             >
-              📁 Cargar Excel
+              Cargar datos desde Excel
             </button>
             <button
               onClick={() => setShowCreateForm(true)}
@@ -608,8 +608,8 @@ const AdminAnnotations = () => {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">ID</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Pregunta</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Respuesta</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">👥 Asignados</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">✏️ Traducciones</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Asignados</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Traducciones</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Estado</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Acciones</th>
               </tr>

@@ -41,9 +41,9 @@ const HelpPage = () => {
             </div>
           </div>
           
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-semibold text-blue-900 mb-2">Instrucciones principales:</h3>
-            <ul className="text-sm text-blue-800 space-y-2">
+          <div className="mt-6 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+            <h3 className="font-semibold text-teal-900 mb-2">Instrucciones principales:</h3>
+            <ul className="text-sm text-teal-800 space-y-2">
              <li>• Todas las enunciados pendientes se muestran en un listado en la sección de "Traducciones pendientes".</li>
              <li>• Para traducir el enunciado seleccionado, haz click en el botón "Traducir" situado a la derecha de cada enunciado.</li>
               <li>• Posteriormente, revisa cuidadosamente cada enunciado.</li>

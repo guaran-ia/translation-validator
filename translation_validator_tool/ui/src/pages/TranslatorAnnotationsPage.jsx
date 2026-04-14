@@ -408,7 +408,7 @@ const TranslatorAnnotationsPage = () => {
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
         </div>
       </div>
     </div>
@@ -423,17 +423,17 @@ const TranslatorAnnotationsPage = () => {
           <h2 className="text-3xl font-bold text-gray-900 mb-4">¡Felicidades!</h2>
           <p className="text-xl text-gray-600 mb-2">Ya no tienes traducciones pendientes</p>
           
-          <div className="mt-8 p-6 bg-blue-50 rounded-lg border border-blue-200 max-w-md mx-auto">
-            <p className="text-blue-800">
+          <div className="mt-8 p-6 bg-teal-50 rounded-lg border border-teal-200 max-w-md mx-auto">
+            <p className="text-teal-800">
               <strong>¿Quieres más preguntas?</strong>
             </p>
-            <p className="text-blue-700 text-sm mt-2">
+            <p className="text-teal-700 text-sm mt-2">
               Visita la página de
               <a href="/pending-translations" className="font-semibold underline"> Traducciones pendientes</a>
             </p>
           </div>
           
-          <button onClick={() => window.location.href = '/pending-translations'} className="mt-6 btn btn-primary">Ver Traducciones Pendientes</button>
+          <button onClick={() => window.location.href = '/pending-translations'} className="btn mt-6 bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Ver Traducciones Pendientes</button>
         </div>
       </div>
     </div>
@@ -449,14 +449,14 @@ const TranslatorAnnotationsPage = () => {
             <button
               onClick={handlePreviousClick}
               disabled={loading || submitting || currentIndex === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
             >
               ← Anterior
             </button>
             <button
               onClick={handleNext}
               disabled={loading || submitting || currentIndex >= allAnnotations.length - 1}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
             >
               Siguiente →
             </button>
@@ -517,7 +517,7 @@ const TranslatorAnnotationsPage = () => {
                 value={formData.question_gn}
                 onChange={handleTextChange}
                 placeholder="Traduce la pregunta al guaraní aquí..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                 rows={4}
                 disabled={submitting}
               />
@@ -525,8 +525,8 @@ const TranslatorAnnotationsPage = () => {
 
             {/* Suggestions */}
             {currentAnnotation.suggestion_count > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm font-semibold text-blue-800 mb-2">
+              <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                <p className="text-sm font-semibold text-teal-800 mb-2">
                   💡 Sugerencias disponibles: {currentAnnotation.suggestion_count}
                 </p>
               </div>
@@ -581,7 +581,7 @@ const TranslatorAnnotationsPage = () => {
                 value={formData.answer_gn}
                 onChange={handleTextChange}
                 placeholder="Traduce la respuesta al guaraní aquí..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                 rows={4}
                 disabled={submitting}
               />
@@ -589,8 +589,8 @@ const TranslatorAnnotationsPage = () => {
 
             {/* Suggestions */}
             {currentAnnotation.suggestion_count > 0 && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm font-semibold text-blue-800 mb-2">
+              <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                <p className="text-sm font-semibold text-teal-800 mb-2">
                   💡 Sugerencias disponibles: {currentAnnotation.suggestion_count}
                 </p>
               </div>
