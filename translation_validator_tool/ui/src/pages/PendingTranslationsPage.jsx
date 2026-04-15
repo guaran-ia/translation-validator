@@ -76,6 +76,13 @@ const PendingTranslationsPage = () => {
           <p className="text-gray-600 mt-2">Anotaciones disponibles para traducir. Click en "✏️ Traducir" para asignarte a ti mismo.</p>
         </div>
 
+        {/* Disclaimer */}
+        <div className="mb-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+          <p className="text-blue-800 text-sm">
+            <span className="font-semibold">Nota:</span> No es necesario traducir todo el listado. Puedes seleccionar únicamente los enunciados que prefieras.
+          </p>
+        </div>
+
         {loading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

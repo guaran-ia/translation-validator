@@ -61,6 +61,46 @@ const HelpPage = () => {
             Si tienes dudas o necesitas más ayuda, no dudes en contactarnos.
           </p>
         </div>
+
+        {/* Contact Section */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Contactos del equipo:</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Contact Card 1 */}
+            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📧</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">Carlos Lugo</h3>
+                  <span 
+                    className="text-blue-600 hover:text-blue-800 text-sm break-all"
+                  >
+                    carlos.luugoo@gmail.com
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Card 2 */}
+            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">📧</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900">Raquel Insfran</h3>
+                  <span 
+                    className="text-blue-600 hover:text-blue-800 text-sm break-all"
+                  >
+                    raquelinsfran17@gmail.com
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
