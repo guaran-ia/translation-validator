@@ -30,6 +30,9 @@ class Annotation(Base):
     # Source information
     source: Mapped[str] = mapped_column(String(255), default="GuaranIA")
     
+    # MD5 hash for content verification
+    md5: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    
     # Translation status: true when annotation has 3 translations (one from each of 3 users)
     translated: Mapped[bool] = mapped_column(Boolean, default=False)
     

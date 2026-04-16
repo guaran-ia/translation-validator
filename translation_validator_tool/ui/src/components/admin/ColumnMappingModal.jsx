@@ -6,6 +6,7 @@ const ColumnMappingModal = ({ isOpen, onClose, onConfirm, availableColumns, prev
     answer_es: null,
     answer_number: null,
     equation_solution: null,
+    md5: null,
   });
 
   const handleMappingChange = (field, column) => {
@@ -21,6 +22,11 @@ const ColumnMappingModal = ({ isOpen, onClose, onConfirm, availableColumns, prev
       alert('Debes mapear al menos la pregunta o la respuesta');
       return;
     }
+    // Validar que md5 esté mapeado
+    if (!mapping.md5) {
+      alert('Debes mapear la columna MD5 (es obligatoria)');
+      return;
+    }
     onConfirm(mapping);
     onClose();
   };
@@ -32,6 +38,7 @@ const ColumnMappingModal = ({ isOpen, onClose, onConfirm, availableColumns, prev
     answer_es: 'Respuesta (ES)',
     answer_number: 'Número (opcional)',
     equation_solution: 'Ecuación (opcional)',
+    md5: 'MD5 (obligatorio)',
   };
 
   return (
@@ -100,7 +107,12 @@ const ColumnMappingModal = ({ isOpen, onClose, onConfirm, availableColumns, prev
                 {mapping.equation_solution && (
                   <p className="text-gray-700">
                     <span className="font-semibold text-blue-700">Ecuación:</span> <span className="text-gray-600">{previewData[mapping.equation_solution] || '(vacío)'}</span>
+                  
+                {mapping.md5 && (
+                  <p className="text-gray-700">
+                    <span className="font-semibold text-blue-700">MD5:</span> <span className="text-gray-600">{previewData[mapping.md5] || '(vacío)'}</span>
                   </p>
+                )}</p>
                 )}
               </div>
             </div>

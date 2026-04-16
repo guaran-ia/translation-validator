@@ -101,7 +101,8 @@ def load_annotations_from_excel_bytes(
                            "question_es": "column_name",
                            "answer_es": "column_name",
                            "answer_number": "column_name" (optional),
-                           "equation_solution": "column_name" (optional)
+                           "equation_solution": "column_name" (optional),
+                           "md5": "column_name" (optional)
                        }
         skip_duplicates: Whether to skip duplicate entries
         
@@ -157,7 +158,7 @@ def load_annotations_from_excel_bytes(
         
         # Get column indices for each field
         col_indices = {}
-        required_fields = {"question_es", "answer_es"}
+        required_fields = {"question_es", "answer_es", "md5"}
         
         for field, col_name in column_mapping.items():
             if col_name:
@@ -189,6 +190,7 @@ def load_annotations_from_excel_bytes(
             answer_es = None
             answer_number = None
             equation_solution = None
+            md5 = None
             
             if "question_es" in col_indices:
                 val = sheet.cell(row=row_num, column=col_indices["question_es"]).value
@@ -211,6 +213,31 @@ def load_annotations_from_excel_bytes(
                         result["errors"].append(
                             f"Row {row_num}: answer_number '{val}' is not a valid integer"
                         )
+            
+            if "md5" in col_indices:
+                val = sheet.cell(row=row_num, column=col_indices["md5"]).value
+                # md5 is mandatory - validate it exists and is exactly 32 characters
+                if not val:
+                    result["errors"].append(f"Row {row_num}: md5 is required but empty")
+                    result["skipped_count"] += 1
+                    row_num += 1
+                    continue
+                md5_str = str(val).strip()
+                if len(md5_str) == 32:
+                    md5 = md5_str
+                else:
+                    result["errors"].append(
+                        f"Row {row_num}: md5 '{md5_str}' is not exactly 32 characters"
+                    )
+                    result["skipped_count"] += 1
+                    row_num += 1
+                    continue
+            else:
+                # md5 column not mapped but is required
+                result["errors"].append(f"Row {row_num}: md5 column is not mapped (required)")
+                result["skipped_count"] += 1
+                row_num += 1
+                continue
             
             if "equation_solution" in col_indices:
                 val = sheet.cell(row=row_num, column=col_indices["equation_solution"]).value
@@ -242,6 +269,7 @@ def load_annotations_from_excel_bytes(
                     answer_es=answer_es,
                     answer_number=answer_number,
                     equation_solution=equation_solution,
+                    md5=md5,
                     source="GuaranIA"
                 )
                 db.add(annotation)
@@ -253,7 +281,8 @@ def load_annotations_from_excel_bytes(
                     "id": annotation.id,
                     "question_es": question_es[:60] + "..." if question_es and len(question_es) > 60 else question_es,
                     "answer_es": answer_es[:60] + "..." if answer_es and len(answer_es) > 60 else answer_es,
-                    "equation_solution": equation_solution
+                    "equation_solution": equation_solution,
+                    "md5": md5
                 })
                 
             except Exception as e:

@@ -655,7 +655,7 @@ async def bulk_upload_annotations(
 ):
     """
     Bulk upload annotations from Excel file using column mapping.
-    column_mapping should be JSON with keys: question_es, answer_es, answer_number, equation_solution
+    column_mapping should be JSON with keys: question_es, answer_es, answer_number, equation_solution, md5
     values are column names from the Excel sheet.
     
     Only admins can use this endpoint.
