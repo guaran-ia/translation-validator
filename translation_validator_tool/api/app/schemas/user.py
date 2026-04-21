@@ -10,8 +10,8 @@ UserRole = Literal["admin", "validador", "traductor"]
 class UserBase(BaseModel):
     email: EmailStr
     username: str
-    nombre_completo: Optional[str] = None
-    contacto: Optional[str] = None
+    nombre_completo: str
+    contacto: str
     role: UserRole = "traductor"
     is_active: bool = True
     is_superuser: bool = False
@@ -21,8 +21,8 @@ class UserCreate(BaseModel):
     email: EmailStr
     username: str
     password: str
-    nombre_completo: Optional[str] = None
-    contacto: Optional[str] = None
+    nombre_completo: str
+    contacto: str
 
 
 class UserLogin(BaseModel):

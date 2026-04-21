@@ -14,8 +14,8 @@ const AdminUsersList = () => {
   const [deleteUser, setDeleteUser] = useState(null);
   const [changePasswordUser, setChangePasswordUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
-  const [editForm, setEditForm] = useState({ username: '', email: '', role: 'traductor', is_active: true });
-  const [createForm, setCreateForm] = useState({ username: '', email: '', password: '', role: 'traductor' });
+  const [editForm, setEditForm] = useState({ username: '', email: '', nombre_completo: '', contacto: '', role: 'traductor', is_active: true });
+  const [createForm, setCreateForm] = useState({ username: '', email: '', password: '', nombre_completo: '', contacto: '', role: 'traductor' });
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -41,6 +41,8 @@ const AdminUsersList = () => {
     setEditForm({
       username: u.username,
       email: u.email,
+      nombre_completo: u.nombre_completo || '',
+      contacto: u.contacto || '',
       role: u.role || (u.is_superuser ? 'admin' : 'traductor'),
       is_active: u.is_active,
     });
@@ -99,8 +101,8 @@ const AdminUsersList = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!createForm.username.trim() || !createForm.email.trim() || !createForm.password.trim()) {
-      toast.error('Completa usuario, email y contraseña');
+    if (!createForm.username.trim() || !createForm.email.trim() || !createForm.password.trim() || !createForm.nombre_completo.trim() || !createForm.contacto.trim()) {
+      toast.error('Completa todos los campos (usuario, email, contraseña, nombre y contacto)');
       return;
     }
 
@@ -110,6 +112,8 @@ const AdminUsersList = () => {
         username: createForm.username.trim(),
         email: createForm.email.trim(),
         password: createForm.password,
+        nombre_completo: createForm.nombre_completo.trim(),
+        contacto: createForm.contacto.trim(),
       });
 
       const createdUser = registerRes.data;
@@ -117,7 +121,7 @@ const AdminUsersList = () => {
       await authAPI.updateUser(createdUser.id, { role: createForm.role });
 
       toast.success('Usuario creado y activado correctamente');
-      setCreateForm({ username: '', email: '', password: '', role: 'traductor' });
+      setCreateForm({ username: '', email: '', password: '', nombre_completo: '', contacto: '', role: 'traductor' });
       setActiveTab('list');
       loadUsers();
     } catch (e) {
@@ -239,6 +243,7 @@ const AdminUsersList = () => {
                   onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
                   className="w-full border rounded px-3 py-2"
                   placeholder="usuario"
+                  required
                 />
               </div>
               <div>
@@ -249,6 +254,29 @@ const AdminUsersList = () => {
                   onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                   className="w-full border rounded px-3 py-2"
                   placeholder="usuario@dominio.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Nombre Completo</label>
+                <input
+                  type="text"
+                  value={createForm.nombre_completo}
+                  onChange={(e) => setCreateForm({ ...createForm, nombre_completo: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Juan Pérez"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Contacto</label>
+                <input
+                  type="text"
+                  value={createForm.contacto}
+                  onChange={(e) => setCreateForm({ ...createForm, contacto: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Teléfono o WhatsApp"
+                  required
                 />
               </div>
               <div>
@@ -259,6 +287,7 @@ const AdminUsersList = () => {
                   onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                   className="w-full border rounded px-3 py-2"
                   placeholder="Contraseña inicial"
+                  required
                 />
               </div>
               <div>
@@ -308,6 +337,24 @@ const AdminUsersList = () => {
                     type="email"
                     value={editForm.email}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Nombre Completo</label>
+                  <input
+                    type="text"
+                    value={editForm.nombre_completo}
+                    onChange={(e) => setEditForm({ ...editForm, nombre_completo: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Contacto</label>
+                  <input
+                    type="text"
+                    value={editForm.contacto}
+                    onChange={(e) => setEditForm({ ...editForm, contacto: e.target.value })}
                     className="w-full border rounded px-3 py-2"
                   />
                 </div>

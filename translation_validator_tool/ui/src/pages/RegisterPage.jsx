@@ -55,6 +55,16 @@ const RegisterPage = () => {
       errors.confirmPassword = 'Las contraseñas no coinciden';
     }
     
+    // Validar nombre completo
+    if (!formData.nombre_completo.trim()) {
+      errors.nombre_completo = 'El nombre completo es obligatorio';
+    }
+    
+    // Validar contacto
+    if (!formData.contacto.trim()) {
+      errors.contacto = 'El contacto es obligatorio';
+    }
+    
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -63,7 +73,7 @@ const RegisterPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword || !formData.nombre_completo || !formData.contacto) {
       setValidationErrors({ general: 'Por favor completa todos los campos' });
       setLoading(false);
       return;
@@ -129,7 +139,7 @@ const RegisterPage = () => {
                 {/* Username Input */}
                 <div className="space-y-2">
                   <label htmlFor="username" className="block text-sm font-semibold text-gray-700">
-                    Usuario
+                    Usuario <span className="text-red-600">*</span>
                   </label>
                   <input 
                     id="username"
@@ -149,22 +159,26 @@ const RegisterPage = () => {
                 {/* Nombre Completo Input */}
                 <div className="space-y-2">
                   <label htmlFor="nombre_completo" className="block text-sm font-semibold text-gray-700">
-                    Nombre Completo
+                    Nombre Completo <span className="text-red-600">*</span>
                   </label>
                   <input 
                     id="nombre_completo"
                     name="nombre_completo" 
+                    required
                     value={formData.nombre_completo} 
                     onChange={handleChange}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition duration-200 text-gray-800 placeholder-gray-400"
                     placeholder="Juan Pérez"
                   />
+                  {validationErrors.nombre_completo && (
+                    <p className="text-sm text-red-600">{validationErrors.nombre_completo}</p>
+                  )}
                 </div>
 
                 {/* Email Input */}
                 <div className="space-y-2">
                   <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
-                    Correo electrónico
+                    Correo electrónico <span className="text-red-600">*</span>
                   </label>
                   <input 
                     id="email"
@@ -181,16 +195,20 @@ const RegisterPage = () => {
                 {/* Contacto Input */}
                 <div className="space-y-2">
                   <label htmlFor="contacto" className="block text-sm font-semibold text-gray-700">
-                    Contacto
+                    Contacto <span className="text-red-600">*</span>
                   </label>
                   <input 
                     id="contacto"
                     name="contacto" 
+                    required
                     value={formData.contacto} 
                     onChange={handleChange}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition duration-200 text-gray-800 placeholder-gray-400"
                     placeholder="Teléfono o WhatsApp"
                   />
+                  {validationErrors.contacto && (
+                    <p className="text-sm text-red-600">{validationErrors.contacto}</p>
+                  )}
                 </div>
 
                 {/* Password Input */}
