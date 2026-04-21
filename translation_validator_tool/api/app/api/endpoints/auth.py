@@ -77,14 +77,16 @@ async def register(
             detail="Email already registered"
         )
     
-    # Create new user (start inactive; admin must approve)
+    # Create new user (active immediately)
     hashed_password = get_password_hash(user_data.password)
     db_user = User(
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
-        role="validador",
-        is_active=False
+        nombre_completo=user_data.nombre_completo,
+        contacto=user_data.contacto,
+        role="traductor",
+        is_active=True
     )
     
     db.add(db_user)
@@ -266,7 +268,7 @@ async def admin_update_user(
     if 'is_superuser' in updates:
         target_user.is_superuser = updates['is_superuser']
         if not role_updated:
-            target_user.role = 'admin' if updates['is_superuser'] else 'validador'
+            target_user.role = 'admin' if updates['is_superuser'] else 'traductor'
     
     db.add(target_user)
     db.commit()

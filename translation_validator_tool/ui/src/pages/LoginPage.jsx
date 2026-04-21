@@ -14,7 +14,7 @@ const LoginPage = () => {
   const getUserRole = (u) => {
     if (!u) return null;
     if (u.role) return u.role;
-    return u.is_superuser ? 'admin' : 'validador';
+    return u.is_superuser ? 'admin' : 'traductor';
   };
 
   const redirectByRole = (u) => {
@@ -210,12 +210,27 @@ const LoginPage = () => {
                   )}
                 </button>
 
-                {/* Help Badge */}
-                <div className="pt-4 text-center">
+                {/* Help and Register Buttons */}
+                <div className="pt-4 space-y-3">
+  
+                  <button
+                    type="button"
+                    onClick={() => navigate('/register')}
+                    className="w-full inline-flex flex-col items-start justify-center bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold px-4 py-3 rounded-full shadow-md transition duration-200"
+                    aria-label="Crear cuenta - regístrate en la plataforma"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="text-left">
+                        <span className="block text-sm font-semibold">¿No tienes cuenta?</span>
+                        <span className="block text-xs font-normal text-teal-100">Regístrate en la plataforma.</span>
+                      </div>
+                    </div>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setShowHelp(true)}
-                    className="inline-flex flex-col items-start justify-center bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold px-4 py-3 rounded-full shadow-md transition duration-200"
+                    className="w-full inline-flex flex-col items-start justify-center bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold px-4 py-3 rounded-full shadow-md transition duration-200"
                     aria-label="Necesitas ayuda - ver video instructivo"
                   >
                     <div className="flex items-center space-x-3">
@@ -225,6 +240,7 @@ const LoginPage = () => {
                       </div>
                     </div>
                   </button>
+                  
                 </div>
               </form>
 

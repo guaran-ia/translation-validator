@@ -14,8 +14,8 @@ const AdminUsersList = () => {
   const [deleteUser, setDeleteUser] = useState(null);
   const [changePasswordUser, setChangePasswordUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
-  const [editForm, setEditForm] = useState({ username: '', email: '', role: 'validador', is_active: true });
-  const [createForm, setCreateForm] = useState({ username: '', email: '', password: '', role: 'validador' });
+  const [editForm, setEditForm] = useState({ username: '', email: '', role: 'traductor', is_active: true });
+  const [createForm, setCreateForm] = useState({ username: '', email: '', password: '', role: 'traductor' });
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ const AdminUsersList = () => {
     setEditForm({
       username: u.username,
       email: u.email,
-      role: u.role || (u.is_superuser ? 'admin' : 'validador'),
+      role: u.role || (u.is_superuser ? 'admin' : 'traductor'),
       is_active: u.is_active,
     });
   };
@@ -117,7 +117,7 @@ const AdminUsersList = () => {
       await authAPI.updateUser(createdUser.id, { role: createForm.role });
 
       toast.success('Usuario creado y activado correctamente');
-      setCreateForm({ username: '', email: '', password: '', role: 'validador' });
+      setCreateForm({ username: '', email: '', password: '', role: 'traductor' });
       setActiveTab('list');
       loadUsers();
     } catch (e) {
@@ -185,7 +185,7 @@ const AdminUsersList = () => {
                       <td className="px-4 py-2 text-sm font-medium">{u.username}</td>
                       <td className="px-4 py-2 text-sm">{u.email}</td>
                       <td className="px-4 py-2 text-sm">
-                        <span className="capitalize">{u.role || (u.is_superuser ? 'admin' : 'validador')}</span>
+                        <span className="capitalize">{u.role || (u.is_superuser ? 'admin' : 'traductor')}</span>
                       </td>
                       <td className="px-4 py-2 text-sm">
                         {u.is_active ? (
