@@ -421,7 +421,7 @@ const TranslatorAnnotationsPage = () => {
         <div className="text-center py-16">
           <div className="text-6xl mb-4">🎉</div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">¡Felicidades!</h2>
-          <p className="text-xl text-gray-600 mb-2">Ya no tienes traducciones pendientes</p>
+          <p className="text-xl text-gray-600 mb-2">No tienes traducciones pendientes</p>
           
           <div className="mt-8 p-6 bg-teal-50 rounded-lg border border-teal-200 max-w-md mx-auto">
             <p className="text-teal-800">

@@ -68,13 +68,13 @@ async def register(
     if db.query(User).filter(User.username == user_data.username).first():
         raise HTTPException(
             status_code=400,
-            detail="Username already registered"
+            detail="Nombre de usuario ya registrado"
         )
     
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(
             status_code=400,
-            detail="Email already registered"
+            detail="Correo electrónico ya registrado"
         )
     
     # Create new user (active immediately)

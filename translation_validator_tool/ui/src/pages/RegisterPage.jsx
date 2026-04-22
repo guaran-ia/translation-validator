@@ -46,8 +46,13 @@ const RegisterPage = () => {
     }
     
     // Validar contraseña
-    if (formData.password.length < 6) {
-      errors.password = 'La contraseña debe tener al menos 6 caracteres';
+    const password = formData.password;
+    if (password.length < 8) {
+      errors.password = 'La contraseña debe tener al menos 8 caracteres';
+    } else if (!/[a-zA-Z]/.test(password)) {
+      errors.password = 'La contraseña debe contener al menos una letra';
+    } else if (!/[0-9]/.test(password)) {
+      errors.password = 'La contraseña debe contener al menos un número';
     }
     
     // Validar confirmación de contraseña
@@ -154,7 +159,7 @@ const RegisterPage = () => {
                 {/* Nombre Completo Input */}
                 <div className="space-y-2">
                   <label htmlFor="nombre_completo" className="block text-sm font-semibold text-gray-700">
-                    Nombre Completo <span className="text-red-600">*</span>
+                    Nombre completo <span className="text-red-600">*</span>
                   </label>
                   <input 
                     id="nombre_completo"
@@ -190,7 +195,7 @@ const RegisterPage = () => {
                 {/* Contacto Input */}
                 <div className="space-y-2">
                   <label htmlFor="contacto" className="block text-sm font-semibold text-gray-700">
-                    Contacto
+                    Contacto (opcional)
                   </label>
                   <input 
                     id="contacto"
@@ -219,8 +224,9 @@ const RegisterPage = () => {
                       value={formData.password} 
                       onChange={handleChange}
                       className="w-full px-4 py-3 pr-10 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition duration-200 text-gray-800 placeholder-gray-400"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Ingrese su contraseña"
                     />
+                     <p className="text-xs text-gray-500">Mínimo 8 caracteres, números y letras</p>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
