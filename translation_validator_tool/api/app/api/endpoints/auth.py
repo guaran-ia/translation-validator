@@ -253,11 +253,15 @@ async def admin_update_user(
             detail="Usuario no encontrado"
         )
     
-    # Allow updating: email, username, is_active, is_superuser, role
+    # Allow updating: email, username, is_active, is_superuser, role, nombre_completo, contacto
     if 'email' in updates:
         target_user.email = updates['email']
     if 'username' in updates:
         target_user.username = updates['username']
+    if 'nombre_completo' in updates:
+        target_user.nombre_completo = updates['nombre_completo']
+    if 'contacto' in updates:
+        target_user.contacto = updates['contacto']
     if 'is_active' in updates:
         target_user.is_active = updates['is_active']
     role_updated = False
