@@ -101,8 +101,8 @@ const AdminUsersList = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!createForm.username.trim() || !createForm.email.trim() || !createForm.password.trim() || !createForm.nombre_completo.trim() || !createForm.contacto.trim()) {
-      toast.error('Completa todos los campos (usuario, email, contraseña, nombre y contacto)');
+    if (!createForm.username.trim() || !createForm.email.trim() || !createForm.password.trim() || !createForm.nombre_completo.trim()) {
+      toast.error('Completa usuario, email, contraseña y nombre completo');
       return;
     }
 
@@ -113,7 +113,7 @@ const AdminUsersList = () => {
         email: createForm.email.trim(),
         password: createForm.password,
         nombre_completo: createForm.nombre_completo.trim(),
-        contacto: createForm.contacto.trim(),
+        contacto: createForm.contacto.trim() || null,
       });
 
       const createdUser = registerRes.data;
@@ -276,7 +276,6 @@ const AdminUsersList = () => {
                   onChange={(e) => setCreateForm({ ...createForm, contacto: e.target.value })}
                   className="w-full border rounded px-3 py-2"
                   placeholder="Teléfono o WhatsApp"
-                  required
                 />
               </div>
               <div>
@@ -392,7 +391,7 @@ const AdminUsersList = () => {
               </div>
             </div>
           </div>
-        )}
+        )} 
 
         {/* Delete Confirmation Modal */}
         {deleteUser && (

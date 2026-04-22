@@ -11,7 +11,7 @@ class UserBase(BaseModel):
     email: EmailStr
     username: str
     nombre_completo: str
-    contacto: str
+    contacto: Optional[str] = None
     role: UserRole = "traductor"
     is_active: bool = True
     is_superuser: bool = False
@@ -22,7 +22,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
     nombre_completo: str
-    contacto: str
+    contacto: Optional[str] = None
 
 
 class UserLogin(BaseModel):

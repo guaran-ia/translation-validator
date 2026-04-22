@@ -60,11 +60,6 @@ const RegisterPage = () => {
       errors.nombre_completo = 'El nombre completo es obligatorio';
     }
     
-    // Validar contacto
-    if (!formData.contacto.trim()) {
-      errors.contacto = 'El contacto es obligatorio';
-    }
-    
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -73,8 +68,8 @@ const RegisterPage = () => {
     e.preventDefault();
     setLoading(true);
 
-    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword || !formData.nombre_completo || !formData.contacto) {
-      setValidationErrors({ general: 'Por favor completa todos los campos' });
+    if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword || !formData.nombre_completo) {
+      setValidationErrors({ general: 'Por favor completa todos los campos obligatorios' });
       setLoading(false);
       return;
     }
@@ -195,12 +190,11 @@ const RegisterPage = () => {
                 {/* Contacto Input */}
                 <div className="space-y-2">
                   <label htmlFor="contacto" className="block text-sm font-semibold text-gray-700">
-                    Contacto <span className="text-red-600">*</span>
+                    Contacto
                   </label>
                   <input 
                     id="contacto"
                     name="contacto" 
-                    required
                     value={formData.contacto} 
                     onChange={handleChange}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-teal-500 focus:ring-2 focus:ring-teal-200 outline-none transition duration-200 text-gray-800 placeholder-gray-400"
