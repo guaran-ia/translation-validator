@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { annotationsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
+import HackathonModal from '../components/auth/HackathonModal';
 
 const TranslatorAnnotationsPage = () => {
   const { user } = useAuth();
@@ -37,6 +38,13 @@ const TranslatorAnnotationsPage = () => {
 
   // Refs para insertar caracteres especiales
   const questionGnRef = useRef(null);
+  const [showHackModal, setShowHackModal] = useState(() => {
+    try {
+      return localStorage.getItem('hackathon_seen') !== 'true';
+    } catch (e) {
+      return true;
+    }
+  });
   const answerGnRef = useRef(null);
 
   useEffect(() => {
@@ -411,6 +419,12 @@ const TranslatorAnnotationsPage = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
         </div>
       </div>
+      <HackathonModal
+        isOpen={showHackModal}
+        onClose={() => {
+          setShowHackModal(false);
+        }}
+      />
     </div>
   );
 
@@ -436,6 +450,12 @@ const TranslatorAnnotationsPage = () => {
           <button onClick={() => window.location.href = '/pending-translations'} className="btn mt-6 bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Ver Traducciones Pendientes</button>
         </div>
       </div>
+      <HackathonModal
+        isOpen={showHackModal}
+        onClose={() => {
+          setShowHackModal(false);
+        }}
+      />
     </div>
   );
 
@@ -688,6 +708,12 @@ const TranslatorAnnotationsPage = () => {
           </div>
         )}
       </div>
+      <HackathonModal
+        isOpen={showHackModal}
+        onClose={() => {
+          setShowHackModal(false);
+        }}
+      />
     </div>
   );
 };
