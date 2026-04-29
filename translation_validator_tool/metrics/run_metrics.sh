@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METRICS_SCRIPT="$SCRIPT_DIR/metrics_report.py"
 REQUIREMENTS_FILE="$SCRIPT_DIR/requirements_metrics.txt"
 
-LOG_DIR="/var/log/guarania"
+LOG_DIR="/logsMetrics"
 LOG_FILE="$LOG_DIR/metrics_report.log"
 
 PYTHON_CMD="python"
