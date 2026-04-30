@@ -19,13 +19,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METRICS_SCRIPT="$SCRIPT_DIR/metrics_report.py"
 REQUIREMENTS_FILE="$SCRIPT_DIR/requirements_metrics.txt"
 
-LOG_DIR="/logsMetrics"
+LOG_DIR="$SCRIPT_DIR/logsMetrics"
 LOG_FILE="$LOG_DIR/metrics_report.log"
 
 PYTHON_CMD="python"
 
-REPORT_FILE="$SCRIPT_DIR/Metricas_Plataforma.docx"
-DRIVE_REMOTE="drive:Estadisticas Mbo'ehara Digital"
+REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
+DRIVE_REMOTE="gdrive:EstadisticasGuarania"
 
 # Crear directorio de logs si no existe
 mkdir -p "$LOG_DIR"
@@ -66,17 +66,7 @@ if [ ! -f "$METRICS_SCRIPT" ]; then
     exit 1
 fi
 
-# ============================================
-# INSTALACIÓN DE DEPENDENCIAS
-# ============================================
 
-if [ -f "$REQUIREMENTS_FILE" ]; then
-    log_message "Instalando/verificando dependencias..."
-    $PYTHON_CMD -m pip install -r "$REQUIREMENTS_FILE" >> "$LOG_FILE" 2>&1
-else
-    log_error "No se encontró requirements_metrics.txt"
-    exit 1
-fi
 
 # ============================================
 # EJECUCIÓN

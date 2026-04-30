@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-04-30T00:23:03.382854",
+  "metrics": {
+    "usuarios": {
+      "total_usuarios": 86,
+      "usuarios_nuevos_2dias": {
+        "2026-04-28": 4,
+        "2026-04-29": 2
+      }
+    },
+    "anotaciones": {
+      "traducciones_completadas_total": 20,
+      "traducciones_completadas_2dias": 9
+    },
+    "asignaciones": {
+      "asignaciones_totales": 490,
+      "asignaciones_2dias": 145,
+      "annotations_tomadas_usuarios": 329
+    },
+    "traducciones": {
+      "annotations_con_traduccion": 194,
+      "annotations_sin_traduccion": 576,
+      "annotations_asignadas_sin_traduccion": 135
+    }
+  }
+}
