@@ -38,7 +38,9 @@ ui/dist/
 ui/.env.local
 ui/.vite/
 .vite/
-/metrics/logsMetrics/
+
+translation_validator_tool/metrics/documents/
+translation_validator_tool/metrics/logsMetrics/
 
 # Env files (keep .env.example)
 .env
@@ -87,3 +89,4 @@ data/*.csv
 # db_schema/*.sql     # uncomment only if you want to ignore generated SQL files
 openai_cache/
 
+translation_validator_tool/metrics/documents/Metricas_Plataforma.docx
