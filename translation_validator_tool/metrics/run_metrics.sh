@@ -6,10 +6,12 @@ set -e
 # PYENV CONFIG
 # ============================================
 
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$PYENV_ROOT/bin:$PATH"
+export HOME="/home/clugo"
+export PYENV_ROOT="/opt/pyenv"
+export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/local/bin:/usr/bin:/bin:$PATH"
 
-eval "$(pyenv init -)"
+eval "$("$PYENV_ROOT/bin/pyenv" init -)"
+
 
 # ============================================
 # CONFIGURACIÓN
@@ -22,7 +24,7 @@ REQUIREMENTS_FILE="$SCRIPT_DIR/requirements_metrics.txt"
 LOG_DIR="$SCRIPT_DIR/logsMetrics"
 LOG_FILE="$LOG_DIR/metrics_report.log"
 
-PYTHON_CMD="python"
+PYTHON_CMD="$PYENV_ROOT/shims/python"
 
 REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
 DRIVE_REMOTE="gdrive:EstadisticasGuarania"
@@ -49,7 +51,7 @@ log_error() {
 cd "$SCRIPT_DIR"
 
 # activar entorno pyenv del proyecto (usa .python-version si existe)
-if ! pyenv version &> /dev/null; then
+if ! "$PYENV_ROOT/bin/pyenv" version &> /dev/null; then
     log_error "pyenv no está correctamente configurado"
     exit 1
 fi

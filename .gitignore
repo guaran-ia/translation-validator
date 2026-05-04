@@ -90,3 +90,4 @@ data/*.csv
 openai_cache/
 
 translation_validator_tool/metrics/documents/Metricas_Plataforma.docx
+translation_validator_tool/metrics/Metricas_Plataforma.json

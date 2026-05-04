@@ -8,7 +8,6 @@ import psycopg2
 from psycopg2 import sql, Error
 from datetime import datetime
 import sys
-import json
 import os
 from pathlib import Path
 from docx import Document
@@ -405,27 +404,6 @@ def update_metrics_docx(metrics_data, documents_folder):
         return False
 
 
-
-def save_report_json(metrics_data, filename="Metricas_Plataforma.json"):
-    """
-    Guarda el reporte en formato JSON.
-    
-    Args:
-        metrics_data: Diccionario con las métricas
-        filename: Nombre del archivo JSON
-    """
-    try:
-        data = {
-            "timestamp": datetime.now().isoformat(),
-            "metrics": metrics_data
-        }
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        print(f"✅ Reporte JSON guardado en: {filename}")
-    except Exception as e:
-        print(f"❌ Error al guardar el reporte JSON: {e}")
-
-
 def main():
     """
     Función principal que ejecuta todas las métricas.
@@ -448,9 +426,6 @@ def main():
         
         # Generar y mostrar reporte en consola
         report = generate_report(metrics_data)
-        
-        # Guardar en JSON
-        save_report_json(metrics_data)
         
         # Generar/Actualizar documento Word
         documents_folder = ensure_documents_folder()
