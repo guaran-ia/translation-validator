@@ -27,7 +27,7 @@ LOG_FILE="$LOG_DIR/metrics_report.log"
 PYTHON_CMD="$PYENV_ROOT/shims/python"
 
 REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
-DRIVE_REMOTE="gdrive:EstadisticasGuarania"
+DRIVE_REMOTE="gdrive:Mboehara/Estadisticas"
 
 # Crear directorio de logs si no existe
 mkdir -p "$LOG_DIR"
