@@ -27,6 +27,8 @@ LOG_FILE="$LOG_DIR/metrics_report.log"
 PYTHON_CMD="$PYENV_ROOT/shims/python"
 
 REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
+USERS_FILE="$SCRIPT_DIR/documents/Listado_Usuarios.xlsx"
+
 DRIVE_REMOTE="gdrive:Mboehara/Estadisticas"
 
 # Crear directorio de logs si no existe
@@ -79,16 +81,39 @@ log_message "=== Iniciando generación de métricas ==="
 if $PYTHON_CMD "$METRICS_SCRIPT" >> "$LOG_FILE" 2>&1; then
     log_message "Métricas generadas exitosamente"
 
+   # ============================================
+# SUBIDA WORD
+# ============================================
+
+if [ -f "$REPORT_FILE" ]; then
+    log_message "Subiendo documento de métricas a Google Drive..."
+
+    rclone copyto \
+        "$REPORT_FILE" \
+        "$DRIVE_REMOTE/Metricas_Plataforma.docx" \
+        >> "$LOG_FILE" 2>&1
+
+        log_message "Documento Word actualizado en Google Drive"
+    else
+        log_error "El archivo Word no fue generado: $REPORT_FILE"
+        exit 1
+    fi
+
     # ============================================
-    # SUBIDA A GOOGLE DRIVE (REEMPLAZA)
+    # SUBIDA EXCEL USUARIOS
     # ============================================
 
-    if [ -f "$REPORT_FILE" ]; then
-        log_message "Subiendo reporte a Google Drive..."
-        rclone copyto "$REPORT_FILE" "$DRIVE_REMOTE/Metricas_Plataforma.docx" >> "$LOG_FILE" 2>&1
-        log_message "Reporte actualizado en Google Drive"
+    if [ -f "$USERS_FILE" ]; then
+        log_message "Subiendo listado de usuarios a Google Drive..."
+
+        rclone copyto \
+            "$USERS_FILE" \
+            "$DRIVE_REMOTE/Listado_Usuarios.xlsx" \
+            >> "$LOG_FILE" 2>&1
+
+        log_message "Excel de usuarios actualizado en Google Drive"
     else
-        log_error "El archivo no fue generado: $REPORT_FILE"
+        log_error "El archivo Excel no fue generado: $USERS_FILE"
         exit 1
     fi
 

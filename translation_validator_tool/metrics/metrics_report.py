@@ -9,10 +9,15 @@ from psycopg2 import sql, Error
 from datetime import datetime
 import sys
 import os
+import csv
 from pathlib import Path
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+from openpyxl.utils import get_column_letter
+
 
 # Configuración de la base de datos
 DATABASE_URL = "postgresql://postgres:1234@localhost:5432/translation_validator"
@@ -202,6 +207,56 @@ def get_translation_metrics(conn):
     return metrics
 
 
+def get_user_breakdown_metrics(conn):
+    """
+    Obtiene métricas desglosadas sobre usuarios y sus actividades.
+    
+    Args:
+        conn: Conexión a la base de datos
+        
+    Returns:
+        dict: Métricas desglosadas de usuarios
+    """
+    metrics = {}
+    
+    # Usuarios que se registraron pero no se asignaron ninguna premisa
+    query_no_assignments = """
+    SELECT COUNT(*) AS users_without_assignments
+    FROM users u
+    LEFT JOIN annotation_assignments aa
+      ON aa.user_id = u.id
+    WHERE aa.id IS NULL;
+    """
+    result = execute_query(conn, query_no_assignments)
+    metrics['users_without_assignments'] = result[0][0] if result else 0
+    
+    # Usuarios que se asignaron una premisa pero no completaron ninguna traducción
+    query_no_translations = """
+    SELECT COUNT(DISTINCT u.id) AS users_with_assignments_without_translations
+    FROM users u
+    INNER JOIN annotation_assignments aa
+        ON aa.user_id = u.id
+    LEFT JOIN annotation_translations at
+        ON at.annotation_id = aa.annotation_id
+       AND at.user_id = u.id
+    WHERE at.id IS NULL;
+    """
+    result = execute_query(conn, query_no_translations)
+    metrics['users_with_assignments_without_translations'] = result[0][0] if result else 0
+    
+    # Usuarios que completaron al menos una traducción
+    query_with_translations = """
+    SELECT COUNT(DISTINCT u.id) AS users_with_completed_translations
+    FROM users u
+    INNER JOIN annotation_translations at
+      ON at.user_id = u.id;
+    """
+    result = execute_query(conn, query_with_translations)
+    metrics['users_with_completed_translations'] = result[0][0] if result else 0
+    
+    return metrics
+
+
 def generate_report(metrics_data):
     """
     Genera un reporte formateado con las métricas.
@@ -215,29 +270,29 @@ REPORTE DE MÉTRICAS - TRANSLATION VALIDATOR
 Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 {'='*70}
 
-📊 MÉTRICAS DE USUARIOS
+MÉTRICAS DE USUARIOS
 {'-'*70}
   Total de usuarios: {metrics_data['usuarios']['total_usuarios']}
   
   Usuarios nuevos (últimos 2 días):
   {_format_dict(metrics_data['usuarios']['usuarios_nuevos_2dias'])}
 
-📝 MÉTRICAS DE ANOTACIONES
+MÉTRICAS DE ANOTACIONES
 {'-'*70}
   Traducciones completadas (total): {metrics_data['anotaciones']['traducciones_completadas_total']}
   Traducciones completadas (últimos 2 días): {metrics_data['anotaciones']['traducciones_completadas_2dias']}
 
-🎯 MÉTRICAS DE ASIGNACIONES
+MÉTRICAS DE ASIGNACIONES
 {'-'*70}
   Total de asignaciones: {metrics_data['asignaciones']['asignaciones_totales']}
   Asignaciones (últimos 2 días): {metrics_data['asignaciones']['asignaciones_2dias']}
   Annotations distintas tomadas por usuarios: {metrics_data['asignaciones']['annotations_tomadas_usuarios']}
 
-🌐 MÉTRICAS DE TRADUCCIONES
+MÉTRICAS DE TRADUCCIONES
 {'-'*70}
   Annotations con al menos una traducción: {metrics_data['traducciones']['annotations_con_traduccion']}
   Annotations sin traducciones: {metrics_data['traducciones']['annotations_sin_traduccion']}
-  ⚠️  Annotations asignadas pero SIN traducción (tareas abandonadas): {metrics_data['traducciones']['annotations_asignadas_sin_traduccion']}
+   Annotations asignadas pero SIN traducción (tareas abandonadas): {metrics_data['traducciones']['annotations_asignadas_sin_traduccion']}
 
 {'='*70}
 """
@@ -337,10 +392,35 @@ def create_metrics_table_in_docx(doc, metrics_data):
     # Tareas abandonadas en rojo
     p_abandoned = doc.add_paragraph()
     run_abandoned = p_abandoned.add_run(f"Premisas asignadas pero SIN traducción por el momento: {metrics_data['traducciones']['annotations_asignadas_sin_traduccion']}")
+    # MÉTRICAS DE USUARIOS
+    heading_user_breakdown = doc.add_paragraph(" MÉTRICAS DE USUARIOS")
+    heading_user_breakdown_run = heading_user_breakdown.runs[0]
+    heading_user_breakdown_run.bold = True
+    heading_user_breakdown_run.font.size = Pt(12)
+    # Agregar las 3 métricas como lista o párrafos
+    doc.add_paragraph(
+        f"Usuarios que se registraron en la plataforma, pero no se asignaron ninguna premisa: {metrics_data['user_breakdown']['users_without_assignments']}",
+        style='List Bullet'
+    )
+    doc.add_paragraph(
+        f"Usuarios que se asignaron una premisa, pero no completaron ninguna traducción: {metrics_data['user_breakdown']['users_with_assignments_without_translations']}",
+        style='List Bullet'
+    )
+    doc.add_paragraph(
+        f"Usuarios que completaron al menos una traducción en la plataforma: {metrics_data['user_breakdown']['users_with_completed_translations']}",
+        style='List Bullet'
+    )
+    
+    final_note = doc.add_paragraph("Se puede ver el desglose de usuarios en el otro documento word situado en el drive")
+    final_note_run = final_note.runs[0]
+    final_note_run.italic = True
+    final_note_run.font.size = Pt(10)
     
     # Separador final
     doc.add_paragraph("_" * 80)
     doc.add_paragraph()  # Espacio en blanco
+    doc.add_paragraph()
+    doc.add_paragraph()
 
 
 def update_metrics_docx(metrics_data, documents_folder):
@@ -396,7 +476,7 @@ def update_metrics_docx(metrics_data, documents_folder):
         
         # Guardar documento
         doc.save(str(docx_path))
-        print(f"✅ Documento Word guardado en: {docx_path}")
+        print(f"Documento Word guardado en: {docx_path}")
         return True
         
     except Exception as e:
@@ -404,44 +484,176 @@ def update_metrics_docx(metrics_data, documents_folder):
         return False
 
 
+def generate_users_excel(conn, output_path):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+    from datetime import datetime
+    
+    query = """
+   SELECT 
+    u.id,
+    u.nombre_completo,
+    u.email,
+    u.contacto,
+    COUNT(DISTINCT aa.annotation_id) AS premisas_asignadas,
+    COUNT(DISTINCT at.id) AS traducciones_completadas,
+    CASE 
+        WHEN COUNT(DISTINCT aa.annotation_id) = 0 
+         AND COUNT(DISTINCT at.id) = 0 THEN 'inactivo'
+        WHEN COUNT(DISTINCT aa.annotation_id) > 0 
+         AND COUNT(DISTINCT at.id) = 0 THEN 'activo'
+        WHEN COUNT(DISTINCT at.id) > 0 THEN 'muy activo'
+    END AS estado
+    FROM users u
+    LEFT JOIN annotation_assignments aa
+        ON aa.user_id = u.id
+    LEFT JOIN annotation_translations at
+        ON at.user_id = u.id
+    GROUP BY u.id, u.nombre_completo, u.email, u.contacto
+    ORDER BY 
+        CASE 
+            WHEN COUNT(DISTINCT at.id) > 0 THEN 1        -- muy activo
+            WHEN COUNT(DISTINCT aa.annotation_id) > 0 THEN 2  -- activo
+            ELSE 3                                       -- inactivo
+        END,
+        traducciones_completadas DESC,
+        premisas_asignadas DESC;
+    """
+
+    result = execute_query(conn, query)
+
+    if result is None:
+        print("No se obtuvo resultado para la query de usuarios. Comprueba la query y la conexión.")
+        return False
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Usuarios"
+
+    # Header info
+    ws["A1"] = "Última actualización"
+    ws["B1"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    ws["A3"] = "Listado de usuarios"
+    ws["A3"].font = Font(size=14, bold=True)
+
+    headers = [
+        "Nombre completo",
+        "Email",
+        "Contacto",
+        "Estado",
+        "Traducciones realizadas",
+        "Premisas asignadas"
+    ]
+
+    ws.append([])
+    ws.append(headers)
+
+    # Estilo header
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=5, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+
+    # Activar filtros en encabezados
+    ws.auto_filter.ref = f"A5:{get_column_letter(len(headers))}5"
+    # Datos: mapear con tolerancia a filas con menos columnas
+    row_index = 6
+    for row in result:
+        try:
+            full_name = row[1] if len(row) > 1 else ''
+            email = row[2] if len(row) > 2 else ''
+            contact = row[3] if len(row) > 3 else ''
+            premises = row[4] if len(row) > 4 else ''
+            translations = row[5] if len(row) > 5 else ''
+            estado = row[6] if len(row) > 6 else ''
+        except Exception:
+            full_name = email = contact = premises = translations = estado = ''
+
+        ws.append([
+            full_name,
+            email,
+            contact or '',
+            estado,
+            translations,
+            premises
+        ])
+
+        # Colorear estado (tolerante a mayúsculas/minúsculas)
+        est_norm = (estado or '').lower()
+        if est_norm == "muy activo":
+            fill = PatternFill(start_color="C6EFCE", fill_type="solid")  # verde
+        elif est_norm == "activo":
+            fill = PatternFill(start_color="FFEB9C", fill_type="solid")  # amarillo
+        else:
+            fill = PatternFill(start_color="FFC7CE", fill_type="solid")  # rojo
+
+        ws.cell(row=row_index, column=4).fill = fill
+        row_index += 1
+
+    # Auto width
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except Exception:
+                pass
+
+        ws.column_dimensions[col_letter].width = max_length + 2
+
+    file_path = output_path / "Listado_Usuarios.xlsx"
+    wb.save(file_path)
+
+    print(f"Excel generado en: {file_path}")
+    return True
+
+
+
 def main():
     """
     Función principal que ejecuta todas las métricas.
     """
-    print("🔄 Iniciando generación de métricas...")
+    print("Iniciando generación de métricas...")
     
     # Conectar a la base de datos
     conn = get_connection()
-    print("✅ Conectado a la base de datos")
+    print(" Conectado a la base de datos")
     
     try:
         # Recopilar todas las métricas
-        print("📊 Recopilando métricas...")
+        print("Recopilando métricas...")
         metrics_data = {
             'usuarios': get_user_metrics(conn),
             'anotaciones': get_annotation_metrics(conn),
             'asignaciones': get_assignment_metrics(conn),
             'traducciones': get_translation_metrics(conn),
+            'user_breakdown': get_user_breakdown_metrics(conn),
         }
         
         # Generar y mostrar reporte en consola
         report = generate_report(metrics_data)
         
-        # Generar/Actualizar documento Word
+        # Generar/Actualizar documento Word y CSV de usuarios
         documents_folder = ensure_documents_folder()
         update_metrics_docx(metrics_data, documents_folder)
+        #generate_users_csv(conn, documents_folder)
+        generate_users_excel(conn, documents_folder)
         
-        print("✅ Métricas generadas exitosamente")
+        print(" Métricas generadas exitosamente")
         
     except Exception as e:
-        print(f"❌ Error durante la generación de métricas: {e}")
+        print(f"Error durante la generación de métricas: {e}")
         sys.exit(1)
         
     finally:
         # Cerrar conexión
         if conn:
             conn.close()
-            print("✅ Conexión cerrada")
+            print("Conexión cerrada")
 
 
 if __name__ == "__main__":
