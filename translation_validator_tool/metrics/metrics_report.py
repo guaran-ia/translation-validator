@@ -488,36 +488,94 @@ def generate_users_excel(conn, output_path):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from datetime import datetime
-    
     query = """
-   SELECT 
+WITH assignment_stats AS (
+    SELECT
+        user_id,
+        COUNT(DISTINCT annotation_id) AS premisas_asignadas,
+        AVG(EXTRACT(EPOCH FROM assigned_at::time)) AS avg_assignment_seconds
+    FROM annotation_assignments
+    GROUP BY user_id
+),
+translation_stats AS (
+    SELECT
+        user_id,
+        COUNT(*) AS traducciones_completadas,
+        AVG(EXTRACT(EPOCH FROM created_at::time)) AS avg_translation_seconds
+    FROM annotation_translations
+    GROUP BY user_id
+),
+activity_stats AS (
+    SELECT
+        user_id,
+        AVG(activity_seconds) AS avg_activity_seconds
+    FROM (
+        SELECT
+            user_id,
+            EXTRACT(EPOCH FROM assigned_at::time) AS activity_seconds
+        FROM annotation_assignments
+
+        UNION ALL
+
+        SELECT
+            user_id,
+            EXTRACT(EPOCH FROM created_at::time) AS activity_seconds
+        FROM annotation_translations
+    ) activity
+    GROUP BY user_id
+)
+SELECT
     u.id,
     u.nombre_completo,
     u.email,
     u.contacto,
-    COUNT(DISTINCT aa.annotation_id) AS premisas_asignadas,
-    COUNT(DISTINCT at.id) AS traducciones_completadas,
-    CASE 
-        WHEN COUNT(DISTINCT aa.annotation_id) = 0 
-         AND COUNT(DISTINCT at.id) = 0 THEN 'inactivo'
-        WHEN COUNT(DISTINCT aa.annotation_id) > 0 
-         AND COUNT(DISTINCT at.id) = 0 THEN 'activo'
-        WHEN COUNT(DISTINCT at.id) > 0 THEN 'muy activo'
-    END AS estado
-    FROM users u
-    LEFT JOIN annotation_assignments aa
-        ON aa.user_id = u.id
-    LEFT JOIN annotation_translations at
-        ON at.user_id = u.id
-    GROUP BY u.id, u.nombre_completo, u.email, u.contacto
-    ORDER BY 
-        CASE 
-            WHEN COUNT(DISTINCT at.id) > 0 THEN 1        -- muy activo
-            WHEN COUNT(DISTINCT aa.annotation_id) > 0 THEN 2  -- activo
-            ELSE 3                                       -- inactivo
-        END,
-        traducciones_completadas DESC,
-        premisas_asignadas DESC;
+
+    COALESCE(a.premisas_asignadas, 0) AS premisas_asignadas,
+    COALESCE(t.traducciones_completadas, 0) AS traducciones_completadas,
+
+    CASE
+        WHEN COALESCE(a.premisas_asignadas, 0) = 0
+         AND COALESCE(t.traducciones_completadas, 0) = 0
+            THEN 'inactivo'
+
+        WHEN COALESCE(a.premisas_asignadas, 0) > 0
+         AND COALESCE(t.traducciones_completadas, 0) = 0
+            THEN 'activo'
+
+        WHEN COALESCE(t.traducciones_completadas, 0) > 0
+            THEN 'muy activo'
+    END AS estado,
+
+    TO_CHAR(
+        make_interval(secs => ROUND(a.avg_assignment_seconds)::int),
+        'HH24:MI'
+    ) AS hora_promedio_asignacion,
+
+    TO_CHAR(
+        make_interval(secs => ROUND(t.avg_translation_seconds)::int),
+        'HH24:MI'
+    ) AS hora_promedio_traduccion,
+
+    TO_CHAR(
+        make_interval(secs => ROUND(act.avg_activity_seconds)::int),
+        'HH24:MI'
+    ) AS hora_promedio_activo
+
+FROM users u
+LEFT JOIN assignment_stats a
+    ON a.user_id = u.id
+LEFT JOIN translation_stats t
+    ON t.user_id = u.id
+LEFT JOIN activity_stats act
+    ON act.user_id = u.id
+ORDER BY
+    CASE
+        WHEN COALESCE(t.traducciones_completadas, 0) > 0 THEN 1
+        WHEN COALESCE(a.premisas_asignadas, 0) > 0 THEN 2
+        ELSE 3
+    END,
+    COALESCE(t.traducciones_completadas, 0) DESC,
+    COALESCE(a.premisas_asignadas, 0) DESC;
     """
 
     result = execute_query(conn, query)
@@ -543,7 +601,10 @@ def generate_users_excel(conn, output_path):
         "Contacto",
         "Estado",
         "Traducciones realizadas",
-        "Premisas asignadas"
+        "Premisas asignadas",
+        "Hora promedio asignación",
+        "Hora promedio traducción",
+        "Hora promedio activo",
     ]
 
     ws.append([])
@@ -557,18 +618,23 @@ def generate_users_excel(conn, output_path):
 
     # Activar filtros en encabezados
     ws.auto_filter.ref = f"A5:{get_column_letter(len(headers))}5"
+    # Freeze panes para mantener encabezados visibles
+    ws.freeze_panes = "A6"
+
     # Datos: mapear con tolerancia a filas con menos columnas
     row_index = 6
     for row in result:
-        try:
-            full_name = row[1] if len(row) > 1 else ''
-            email = row[2] if len(row) > 2 else ''
-            contact = row[3] if len(row) > 3 else ''
-            premises = row[4] if len(row) > 4 else ''
-            translations = row[5] if len(row) > 5 else ''
-            estado = row[6] if len(row) > 6 else ''
-        except Exception:
-            full_name = email = contact = premises = translations = estado = ''
+        # Mapear columnas según la query nueva
+        full_name = row[1] if len(row) > 1 else ''
+        email = row[2] if len(row) > 2 else ''
+        contact = row[3] if len(row) > 3 else ''
+        premises = row[4] if len(row) > 4 else 0
+        translations = row[5] if len(row) > 5 else 0
+        estado = row[6] if len(row) > 6 else ''
+
+        hora_asign = row[7] if len(row) > 7 and row[7] is not None else '-'
+        hora_trad = row[8] if len(row) > 8 and row[8] is not None else '-'
+        hora_act = row[9] if len(row) > 9 and row[9] is not None else '-'
 
         ws.append([
             full_name,
@@ -576,7 +642,10 @@ def generate_users_excel(conn, output_path):
             contact or '',
             estado,
             translations,
-            premises
+            premises,
+            hora_asign,
+            hora_trad,
+            hora_act,
         ])
 
         # Colorear estado (tolerante a mayúsculas/minúsculas)
