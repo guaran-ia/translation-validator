@@ -43,7 +43,9 @@ const Navbar = () => {
                 {isValidator && (
                   <a href="/history" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Historial</a>
                 )}
-
+                  {isValidator && (
+                      <a href="/validatorHelp" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Ayuda</a>
+                    )}
                 {isAdmin && (
                   // Compact admin menu: one label that reveals two explicit admin links
                   <div className="relative">
@@ -131,6 +133,9 @@ const Navbar = () => {
                     )}
                     {isValidator && (
                       <a href="/history" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Historial</a>
+                    )}
+                     {isValidator && (
+                      <a href="/validatorHelp" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Ayuda</a>
                     )}
                     {isAdmin && (
                       <div className="pt-2">

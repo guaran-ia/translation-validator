@@ -22,6 +22,11 @@ from openpyxl.utils import get_column_letter
 # Configuración de la base de datos
 DATABASE_URL = "postgresql://postgres:1234@localhost:5432/translation_validator"
 
+# está 3 horas adelantado
+SERVER_AHEAD_HOURS = 3
+
+TIME_SUB_SQL = f" - INTERVAL '{SERVER_AHEAD_HOURS} hours'"
+
 
 def get_connection():
     """
@@ -80,11 +85,11 @@ def get_user_metrics(conn):
     metrics['total_usuarios'] = result[0][0] if result else 0
     
     # Usuarios nuevos en los últimos 2 días agrupados por fecha
-    query_new_users = """
-    SELECT DATE(created_at) AS fecha, COUNT(*) AS total
+    query_new_users = f"""
+    SELECT DATE(created_at{TIME_SUB_SQL}) AS fecha, COUNT(*) AS total
     FROM users
-    WHERE created_at >= NOW() - INTERVAL '2 days'
-    GROUP BY DATE(created_at)
+    WHERE (created_at{TIME_SUB_SQL}) >= NOW() - INTERVAL '2 days'
+    GROUP BY DATE(created_at{TIME_SUB_SQL})
     ORDER BY fecha;
     """
     result = execute_query(conn, query_new_users)
@@ -115,11 +120,11 @@ def get_annotation_metrics(conn):
     metrics['traducciones_completadas_total'] = result[0][0] if result else 0
     
     # Traducciones completadas en los últimos 2 días
-    query_recent = """
+    query_recent = f"""
     SELECT COUNT(*)
     FROM annotations
     WHERE translated = true
-    AND updated_at >= NOW() - INTERVAL '2 days';
+    AND (updated_at{TIME_SUB_SQL}) >= NOW() - INTERVAL '2 days';
     """
     result = execute_query(conn, query_recent)
     metrics['traducciones_completadas_2dias'] = result[0][0] if result else 0
@@ -147,10 +152,10 @@ def get_assignment_metrics(conn):
     metrics['asignaciones_totales'] = result[0][0] if result else 0
     
     # Asignaciones en los últimos 2 días
-    query_recent = """
+    query_recent = f"""
     SELECT COUNT(*)
     FROM annotation_assignments
-    WHERE assigned_at >= NOW() - INTERVAL '2 days';
+    WHERE (assigned_at{TIME_SUB_SQL}) >= NOW() - INTERVAL '2 days';
     """
     result = execute_query(conn, query_recent)
     metrics['asignaciones_2dias'] = result[0][0] if result else 0
@@ -488,12 +493,12 @@ def generate_users_excel(conn, output_path):
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill
     from datetime import datetime
-    query = """
+    query = f"""
 WITH assignment_stats AS (
     SELECT
         user_id,
         COUNT(DISTINCT annotation_id) AS premisas_asignadas,
-        AVG(EXTRACT(EPOCH FROM assigned_at::time)) AS avg_assignment_seconds
+        AVG(EXTRACT(EPOCH FROM (assigned_at{TIME_SUB_SQL})::time)) AS avg_assignment_seconds
     FROM annotation_assignments
     GROUP BY user_id
 ),
@@ -501,7 +506,7 @@ translation_stats AS (
     SELECT
         user_id,
         COUNT(*) AS traducciones_completadas,
-        AVG(EXTRACT(EPOCH FROM created_at::time)) AS avg_translation_seconds
+        AVG(EXTRACT(EPOCH FROM (created_at{TIME_SUB_SQL})::time)) AS avg_translation_seconds
     FROM annotation_translations
     GROUP BY user_id
 ),
@@ -512,14 +517,14 @@ activity_stats AS (
     FROM (
         SELECT
             user_id,
-            EXTRACT(EPOCH FROM assigned_at::time) AS activity_seconds
+            EXTRACT(EPOCH FROM (assigned_at{TIME_SUB_SQL})::time) AS activity_seconds
         FROM annotation_assignments
 
         UNION ALL
 
         SELECT
             user_id,
-            EXTRACT(EPOCH FROM created_at::time) AS activity_seconds
+            EXTRACT(EPOCH FROM (created_at{TIME_SUB_SQL})::time) AS activity_seconds
         FROM annotation_translations
     ) activity
     GROUP BY user_id

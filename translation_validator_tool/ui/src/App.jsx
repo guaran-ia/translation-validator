@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 // Pages
 import LoginPage from './pages/LoginPage';
-import ValidatorPage from './pages/ValidatorPage';
+import ValidatorHome from './pages/ValidatorHome';
 import HistoryPage from './pages/HistoryPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminUsers from './pages/AdminUsers';
@@ -94,7 +94,7 @@ const App = () => {
               path="/validator" 
               element={
                 <ValidatorRoute>
-                  <ValidatorPage />
+                  <ValidatorHome />
                 </ValidatorRoute>
               } 
             />
