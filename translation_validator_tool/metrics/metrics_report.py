@@ -566,6 +566,15 @@ SELECT
         'HH24:MI'
     ) AS hora_promedio_activo
 
+        -- Determinar turno según la hora promedio de actividad (hora local ajustada)
+        , CASE
+                WHEN act.avg_activity_seconds IS NULL THEN 'Desconocido'
+                WHEN FLOOR(act.avg_activity_seconds/3600)::int BETWEEN 5 AND 11 THEN 'Mañana'
+                WHEN FLOOR(act.avg_activity_seconds/3600)::int BETWEEN 12 AND 13 THEN 'Siesta'
+                WHEN FLOOR(act.avg_activity_seconds/3600)::int BETWEEN 14 AND 18 THEN 'Tarde'
+                ELSE 'Noche'
+            END AS turno
+
 FROM users u
 LEFT JOIN assignment_stats a
     ON a.user_id = u.id
@@ -610,6 +619,7 @@ ORDER BY
         "Hora promedio asignación",
         "Hora promedio traducción",
         "Hora promedio activo",
+        "Turno",
     ]
 
     ws.append([])
@@ -640,6 +650,7 @@ ORDER BY
         hora_asign = row[7] if len(row) > 7 and row[7] is not None else '-'
         hora_trad = row[8] if len(row) > 8 and row[8] is not None else '-'
         hora_act = row[9] if len(row) > 9 and row[9] is not None else '-'
+        turno = row[10] if len(row) > 10 and row[10] is not None else '-'
 
         ws.append([
             full_name,
@@ -651,6 +662,7 @@ ORDER BY
             hora_asign,
             hora_trad,
             hora_act,
+            turno,
         ])
 
         # Colorear estado (tolerante a mayúsculas/minúsculas)
@@ -687,6 +699,187 @@ ORDER BY
 
 
 
+def get_activity_by_weekday(conn, output_path):
+    """
+    Calcula la cantidad de premisas tomadas por día de la semana
+    (basado en `annotation_assignments.assigned_at` ajustado por servidor)
+    Genera un CSV y un PNG (histograma de barras) en `output_path`.
+
+    Returns: Path al PNG generado o None si falla.
+    """
+    try:
+        query = f"""
+SELECT EXTRACT(DOW FROM (assigned_at{TIME_SUB_SQL}))::int AS dow,
+       COUNT(*)::int AS total
+FROM annotation_assignments
+GROUP BY dow
+ORDER BY dow;
+"""
+        rows = execute_query(conn, query)
+        if rows is None:
+            print("No se obtuvieron datos para actividad por día.")
+            return None
+
+        # Mapear dow (0=Sunday .. 6=Saturday) a nombres en español
+        dow_names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+        counts = {name: 0 for name in dow_names}
+
+        for dow, total in rows:
+            name = dow_names[int(dow) % 7]
+            counts[name] = int(total)
+
+        # Ordenar desde lunes a domingo
+        ordered_days = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+        ordered_counts = [counts[d] for d in ordered_days]
+
+        # Asegurar carpeta
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        # Generar gráfico (matplotlib local import para evitar fallo si no instalado)
+        try:
+            import matplotlib.pyplot as plt
+        except Exception as e:
+            print(f"matplotlib no disponible: {e}. No se generará el PNG.")
+            return None
+
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        bars = ax.bar(ordered_days, ordered_counts, color='deepskyblue')
+        ax.set_title('Premisas por día de la semana')
+        ax.set_ylabel('Cantidad de premisas asiganadas')
+        ax.grid(axis='y', linestyle='--', alpha=0.3)
+
+        # Etiquetas sobre barras
+        for bar in bars:
+            h = bar.get_height()
+            ax.annotate(str(int(h)), xy=(bar.get_x() + bar.get_width() / 2, h),
+                        xytext=(0, 3), textcoords='offset points', ha='center', va='bottom')
+
+        fig.tight_layout()
+        png_path = output_path / 'premisas_por_dia.png'
+        fig.savefig(png_path)
+        plt.close(fig)
+
+        print(f"PNG generado en: {png_path}")
+        return png_path
+
+    except Exception as e:
+        print(f"Error generando actividad por día: {e}")
+        return None
+
+
+def get_translations_by_weekday(conn, output_path):
+    """
+    Genera un histograma PNG con la cantidad de traducciones por día de la semana
+    (basado en `annotation_translations.created_at` ajustado por servidor).
+    """
+    try:
+        query = f"""
+SELECT EXTRACT(DOW FROM (created_at{TIME_SUB_SQL}))::int AS dow,
+       COUNT(*)::int AS total
+FROM annotation_translations
+GROUP BY dow
+ORDER BY dow;
+"""
+        rows = execute_query(conn, query)
+        if rows is None:
+            print("No se obtuvieron datos para traducciones por día.")
+            return None
+
+        dow_names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+        counts = {name: 0 for name in dow_names}
+        for dow, total in rows:
+            counts[dow_names[int(dow) % 7]] = int(total)
+
+        ordered_days = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+        ordered_counts = [counts[d] for d in ordered_days]
+
+        output_path.mkdir(parents=True, exist_ok=True)
+        try:
+            import matplotlib.pyplot as plt
+        except Exception as e:
+            print(f"matplotlib no disponible: {e}. No se generará el PNG de traducciones.")
+            return None
+
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        bars = ax.bar(ordered_days, ordered_counts, color='mediumpurple')
+        ax.set_title('Traducciones por día de la semana')
+        ax.set_ylabel('Cantidad de traducciones')
+        ax.set_xlabel('Día')
+        ax.grid(axis='y', linestyle='--', alpha=0.3)
+        for bar in bars:
+            h = bar.get_height()
+            ax.annotate(str(int(h)), xy=(bar.get_x() + bar.get_width() / 2, h),
+                        xytext=(0, 3), textcoords='offset points', ha='center', va='bottom')
+        fig.tight_layout()
+        png_path = output_path / 'traducciones_por_dia.png'
+        fig.savefig(png_path)
+        plt.close(fig)
+        print(f"PNG de traducciones generado en: {png_path}")
+        return png_path
+    except Exception as e:
+        print(f"Error generando traducciones por día: {e}")
+        return None
+
+
+def get_global_activity_by_weekday(conn, output_path):
+    """
+    Genera un histograma PNG con la actividad global por día (asignaciones + traducciones).
+    """
+    try:
+        query = f"""
+SELECT dow, SUM(total) AS total FROM (
+  SELECT EXTRACT(DOW FROM (assigned_at{TIME_SUB_SQL}))::int AS dow, COUNT(*)::int AS total
+  FROM annotation_assignments
+  GROUP BY dow
+  UNION ALL
+  SELECT EXTRACT(DOW FROM (created_at{TIME_SUB_SQL}))::int AS dow, COUNT(*)::int AS total
+  FROM annotation_translations
+  GROUP BY dow
+) s
+GROUP BY dow
+ORDER BY dow;
+"""
+        rows = execute_query(conn, query)
+        if rows is None:
+            print("No se obtuvieron datos para actividad global por día.")
+            return None
+
+        dow_names = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+        counts = {name: 0 for name in dow_names}
+        for dow, total in rows:
+            counts[dow_names[int(dow) % 7]] = int(total)
+
+        ordered_days = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+        ordered_counts = [counts[d] for d in ordered_days]
+
+        output_path.mkdir(parents=True, exist_ok=True)
+        try:
+            import matplotlib.pyplot as plt
+        except Exception as e:
+            print(f"matplotlib no disponible: {e}. No se generará el PNG de actividad global.")
+            return None
+
+        fig, ax = plt.subplots(figsize=(8, 4.5))
+        bars = ax.bar(ordered_days, ordered_counts, color='seagreen')
+        ax.set_title('Actividad (asignaciones + traducciones) por día')
+        ax.set_ylabel('Cantidad total')
+        ax.set_xlabel('Día')
+        ax.grid(axis='y', linestyle='--', alpha=0.3)
+        for bar in bars:
+            h = bar.get_height()
+            ax.annotate(str(int(h)), xy=(bar.get_x() + bar.get_width() / 2, h),
+                        xytext=(0, 3), textcoords='offset points', ha='center', va='bottom')
+        fig.tight_layout()
+        png_path = output_path / 'actividad_global_por_dia.png'
+        fig.savefig(png_path)
+        plt.close(fig)
+        print(f"PNG de actividad global generado en: {png_path}")
+        return png_path
+    except Exception as e:
+        print(f"Error generando actividad global por día: {e}")
+        return None
+
+
 def main():
     """
     Función principal que ejecuta todas las métricas.
@@ -716,6 +909,12 @@ def main():
         update_metrics_docx(metrics_data, documents_folder)
         #generate_users_csv(conn, documents_folder)
         generate_users_excel(conn, documents_folder)
+        # Generar actividad por día (PNG)
+        get_activity_by_weekday(conn, documents_folder)
+        # Generar traducciones por día (PNG)
+        get_translations_by_weekday(conn, documents_folder)
+        # Generar actividad global (asignaciones + traducciones) por día (PNG)
+        get_global_activity_by_weekday(conn, documents_folder)
         
         print(" Métricas generadas exitosamente")
         
