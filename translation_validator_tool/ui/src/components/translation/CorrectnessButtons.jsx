@@ -1,5 +1,5 @@
 const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
-  const options = [
+  const mainOptions = [
     {
       value: 'correct',
       label: 'Correcta',
@@ -9,6 +9,27 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
       borderColor: 'border-green-600',
       selectedBorder: 'border-green-700'
     },
+    {
+      value: 'regular',
+      label: 'Regular',
+      icon: '!',
+      bgColor: 'bg-yellow-500 hover:bg-yellow-600',
+      selectedBg: 'bg-yellow-600',
+      borderColor: 'border-yellow-500',
+      selectedBorder: 'border-yellow-600'
+    },
+    {
+      value: 'incorrect',
+      label: 'Incorrecta',
+      icon: '✗',
+      bgColor: 'bg-red-600 hover:bg-red-700',
+      selectedBg: 'bg-red-700',
+      borderColor: 'border-red-600',
+      selectedBorder: 'border-red-700'
+    }
+  ];
+
+  const detailOptions = [
     {
       value: 'gn_more',
       label: 'Guaraní tiene más información',
@@ -26,54 +47,107 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
       selectedBg: 'bg-purple-700',
       borderColor: 'border-purple-600',
       selectedBorder: 'border-purple-700'
-    },
-    {
-      value: 'incorrect',
-      label: 'Incorrecta',
-      icon: '✗',
-      bgColor: 'bg-red-600 hover:bg-red-700',
-      selectedBg: 'bg-red-700',
-      borderColor: 'border-red-600',
-      selectedBorder: 'border-red-700'
     }
   ];
 
+  const isRegularGroupSelected =
+    selectedCorrectness === 'regular' ||
+    selectedCorrectness === 'gn_more' ||
+    selectedCorrectness === 'es_more';
+
+  const showDetailOptions = isRegularGroupSelected;
+
+  const getMainButtonClasses = (option) => {
+    const isSelected =
+      selectedCorrectness === option.value ||
+      (option.value === 'regular' && isRegularGroupSelected);
+
+    const isDimmed = selectedCorrectness && !isSelected;
+
+    return `
+      flex-1 min-w-[140px] px-5 py-3 border-2 rounded-lg font-semibold text-white text-sm
+      transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2
+      ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+      ${
+        isSelected
+          ? `${option.selectedBg} ${option.selectedBorder} shadow-md scale-105`
+          : isDimmed
+            ? 'bg-gray-100 text-gray-500 border-gray-200 filter grayscale opacity-80 transform scale-100'
+            : `${option.bgColor} ${option.borderColor} hover:shadow-sm`
+      }
+    `.replace(/\s+/g, ' ').trim();
+  };
+
+  const getDetailButtonClasses = (option) => {
+  const isSelected = selectedCorrectness === option.value;
+
+  const hasSecondarySelection =
+    selectedCorrectness === 'gn_more' ||
+    selectedCorrectness === 'es_more';
+
+  const isDimmed = hasSecondarySelection && !isSelected;
+
+  return `
+    w-full md:w-[320px] px-5 py-3 border-2 rounded-lg font-semibold text-white text-sm
+    transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2
+    ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+    ${
+      isSelected
+        ? `${option.selectedBg} ${option.selectedBorder} shadow-md scale-105`
+        : isDimmed
+          ? 'bg-gray-100 text-gray-500 border-gray-200 filter grayscale opacity-80 transform scale-100'
+          : `${option.bgColor} ${option.borderColor} hover:shadow-sm`
+    }
+  `.replace(/\s+/g, ' ').trim();
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       <h3 className="text-lg font-medium text-gray-800">
         Corrección de la traducción
       </h3>
-      <div className="flex flex-wrap gap-3">
-        {options.map((option) => {
-          const isSelected = selectedCorrectness === option.value;
-          const isDimmed = selectedCorrectness && !isSelected;
-          const buttonClasses = `
-            flex-1 min-w-[140px] px-5 py-3 border-2 rounded-lg font-semibold text-white text-sm
-            transition-all duration-200 transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2
-            ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
-            ${isSelected 
-              ? `${option.selectedBg} ${option.selectedBorder} shadow-md scale-105` 
-              : isDimmed
-                ? `bg-gray-100 text-gray-500 border-gray-200 filter grayscale opacity-80 transform scale-100`
-                : `${option.bgColor} ${option.borderColor} hover:shadow-sm`}
-          `.replace(/\s+/g, ' ').trim();
 
-          return (
-            <button
-              key={option.value}
-              type="button"
-              className={buttonClasses}
-              onClick={() => !disabled && onSelect(option.value)}
-              disabled={disabled}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <span className="text-xl">{option.icon}</span>
-                <span>{option.label}</span>
-              </div>
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap gap-3">
+        {mainOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={getMainButtonClasses(option)}
+            onClick={() => !disabled && onSelect(option.value)}
+            disabled={disabled}
+          >
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-xl">{option.icon}</span>
+              <span>{option.label}</span>
+            </div>
+          </button>
+        ))}
       </div>
+
+      {showDetailOptions && (
+        <div className="pt-3 space-y-3">
+          <p className="text-sm font-medium text-gray-700 text-center">
+            Proporcione más información:
+          </p>
+
+          <div className="flex flex-wrap justify-center gap-3">
+            {detailOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={getDetailButtonClasses(option)}
+                onClick={() => !disabled && onSelect(option.value)}
+                disabled={disabled}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="text-xl">{option.icon}</span>
+                  <span>{option.label}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

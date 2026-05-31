@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { CheckIcon } from '@heroicons/react/24/solid';
 
 // Componentes
 import Navbar from '../components/common/Navbar';
@@ -167,22 +166,17 @@ const ValidatorHome = () => {
 
         {/* Translation Card */}
         <div className="card">
-          {/* Translator Info */}
-          <div className="mb-6 p-4 bg-white-100 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700">Autor de la traducción</h3>
-                <p className="text-lg font-medium text-gray-900 mt-1">{currentTranslation.author}</p>
-                <p className="text-xs text-gray-500 mt-1">ID Usuario: #{currentTranslation.author_id}</p>
-              </div>
-              <div className="text-right">
-                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-white border border-gray-300 text-gray-700">
-                  <CheckIcon className="h-4 w-4" />
-                  {currentTranslation.validation_count} validaciones
-                </div>
-              </div>
-            </div>
+        {/* Translation Info */}
+        <div className="mb-6 p-4 bg-white rounded-lg border-gray-200">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700">
+              Traducción a validar
+            </h3>
+            <p className="text-lg font-medium text-gray-900 mt-1">
+              ID de traducción: #{currentTranslation.id}
+            </p>
           </div>
+        </div>
 
 
           {/* Original and Translation Sections */}
@@ -210,26 +204,46 @@ const ValidatorHome = () => {
             </div>
           </div>
 
-          {/* Suggestions Button */}
-          <div className="mb-6 justify-center flex">
-            <button
-              onClick={() => setShowSuggestionsModal(true)}
-              className="justify-center w-50 px-4 py-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-100 font-medium text-sm transition-colors"
-            >
-              Sugerir una traducción
-            </button>
-          </div>
-
+      
           {/* Validation Form */}
           <div className="space-y-6 border-t border-gray-200 pt-6">
-            <CorrectnessButtons selectedCorrectness={formData.correctness} onSelect={handleCorrectnessSelect} disabled={false} />
+            <CorrectnessButtons
+              selectedCorrectness={formData.correctness}
+              onSelect={handleCorrectnessSelect}
+              disabled={false}
+            />
+
+            {['incorrect', 'regular', 'gn_more', 'es_more'].includes(formData.correctness) && (
+              <div className="justify-center flex">
+                <button
+                  onClick={() => setShowSuggestionsModal(true)}
+                  className="justify-center w-50 px-4 py-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-100 font-medium text-sm transition-colors"
+                >
+                  Sugerir una traducción
+                </button>
+              </div>
+            )}
 
             <div className="grid md:grid-cols-2 gap-6">
-              <ScoreSelector label="Puntuación de fluidez" selectedScore={formData.fluency_score} onSelect={handleFluencySelect} disabled={false} />
-              <ScoreSelector label="Puntuación de precisión" selectedScore={formData.accuracy_score} onSelect={handleAccuracySelect} disabled={false} />
+              <ScoreSelector
+                label="Puntuación de fluidez"
+                selectedScore={formData.fluency_score}
+                onSelect={handleFluencySelect}
+                disabled={false}
+              />
+              <ScoreSelector
+                label="Puntuación de precisión"
+                selectedScore={formData.accuracy_score}
+                onSelect={handleAccuracySelect}
+                disabled={false}
+              />
             </div>
 
-            <NotesTextarea notes={formData.notes} onNotesChange={handleNotesChange} disabled={false} />
+            <NotesTextarea
+              notes={formData.notes}
+              onNotesChange={handleNotesChange}
+              disabled={false}
+            />
 
             <div className="mb-6 justify-center flex">
               <button
