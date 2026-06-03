@@ -31,7 +31,7 @@ USERS_FILE="$SCRIPT_DIR/documents/Listado_Usuarios.xlsx"
 ACTIVIDAD_GLOBAL_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia.png"
 PREMISAS_DIA_IMG="$SCRIPT_DIR/documents/premisas_por_dia.png"
 TRADUCCIONES_DIA_IMG="$SCRIPT_DIR/documents/traducciones_por_dia.png"
-
+ACTIVIDAD_GLOBAL_DIARIA_IMG="$SCRIPT_DIR/documents/actividad_global_diaria.png"
 
 DRIVE_REMOTE="gdrive:Mboehara/Estadisticas"
 
@@ -174,6 +174,24 @@ if [ -f "$TRADUCCIONES_DIA_IMG" ]; then
     log_message "Gráfico traducciones_por_dia.png actualizado en Google Drive"
 else
     log_error "El gráfico no fue generado: $TRADUCCIONES_DIA_IMG"
+    exit 1
+fi
+
+# ============================================
+# SUBIDA PNG ACTIVIDAD GLOBAL DIARIA
+# ============================================
+
+if [ -f "$ACTIVIDAD_GLOBAL_DIARIA_IMG" ]; then
+    log_message "Subiendo gráfico actividad_global_diaria.png a Google Drive..."
+
+    rclone copyto \
+        "$ACTIVIDAD_GLOBAL_DIARIA_IMG" \
+        "$DRIVE_REMOTE/actividad_global_diaria.png" \
+        >> "$LOG_FILE" 2>&1
+
+    log_message "Gráfico actividad_global_diaria.png actualizado en Google Drive"
+else
+    log_error "El gráfico no fue generado: $ACTIVIDAD_GLOBAL_DIARIA_IMG"
     exit 1
 fi
 

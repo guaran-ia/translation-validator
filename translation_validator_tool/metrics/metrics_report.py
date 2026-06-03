@@ -879,6 +879,96 @@ ORDER BY dow;
         print(f"Error generando actividad global por día: {e}")
         return None
 
+def get_global_activity_by_date(conn, output_path):
+    """
+    Genera un gráfico PNG con la actividad global por fecha real:
+    premisas asignadas + traducciones realizadas por día.
+    """
+    try:
+        query = f"""
+WITH activity AS (
+    SELECT
+        DATE(assigned_at{TIME_SUB_SQL}) AS fecha,
+        COUNT(*)::int AS premisas,
+        0::int AS traducciones
+    FROM annotation_assignments
+    GROUP BY DATE(assigned_at{TIME_SUB_SQL})
+
+    UNION ALL
+
+    SELECT
+        DATE(created_at{TIME_SUB_SQL}) AS fecha,
+        0::int AS premisas,
+        COUNT(*)::int AS traducciones
+    FROM annotation_translations
+    GROUP BY DATE(created_at{TIME_SUB_SQL})
+),
+daily_activity AS (
+    SELECT
+        fecha,
+        SUM(premisas)::int AS premisas,
+        SUM(traducciones)::int AS traducciones,
+        SUM(premisas + traducciones)::int AS total
+    FROM activity
+    GROUP BY fecha
+),
+date_range AS (
+    SELECT generate_series(
+        (SELECT MIN(fecha) FROM daily_activity),
+        (SELECT MAX(fecha) FROM daily_activity),
+        INTERVAL '1 day'
+    )::date AS fecha
+)
+SELECT
+    dr.fecha,
+    COALESCE(da.premisas, 0) AS premisas,
+    COALESCE(da.traducciones, 0) AS traducciones,
+    COALESCE(da.total, 0) AS total
+FROM date_range dr
+LEFT JOIN daily_activity da
+    ON da.fecha = dr.fecha
+ORDER BY dr.fecha;
+"""
+
+        rows = execute_query(conn, query)
+
+        if rows is None or len(rows) == 0:
+            print("No se obtuvieron datos para actividad global diaria.")
+            return None
+
+        fechas = [row[0].strftime("%d/%m") for row in rows]
+        totales = [int(row[3]) for row in rows]
+
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        try:
+            import matplotlib.pyplot as plt
+        except Exception as e:
+            print(f"matplotlib no disponible: {e}. No se generará el PNG de actividad global diaria.")
+            return None
+
+        fig, ax = plt.subplots(figsize=(12, 5))
+
+        ax.plot(fechas, totales, marker='o')
+        ax.set_title("Actividad global diaria")
+        ax.set_ylabel("Premisas + traducciones")
+        ax.set_xlabel("Fecha")
+        ax.grid(axis='y', linestyle='--', alpha=0.3)
+
+        plt.xticks(rotation=45, ha='right')
+
+        fig.tight_layout()
+
+        png_path = output_path / "actividad_global_diaria.png"
+        fig.savefig(png_path)
+        plt.close(fig)
+
+        print(f"PNG de actividad global diaria generado en: {png_path}")
+        return png_path
+
+    except Exception as e:
+        print(f"Error generando actividad global diaria: {e}")
+        return None
 
 def main():
     """
@@ -915,6 +1005,8 @@ def main():
         get_translations_by_weekday(conn, documents_folder)
         # Generar actividad global (asignaciones + traducciones) por día (PNG)
         get_global_activity_by_weekday(conn, documents_folder)
+        # Generar actividad global por fecha real (PNG)
+        get_global_activity_by_date(conn, documents_folder)
         
         print(" Métricas generadas exitosamente")
         
