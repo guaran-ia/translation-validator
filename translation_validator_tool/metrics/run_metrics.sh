@@ -28,6 +28,10 @@ PYTHON_CMD="$PYENV_ROOT/shims/python"
 
 REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
 USERS_FILE="$SCRIPT_DIR/documents/Listado_Usuarios.xlsx"
+ACTIVIDAD_GLOBAL_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia.png"
+PREMISAS_DIA_IMG="$SCRIPT_DIR/documents/premisas_por_dia.png"
+TRADUCCIONES_DIA_IMG="$SCRIPT_DIR/documents/traducciones_por_dia.png"
+
 
 DRIVE_REMOTE="gdrive:Mboehara/Estadisticas"
 
@@ -117,7 +121,64 @@ if [ -f "$REPORT_FILE" ]; then
         exit 1
     fi
 
-    exit 0
+   # ============================================
+# SUBIDA PNG ACTIVIDAD GLOBAL
+# ============================================
+
+if [ -f "$ACTIVIDAD_GLOBAL_IMG" ]; then
+    log_message "Subiendo gráfico actividad_global_por_dia.png a Google Drive..."
+
+    rclone copyto \
+        "$ACTIVIDAD_GLOBAL_IMG" \
+        "$DRIVE_REMOTE/actividad_global_por_dia.png" \
+        >> "$LOG_FILE" 2>&1
+
+    log_message "Gráfico actividad_global_por_dia.png actualizado en Google Drive"
+else
+    log_error "El gráfico no fue generado: $ACTIVIDAD_GLOBAL_IMG"
+    exit 1
+fi
+
+
+# ============================================
+# SUBIDA PNG PREMISAS POR DÍA
+# ============================================
+
+if [ -f "$PREMISAS_DIA_IMG" ]; then
+    log_message "Subiendo gráfico premisas_por_dia.png a Google Drive..."
+
+    rclone copyto \
+        "$PREMISAS_DIA_IMG" \
+        "$DRIVE_REMOTE/premisas_por_dia.png" \
+        >> "$LOG_FILE" 2>&1
+
+    log_message "Gráfico premisas_por_dia.png actualizado en Google Drive"
+else
+    log_error "El gráfico no fue generado: $PREMISAS_DIA_IMG"
+    exit 1
+fi
+
+
+# ============================================
+# SUBIDA PNG TRADUCCIONES POR DÍA
+# ============================================
+
+if [ -f "$TRADUCCIONES_DIA_IMG" ]; then
+    log_message "Subiendo gráfico traducciones_por_dia.png a Google Drive..."
+
+    rclone copyto \
+        "$TRADUCCIONES_DIA_IMG" \
+        "$DRIVE_REMOTE/traducciones_por_dia.png" \
+        >> "$LOG_FILE" 2>&1
+
+    log_message "Gráfico traducciones_por_dia.png actualizado en Google Drive"
+else
+    log_error "El gráfico no fue generado: $TRADUCCIONES_DIA_IMG"
+    exit 1
+fi
+
+exit 0
+
 else
     EXIT_CODE=$?
     log_error "❌ Error al generar métricas (código: $EXIT_CODE)"
