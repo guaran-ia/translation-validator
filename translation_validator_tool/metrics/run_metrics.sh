@@ -32,6 +32,7 @@ ACTIVIDAD_GLOBAL_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia.png"
 PREMISAS_DIA_IMG="$SCRIPT_DIR/documents/premisas_por_dia.png"
 TRADUCCIONES_DIA_IMG="$SCRIPT_DIR/documents/traducciones_por_dia.png"
 ACTIVIDAD_GLOBAL_DIARIA_IMG="$SCRIPT_DIR/documents/actividad_global_diaria.png"
+ACTIVIDAD_GLOBAL_DIA_HORA_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia_hora.png"
 
 DRIVE_REMOTE="gdrive:Mboehara/Estadisticas"
 
@@ -192,6 +193,24 @@ if [ -f "$ACTIVIDAD_GLOBAL_DIARIA_IMG" ]; then
     log_message "Gráfico actividad_global_diaria.png actualizado en Google Drive"
 else
     log_error "El gráfico no fue generado: $ACTIVIDAD_GLOBAL_DIARIA_IMG"
+    exit 1
+fi
+
+# ============================================
+# SUBIDA PNG ACTIVIDAD GLOBAL POR DÍA Y HORA
+# ============================================
+
+if [ -f "$ACTIVIDAD_GLOBAL_DIA_HORA_IMG" ]; then
+    log_message "Subiendo mapa de calor actividad_global_por_dia_hora.png a Google Drive..."
+
+    rclone copyto \
+        "$ACTIVIDAD_GLOBAL_DIA_HORA_IMG" \
+        "$DRIVE_REMOTE/actividad_global_por_dia_hora.png" \
+        >> "$LOG_FILE" 2>&1
+
+    log_message "Mapa de calor actividad_global_por_dia_hora.png actualizado en Google Drive"
+else
+    log_error "El mapa de calor no fue generado: $ACTIVIDAD_GLOBAL_DIA_HORA_IMG"
     exit 1
 fi
 

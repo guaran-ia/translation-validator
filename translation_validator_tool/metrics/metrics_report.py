@@ -969,6 +969,120 @@ ORDER BY dr.fecha;
     except Exception as e:
         print(f"Error generando actividad global diaria: {e}")
         return None
+    
+def get_global_activity_heatmap(conn, output_path):
+    """
+    Genera un mapa de calor con actividad global por día de semana y hora:
+    premisas asignadas + traducciones realizadas.
+    """
+    try:
+        query = f"""
+SELECT
+    EXTRACT(DOW FROM fecha)::int AS dow,
+    EXTRACT(HOUR FROM fecha)::int AS hour,
+    COUNT(*)::int AS total
+FROM (
+    SELECT assigned_at{TIME_SUB_SQL} AS fecha
+    FROM annotation_assignments
+
+    UNION ALL
+
+    SELECT created_at{TIME_SUB_SQL} AS fecha
+    FROM annotation_translations
+) activity
+GROUP BY dow, hour
+ORDER BY dow, hour;
+"""
+
+        rows = execute_query(conn, query)
+
+        if rows is None:
+            print("No se obtuvieron datos para el mapa de calor.")
+            return None
+
+        ordered_days = [
+            "lunes",
+            "martes",
+            "miércoles",
+            "jueves",
+            "viernes",
+            "sábado",
+            "domingo"
+        ]
+
+        dow_to_index = {
+            1: 0,  # lunes
+            2: 1,
+            3: 2,
+            4: 3,
+            5: 4,
+            6: 5,
+            0: 6,  # domingo
+        }
+
+        heatmap_data = [[0 for _ in range(24)] for _ in range(7)]
+
+        for dow, hour, total in rows:
+            day_index = dow_to_index[int(dow)]
+            hour_index = int(hour)
+            heatmap_data[day_index][hour_index] = int(total)
+
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        try:
+            import matplotlib.pyplot as plt
+        except Exception as e:
+            print(f"matplotlib no disponible: {e}. No se generará el mapa de calor.")
+            return None
+
+        fig, ax = plt.subplots(figsize=(14, 5.5))
+
+        image = ax.imshow(
+            heatmap_data,
+            aspect="auto",
+            interpolation="nearest",
+            cmap="Blues"
+        )
+
+        ax.set_title("Actividad global por día y hora")
+        ax.set_xlabel("Hora del día")
+        ax.set_ylabel("Día de la semana")
+
+        ax.set_xticks(range(24))
+        ax.set_xticklabels([f"{h:02d}" for h in range(24)])
+
+        ax.set_yticks(range(7))
+        ax.set_yticklabels(ordered_days)
+
+        cbar = fig.colorbar(image, ax=ax)
+        cbar.set_label("Premisas + traducciones")
+
+        for day_index in range(7):
+            for hour_index in range(24):
+                value = heatmap_data[day_index][hour_index]
+                if value > 0:
+                    ax.text(
+                        hour_index,
+                        day_index,
+                        str(value),
+                        ha="center",
+                        va="center",
+                        fontsize=7
+                    )
+
+        fig.tight_layout()
+
+        png_path = output_path / "actividad_global_por_dia_hora.png"
+        fig.savefig(png_path)
+        plt.close(fig)
+
+        print(f"Mapa de calor generado en: {png_path}")
+        return png_path
+
+    except Exception as e:
+        print(f"Error generando mapa de calor: {e}")
+        return None
+    
 
 def main():
     """
@@ -1007,6 +1121,8 @@ def main():
         get_global_activity_by_weekday(conn, documents_folder)
         # Generar actividad global por fecha real (PNG)
         get_global_activity_by_date(conn, documents_folder)
+        # Generar mapa de calor de actividad global por día y hora (PNG)
+        get_global_activity_heatmap(conn, documents_folder)
         
         print(" Métricas generadas exitosamente")
         
