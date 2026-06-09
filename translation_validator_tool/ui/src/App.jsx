@@ -15,6 +15,7 @@ import AdminAnnotations from './pages/AdminAnnotations';
 import TranslatorAnnotationsPage from './pages/TranslatorAnnotationsPage';
 import PendingTranslationsPage from './pages/PendingTranslationsPage';
 import HelpPage from './pages/HelpPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 
 const getUserRole = (user) => {
@@ -119,6 +120,14 @@ const App = () => {
               element={
                 <TranslatorRoute>
                   <HelpPage />
+                </TranslatorRoute>
+              }
+            />
+            <Route
+             path="/leaderboard" 
+              element={
+                <TranslatorRoute>
+                  <LeaderboardPage />
                 </TranslatorRoute>
               }
             />

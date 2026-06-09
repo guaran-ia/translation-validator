@@ -1,0 +1,197 @@
+import { useEffect, useMemo, useState } from 'react';
+import Navbar from '../components/common/Navbar';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+
+const LeaderboardPage = () => {
+  const [items, setItems] = useState([]);
+  const [weekStart, setWeekStart] = useState(null);
+  const [weekEnd, setWeekEnd] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const token = localStorage.getItem('access_token');
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, []);
+
+  const fetchLeaderboard = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/annotations/weekly-user-activity`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('No se pudo cargar el leaderboard semanal.');
+      }
+
+      const data = await response.json();
+
+      setItems(data.items || []);
+      setWeekStart(data.week_start);
+      setWeekEnd(data.week_end);
+    } catch (err) {
+      console.error(err);
+      setError('No se pudo cargar el leaderboard. Verifica tu sesión o intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const topUsers = useMemo(() => {
+    return [...items]
+      .sort((a, b) => {
+        const totalB = b.actividad_total ?? b.asignaciones_semana + b.traducciones_semana;
+        const totalA = a.actividad_total ?? a.asignaciones_semana + a.traducciones_semana;
+
+        if (totalB !== totalA) return totalB - totalA;
+        return b.traducciones_semana - a.traducciones_semana;
+      })
+      .slice(0, 10);
+  }, [items]);
+
+  const getMedal = (index) => {
+    if (index === 0) return '🥇';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
+    return `#${index + 1}`;
+  };
+
+  const getInitials = (name = '') => {
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0])
+      .join('')
+      .toUpperCase() || '?';
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
+            <h1 className="text-3xl font-bold">Ranking semanal</h1>
+            <p className="mt-2 text-teal-100">
+              Ranking de las 10 personas con mayor actividad de la semana en Mbo'ehara Digital.
+            </p>
+
+            <div className="mt-4 inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-full text-sm">
+              Semana actual: {weekStart || '-'} al {weekEnd || '-'}
+            </div>
+          </div>
+        </div>
+
+        {/* Loading */}
+        {loading && (
+          <div className="bg-white rounded-lg shadow-md p-10 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+          </div>
+        )}
+
+        {/* Error */}
+        {!loading && error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* Empty */}
+        {!loading && !error && topUsers.length === 0 && (
+          <div className="bg-white rounded-lg shadow-md p-10 text-center">
+            <div className="text-5xl mb-4">📊</div>
+            <h2 className="text-xl font-bold text-gray-900">Sin actividad esta semana</h2>
+            <p className="text-gray-600 mt-2">
+              Aún no hay asignaciones ni traducciones registradas en la semana actual.
+            </p>
+          </div>
+        )}
+
+        {/* Leaderboard */}
+        {!loading && !error && topUsers.length > 0 && (
+          <div className="space-y-4">
+            {topUsers.map((user, index) => {
+              const total =
+                user.actividad_total ?? user.asignaciones_semana + user.traducciones_semana;
+
+              return (
+                <div
+                  key={user.user_id}
+                  className={`bg-white rounded-xl shadow-md p-5 border transition hover:shadow-lg ${
+                    index < 3 ? 'border-teal-200' : 'border-gray-100'
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center gap-4">
+                    {/* Position */}
+                    <div className="w-16 h-16 rounded-2xl bg-teal-50 flex items-center justify-center text-2xl font-bold text-teal-700">
+                      {getMedal(index)}
+                    </div>
+
+                    {/* User */}
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="w-12 h-12 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold">
+                        {getInitials(user.nombre_completo)}
+                      </div>
+
+                      <div>
+                        <h3 className="font-bold text-gray-900">
+                          {user.nombre_completo || 'Usuario sin nombre'}
+                        </h3>
+                        <p className="text-sm text-gray-500 break-all">{user.email}</p>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-3 w-full md:w-auto">
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 text-center">
+                        <p className="text-xs text-gray-500">Asignaciones</p>
+                        <p className="text-xl font-bold text-gray-900">
+                          {user.asignaciones_semana}
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg px-4 py-3 text-center">
+                        <p className="text-xs text-gray-500">Traducciones</p>
+                        <p className="text-xl font-bold text-gray-900">
+                          {user.traducciones_semana}
+                        </p>
+                      </div>
+
+                      <div className="bg-teal-50 rounded-lg px-4 py-3 text-center border border-teal-100">
+                        <p className="text-xs text-teal-700">Total</p>
+                        <p className="text-xl font-bold text-teal-800">{total}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Info */}
+        <div className="mt-8 p-4 bg-teal-50 border border-teal-200 rounded-lg">
+          <h3 className="font-semibold text-teal-900 mb-2">¿Cómo se calcula?</h3>
+          <p className="text-sm text-teal-800">
+            Se suman las asignaciones y traducciones realizadas durante la semana actual,
+            de lunes a domingo. El ranking se reinicia automáticamente cada lunes.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default LeaderboardPage;

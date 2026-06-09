@@ -4,7 +4,7 @@ Endpoints for managing AnnotationAssignment and AnnotationTranslation
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, desc
+from sqlalchemy import func, and_, desc, text
 
 from app.database import get_db
 from app.models.user import User
@@ -590,4 +590,87 @@ async def get_my_translations(
         "skip": skip,
         "limit": limit,
         "has_next": (skip + limit) < total,
+    }
+
+@router.get("/weekly-user-activity", response_model=dict)
+async def get_weekly_user_activity(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Obtiene asignaciones y traducciones por usuario de la semana actual.
+    Semana: lunes 00:00 hasta domingo 23:59:59.
+    Ajusta la hora del servidor restando 3 horas.
+    """
+    query = text("""
+        WITH week_range AS (
+            SELECT
+                date_trunc('week', NOW() - INTERVAL '3 hours') AS week_start,
+                date_trunc('week', NOW() - INTERVAL '3 hours') + INTERVAL '7 days' AS week_end
+        ),
+        assignment_stats AS (
+            SELECT
+                aa.user_id,
+                COUNT(*) AS asignaciones_semana
+            FROM annotation_assignments aa
+            CROSS JOIN week_range wr
+            WHERE (aa.assigned_at - INTERVAL '3 hours') >= wr.week_start
+              AND (aa.assigned_at - INTERVAL '3 hours') < wr.week_end
+            GROUP BY aa.user_id
+        ),
+        translation_stats AS (
+            SELECT
+                at.user_id,
+                COUNT(*) AS traducciones_semana
+            FROM annotation_translations at
+            CROSS JOIN week_range wr
+            WHERE (at.created_at - INTERVAL '3 hours') >= wr.week_start
+              AND (at.created_at - INTERVAL '3 hours') < wr.week_end
+            GROUP BY at.user_id
+        )
+        SELECT
+            u.id AS user_id,
+            u.nombre_completo,
+            u.email,
+            COALESCE(a.asignaciones_semana, 0) AS asignaciones_semana,
+            COALESCE(t.traducciones_semana, 0) AS traducciones_semana,
+            wr.week_start::date AS week_start,
+            (wr.week_end::date - 1) AS week_end
+        FROM users u
+        CROSS JOIN week_range wr
+        LEFT JOIN assignment_stats a ON a.user_id = u.id
+        LEFT JOIN translation_stats t ON t.user_id = u.id
+        WHERE COALESCE(a.asignaciones_semana, 0) > 0
+           OR COALESCE(t.traducciones_semana, 0) > 0
+        ORDER BY
+            COALESCE(t.traducciones_semana, 0) DESC,
+            COALESCE(a.asignaciones_semana, 0) DESC,
+            u.nombre_completo ASC;
+    """)
+
+    rows = db.execute(query).fetchall()
+
+    if not rows:
+        return {
+            "week_start": None,
+            "week_end": None,
+            "items": [],
+            "total": 0,
+        }
+
+    return {
+        "week_start": rows[0].week_start.isoformat(),
+        "week_end": rows[0].week_end.isoformat(),
+        "items": [
+            {
+                "user_id": row.user_id,
+                "nombre_completo": row.nombre_completo,
+                "email": row.email,
+                "asignaciones_semana": row.asignaciones_semana,
+                "traducciones_semana": row.traducciones_semana,
+                "actividad_total": row.asignaciones_semana + row.traducciones_semana,
+            }
+            for row in rows
+        ],
+        "total": len(rows),
     }

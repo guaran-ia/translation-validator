@@ -38,6 +38,9 @@ const Navbar = () => {
                       <a href="/pending-translations" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Traducciones pendientes</a>
                 )}
                 {isTranslator && (
+                      <a href="/leaderboard" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ranking semanal</a>
+                )}
+                {isTranslator && (
                     <Link to="/help" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ayuda</Link>
                 )}
                 {isValidator && (
@@ -130,6 +133,9 @@ const Navbar = () => {
                     )}
                      {isTranslator && (
                       <Link to="/help" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Ayuda</Link>
+                    )}
+                     {isTranslator && (
+                      <a href="/leaderboard" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ranking semanal</a>
                     )}
                     {isValidator && (
                       <a href="/history" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Historial</a>
