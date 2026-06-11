@@ -598,25 +598,16 @@ async def get_weekly_user_activity(
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Obtiene asignaciones y traducciones por usuario de la semana actual.
+    Obtiene traducciones por usuario de la semana actual.
     Semana: lunes 00:00 hasta domingo 23:59:59.
     Ajusta la hora del servidor restando 3 horas.
     """
+
     query = text("""
         WITH week_range AS (
             SELECT
                 date_trunc('week', NOW() - INTERVAL '3 hours') AS week_start,
                 date_trunc('week', NOW() - INTERVAL '3 hours') + INTERVAL '7 days' AS week_end
-        ),
-        assignment_stats AS (
-            SELECT
-                aa.user_id,
-                COUNT(*) AS asignaciones_semana
-            FROM annotation_assignments aa
-            CROSS JOIN week_range wr
-            WHERE (aa.assigned_at - INTERVAL '3 hours') >= wr.week_start
-              AND (aa.assigned_at - INTERVAL '3 hours') < wr.week_end
-            GROUP BY aa.user_id
         ),
         translation_stats AS (
             SELECT
@@ -632,20 +623,16 @@ async def get_weekly_user_activity(
             u.id AS user_id,
             u.nombre_completo,
             u.email,
-            COALESCE(a.asignaciones_semana, 0) AS asignaciones_semana,
             COALESCE(t.traducciones_semana, 0) AS traducciones_semana,
             wr.week_start::date AS week_start,
             (wr.week_end::date - 1) AS week_end
         FROM users u
         CROSS JOIN week_range wr
-        LEFT JOIN assignment_stats a ON a.user_id = u.id
-        LEFT JOIN translation_stats t ON t.user_id = u.id
-        WHERE COALESCE(a.asignaciones_semana, 0) > 0
-           OR COALESCE(t.traducciones_semana, 0) > 0
+        INNER JOIN translation_stats t ON t.user_id = u.id
         ORDER BY
             COALESCE(t.traducciones_semana, 0) DESC,
-            COALESCE(a.asignaciones_semana, 0) DESC,
-            u.nombre_completo ASC;
+            u.nombre_completo ASC
+        LIMIT 10;
     """)
 
     rows = db.execute(query).fetchall()
@@ -666,9 +653,7 @@ async def get_weekly_user_activity(
                 "user_id": row.user_id,
                 "nombre_completo": row.nombre_completo,
                 "email": row.email,
-                "asignaciones_semana": row.asignaciones_semana,
                 "traducciones_semana": row.traducciones_semana,
-                "actividad_total": row.asignaciones_semana + row.traducciones_semana,
             }
             for row in rows
         ],

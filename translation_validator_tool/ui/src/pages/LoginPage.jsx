@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import HelpModal from '../components/auth/HelpModal';
 import guaraniaLogoNoBG from '../images/logo.svg';
+import WeeklyLeaderboard from '../components/common/WeeklyLeaderboard';
 
 const LoginPage = () => {
   const navigate = useNavigate();

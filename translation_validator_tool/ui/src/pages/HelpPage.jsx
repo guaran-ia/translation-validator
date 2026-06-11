@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Navbar from '../components/common/Navbar';
 import instructivoVideo from '../videos/Instructivo.mp4';
+import WeeklyLeaderboard from '../components/common/WeeklyLeaderboard';
 
 const HelpPage = () => {
   const { user } = useAuth();
@@ -17,14 +18,19 @@ const HelpPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Video instructivo</h1>
-          <p className="mt-2 text-gray-600">
-              A continuación se muestra un video con instrucciones detalladas para traducir correctamente en Mbo'ehara Digital.
+        <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
+          <h1 className="text-3xl font-bold">
+            Video instructivo
+          </h1>
+
+          <p className="mt-2 text-teal-100">
+            Aprende paso a paso cómo traducir correctamente en Mbo'ehara Digital mediante este video explicativo.
           </p>
         </div>
+      </div>
 
         {/* Video Container */}
         <div className="bg-white rounded-lg shadow-lg p-6">
@@ -101,6 +107,9 @@ const HelpPage = () => {
             </div>
           </div>
         </div>
+      </div>
+      <div className="hidden xl:block absolute top-28 right-3">
+        <WeeklyLeaderboard />
       </div>
     </div>
   );

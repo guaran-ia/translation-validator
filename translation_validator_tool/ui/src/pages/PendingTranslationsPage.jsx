@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { annotationsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
+import WeeklyLeaderboard from '../components/common/WeeklyLeaderboard';
 
 // Fisher-Yates shuffle
 const shuffleArray = (arr) => {
@@ -72,8 +73,15 @@ const PendingTranslationsPage = () => {
       
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Traducciones Pendientes</h1>
-          <p className="text-gray-600 mt-2">Anotaciones disponibles para traducir. Click en "✏️ Traducir" para asignarte a ti mismo.</p>
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
+            <h1 className="text-3xl font-bold">
+              Traducciones pendientes
+            </h1>
+
+            <p className="mt-2 text-teal-100">
+              Selecciona las anotaciones que deseas traducir y asígnatelas para comenzar. Para ello, haz clic en el botón "Traducir" y aparecerán en tu sección de "Mis pendientes".
+            </p>
+          </div>
         </div>
 
         {/* Disclaimer */}
@@ -130,9 +138,9 @@ const PendingTranslationsPage = () => {
                     <button
                       onClick={() => handleAssignToMe(annotation)}
                       disabled={assigning}
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 whitespace-nowrap"
+                      className="px-6 py-3 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 whitespace-nowrap"
                     >
-                      {assigning ? '⏳ Asignando...' : '✏️ Traducir'}
+                      {assigning ? '⏳ Asignando...' : 'Traducir'}
                     </button>
                   </div>
                 </div>
@@ -161,6 +169,9 @@ const PendingTranslationsPage = () => {
             </div>
           </>
         )}
+      </div>
+      <div className="hidden xl:block absolute top-28 right-3">
+        <WeeklyLeaderboard />
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import { annotationsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
 import HackathonModal from '../components/auth/HackathonModal';
+import WeeklyLeaderboard from '../components/common/WeeklyLeaderboard';
 
 const TranslatorAnnotationsPage = () => {
   const { user } = useAuth();
@@ -461,8 +462,11 @@ const TranslatorAnnotationsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+
       <Navbar />
+    
       <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
         {/* Navigation Controls */}
         <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
           <div className="flex gap-3">
@@ -487,9 +491,18 @@ const TranslatorAnnotationsPage = () => {
         </div>
 
         {/* Main Content */}
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">📋 Mis pendientes - Traduce las siguientes oraciones:</h1>
+        <div className="mb-6">
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
+            <h1 className="text-3xl font-bold">
+              Mis pendientes
+            </h1>
 
+            <p className="mt-2 text-teal-100">
+              Traduce las siguientes oraciones.
+            </p>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
           {/* Preguntas */}
           {currentAnnotation.question_es && (
           <div className="mb-8">
@@ -668,7 +681,7 @@ const TranslatorAnnotationsPage = () => {
               <button
                 onClick={handleSendTranslation}
                 disabled={submitting || (!formData.question_gn.trim() && !formData.answer_gn.trim())}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                className="px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
               >
                 {submitting ? 'Enviando...' : '✓ Enviar traducción'}
               </button>
@@ -707,6 +720,11 @@ const TranslatorAnnotationsPage = () => {
             </div>
           </div>
         )}
+
+         <div className="absolute top-28 right-3">
+          <WeeklyLeaderboard />
+        </div>
+        </div>
       </div>
       <HackathonModal
         isOpen={showHackModal}
