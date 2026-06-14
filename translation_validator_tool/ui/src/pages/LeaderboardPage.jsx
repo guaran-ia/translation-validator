@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/common/Navbar';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+import { annotationsAPI } from '../services/api';
 
 const LeaderboardPage = () => {
   const [items, setItems] = useState([]);
@@ -10,41 +10,28 @@ const LeaderboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const token = localStorage.getItem('access_token');
-
   useEffect(() => {
     fetchLeaderboard();
   }, []);
 
-  const fetchLeaderboard = async () => {
-    setLoading(true);
-    setError('');
+ const fetchLeaderboard = async () => {
+  setLoading(true);
+  setError('');
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/annotations/weekly-user-activity`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  try {
+    const response = await annotationsAPI.getWeeklyUserActivity();
+    const data = response.data;
 
-      if (!response.ok) {
-        throw new Error('No se pudo cargar el ranking semanal.');
-      }
-
-      const data = await response.json();
-
-      setItems(data.items || []);
-      setWeekStart(data.week_start);
-      setWeekEnd(data.week_end);
-    } catch (err) {
-      console.error(err);
-      setError('No se pudo cargar el ranking. Verifica tu sesión o intenta nuevamente.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setItems(data.items || []);
+    setWeekStart(data.week_start);
+    setWeekEnd(data.week_end);
+  } catch (err) {
+    console.error(err);
+    setError('No se pudo cargar el ranking. Verifica tu sesión o intenta nuevamente.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const topUsers = useMemo(() => {
     return [...items]
