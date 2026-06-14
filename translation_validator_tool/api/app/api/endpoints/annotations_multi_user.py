@@ -33,7 +33,7 @@ router = APIRouter()
 
 LEADERBOARD_CACHE_HOURS = 10
 
-LEADERBOARD_JSON_PATH = Path("../ui/data/leaderboard/weekly-leaderboard.json")
+LEADERBOARD_JSON_PATH = Path("../ui/public/leaderboard/weekly-leaderboard.json")
 # ==================== ANNOTATION ASSIGNMENT ENDPOINTS ====================
 
 @router.get("/{annotation_id}/assignments", response_model=list[AnnotationAssignmentResponse])

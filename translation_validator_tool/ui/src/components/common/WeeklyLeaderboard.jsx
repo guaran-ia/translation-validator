@@ -18,7 +18,7 @@ const WeeklyLeaderboard = ({ source = 'api' }) => {
       let data;
 
       if (source === 'json') {
-        const response = await fetch('../data/leaderboard/weekly-leaderboard.json', {
+        const response = await fetch('/leaderboard/weekly-leaderboard.json', {
           cache: 'no-store',
         });
 
