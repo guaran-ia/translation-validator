@@ -722,7 +722,7 @@ const TranslatorAnnotationsPage = () => {
         )}
 
          <div className="absolute top-28 right-3">
-          <WeeklyLeaderboard />
+          <WeeklyLeaderboard source="api"/>
         </div>
         </div>
       </div>

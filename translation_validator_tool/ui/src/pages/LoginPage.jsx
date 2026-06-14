@@ -254,6 +254,9 @@ const LoginPage = () => {
             </div>
           </div>
         </div>
+        <div className="hidden xl:block fixed right-4 top-48">
+           <WeeklyLeaderboard source="json" />
+        </div>
       </div>
 
       {/* Help Modal */}

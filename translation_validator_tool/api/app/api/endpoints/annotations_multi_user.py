@@ -24,10 +24,16 @@ from app.schemas.annotation_schemas import (
     AnnotationTranslationBase,
 )
 from app.api.deps import get_current_active_user
+import json
+from pathlib import Path
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
 
+LEADERBOARD_CACHE_HOURS = 10
+
+LEADERBOARD_JSON_PATH = Path("../ui/data/leaderboard/weekly-leaderboard.json")
 # ==================== ANNOTATION ASSIGNMENT ENDPOINTS ====================
 
 @router.get("/{annotation_id}/assignments", response_model=list[AnnotationAssignmentResponse])
@@ -602,7 +608,6 @@ async def get_weekly_user_activity(
     Semana: lunes 00:00 hasta domingo 23:59:59.
     Ajusta la hora del servidor restando 3 horas.
     """
-
     query = text("""
         WITH week_range AS (
             SELECT
@@ -638,24 +643,52 @@ async def get_weekly_user_activity(
     rows = db.execute(query).fetchall()
 
     if not rows:
-        return {
+        response_data = {
             "week_start": None,
             "week_end": None,
             "items": [],
             "total": 0,
         }
+    else:
+        response_data = {
+            "week_start": rows[0].week_start.isoformat(),
+            "week_end": rows[0].week_end.isoformat(),
+            "items": [
+                {
+                    "user_id": row.user_id,
+                    "nombre_completo": row.nombre_completo,
+                    "email": row.email,
+                    "traducciones_semana": row.traducciones_semana,
+                }
+                for row in rows
+            ],
+            "total": len(rows),
+        }
+    
+    try:
+        should_update_file = True
 
-    return {
-        "week_start": rows[0].week_start.isoformat(),
-        "week_end": rows[0].week_end.isoformat(),
-        "items": [
-            {
-                "user_id": row.user_id,
-                "nombre_completo": row.nombre_completo,
-                "email": row.email,
-                "traducciones_semana": row.traducciones_semana,
+        if LEADERBOARD_JSON_PATH.exists():
+            last_modified = datetime.fromtimestamp(
+                LEADERBOARD_JSON_PATH.stat().st_mtime
+            )
+
+            should_update_file = datetime.now() - last_modified >= timedelta(
+                hours=LEADERBOARD_CACHE_HOURS
+            )
+
+        if should_update_file:
+            LEADERBOARD_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+            public_data = {
+                **response_data,
+                "updated_at": datetime.now().isoformat(timespec="seconds"),
             }
-            for row in rows
-        ],
-        "total": len(rows),
-    }
+
+            with open(LEADERBOARD_JSON_PATH, "w", encoding="utf-8") as file:
+                json.dump(public_data, file, ensure_ascii=False, indent=2)
+
+    except Exception as e:
+        print(f"Error generando JSON público del leaderboard: {e}")
+
+    return response_data

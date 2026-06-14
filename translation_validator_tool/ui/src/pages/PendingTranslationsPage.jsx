@@ -171,7 +171,7 @@ const PendingTranslationsPage = () => {
         )}
       </div>
       <div className="hidden xl:block absolute top-28 right-3">
-        <WeeklyLeaderboard />
+        <WeeklyLeaderboard source="api"/>
       </div>
     </div>
   );
