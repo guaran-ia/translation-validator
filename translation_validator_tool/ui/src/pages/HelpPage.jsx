@@ -108,7 +108,7 @@ const HelpPage = () => {
           </div>
         </div>
       </div>
-      <div className="hidden xl:block absolute top-28 right-3">
+      <div className="hidden xl:block absolute top-28 right-1">
         <WeeklyLeaderboard source="api"/>
       </div>
     </div>

@@ -72,9 +72,9 @@ const LoginPage = () => {
 
       {/* Main Container */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-0 items-center">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(620px,1fr)_420px_320px] gap-8 items-start">
           {/* Left Section - Branding (Hidden on mobile, 60% on desktop) */}
-          <div className="hidden lg:flex lg:col-span-2 flex-col justify-center items-start space-y-8 pr-8">
+          <div className="hidden xl:flex flex-col justify-center items-start space-y-8 pr-8">
             {/* Logo - image plus descriptive text */}
             <div className="flex items-center space-x-4">
               <img src={guaraniaLogoNoBG} alt="Mbo'ehara Digital" className="h-14 w-auto" />
@@ -253,9 +253,9 @@ const LoginPage = () => {
               </div>
             </div>
           </div>
+            <div className="hidden 2xl:flex justify-center">
+          <WeeklyLeaderboard source="json" />
         </div>
-        <div className="hidden xl:block fixed right-4 top-48">
-           <WeeklyLeaderboard source="json" />
         </div>
       </div>
 

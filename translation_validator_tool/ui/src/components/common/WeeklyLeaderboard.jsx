@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+import { annotationsAPI } from '../../services/api';
 
 const WeeklyLeaderboard = ({ source = 'api' }) => {
   const [users, setUsers] = useState([]);
@@ -16,28 +15,23 @@ const WeeklyLeaderboard = ({ source = 'api' }) => {
     setLoading(true);
 
     try {
-      let response;
+      let data;
 
       if (source === 'json') {
-        response = await fetch('../data/leaderboard/weekly-leaderboard.json', {
-          cache: 'no-store', 
+        const response = await fetch('../data/leaderboard/weekly-leaderboard.json', {
+          cache: 'no-store',
         });
+
+        if (!response.ok) {
+          setUsers([]);
+          return;
+        }
+
+        data = await response.json();
       } else {
-        const token = localStorage.getItem('access_token');
-
-        response = await fetch(`${API_BASE_URL}/api/annotations/weekly-user-activity`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await annotationsAPI.getWeeklyUserActivity();
+        data = response.data;
       }
-
-      if (!response.ok) {
-        setUsers([]);
-        return;
-      }
-
-      const data = await response.json();
 
       setUsers(data.items || []);
       setWeekStart(data.week_start);
@@ -51,9 +45,9 @@ const WeeklyLeaderboard = ({ source = 'api' }) => {
   };
 
   return (
-    <aside className="w-80 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+    <aside className="hidden 2xl:block w-72 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <h3 className="text-sm font-bold text-gray-900">
+        <h3 className="text-sm 2xl:text-xs font-bold text-gray-900">
           Ranking semanal de traducciones
         </h3>
       </div>
@@ -71,7 +65,7 @@ const WeeklyLeaderboard = ({ source = 'api' }) => {
           {users.map((user, index) => (
             <div
               key={user.user_id || `${user.nombre_completo}-${index}`}
-              className="flex items-center justify-between px-4 py-3 hover:bg-gray-50"
+              className="flex items-center justify-between px-4 py-3 2xl:px-3 2xl:py-2 hover:bg-gray-50"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className="w-6 text-sm font-bold text-teal-700">

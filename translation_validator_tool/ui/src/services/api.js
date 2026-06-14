@@ -180,6 +180,8 @@ export const annotationsAPI = {
     api.get('/annotations/my-assignments'),
   getMyTranslations: () =>
     api.get('/annotations/my-translations'),
+  getWeeklyUserActivity: () =>
+  api.get('/annotations/weekly-user-activity'),
 };
 
 export default api;
