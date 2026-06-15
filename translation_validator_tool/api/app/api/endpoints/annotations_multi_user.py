@@ -33,7 +33,11 @@ router = APIRouter()
 
 LEADERBOARD_CACHE_HOURS = 10
 
-LEADERBOARD_JSON_PATH = Path("../ui/public/leaderboard/weekly-leaderboard.json")
+LEADERBOARD_JSON_PATHS = [
+    Path("../ui/public/leaderboard/weekly-leaderboard.json"),
+    Path("../ui/dist/leaderboard/weekly-leaderboard.json"),
+]
+
 # ==================== ANNOTATION ASSIGNMENT ENDPOINTS ====================
 
 @router.get("/{annotation_id}/assignments", response_model=list[AnnotationAssignmentResponse])
@@ -666,29 +670,30 @@ async def get_weekly_user_activity(
         }
     
     try:
-        should_update_file = True
+        public_data = {
+            **response_data,
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+        }
 
-        if LEADERBOARD_JSON_PATH.exists():
-            last_modified = datetime.fromtimestamp(
-                LEADERBOARD_JSON_PATH.stat().st_mtime
-            )
+        for leaderboard_path in LEADERBOARD_JSON_PATHS:
+            should_update_file = True
 
-            should_update_file = datetime.now() - last_modified >= timedelta(
-                hours=LEADERBOARD_CACHE_HOURS
-            )
+            if leaderboard_path.exists():
+                last_modified = datetime.fromtimestamp(
+                    leaderboard_path.stat().st_mtime
+                )
 
-        if should_update_file:
-            LEADERBOARD_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
+                should_update_file = datetime.now() - last_modified >= timedelta(
+                    hours=LEADERBOARD_CACHE_HOURS
+                )
 
-            public_data = {
-                **response_data,
-                "updated_at": datetime.now().isoformat(timespec="seconds"),
-            }
+            if should_update_file:
+                leaderboard_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(LEADERBOARD_JSON_PATH, "w", encoding="utf-8") as file:
-                json.dump(public_data, file, ensure_ascii=False, indent=2)
+                with open(leaderboard_path, "w", encoding="utf-8") as file:
+                    json.dump(public_data, file, ensure_ascii=False, indent=2)
 
     except Exception as e:
         print(f"Error generando JSON público del leaderboard: {e}")
-
+        
     return response_data
