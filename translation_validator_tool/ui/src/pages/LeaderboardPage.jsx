@@ -90,8 +90,7 @@ const LeaderboardPage = () => {
 
         {!loading && !error && topUsers.length === 0 && (
           <div className="bg-white rounded-lg shadow-md p-10 text-center">
-            <div className="text-5xl mb-4">📊</div>
-            <h2 className="text-xl font-bold text-gray-900">Sin traducciones esta semana</h2>
+            <h2 className="text-xl font-bold text-gray-900">Sin traducciones esta semana.</h2>
             <p className="text-gray-600 mt-2">
               Aún no hay traducciones registradas en la semana actual.
             </p>
