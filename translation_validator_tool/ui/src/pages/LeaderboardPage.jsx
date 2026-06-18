@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/common/Navbar';
 
 import { annotationsAPI } from '../services/api';
@@ -65,10 +66,21 @@ const LeaderboardPage = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
-            <h1 className="text-3xl font-bold">Ranking semanal</h1>
-            <p className="mt-2 text-teal-100">
-              Ranking de las 10 personas con más traducciones realizadas en la semana.
-            </p>
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold">Ranking semanal</h1>
+                <p className="mt-2 text-teal-100">
+                  Ranking de las 10 personas con más traducciones realizadas en la semana.
+                </p>
+              </div>
+
+              <Link
+                to="/leaderboard-general"
+                className="inline-flex items-center justify-center px-4 py-2 bg-white/10 border border-white/20 rounded-full text-sm text-white hover:bg-white/20 transition"
+              >
+                Ver ranking general
+              </Link>
+            </div>
 
             <div className="mt-4 inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 rounded-full text-sm">
               Semana actual: {weekStart || '-'} al {weekEnd || '-'}

@@ -116,6 +116,12 @@ export const validationsAPI = {
     api.get(`/validations/by-translation/${translationId}`),
 };
 
+// Validator API
+export const validatorAPI = {
+  getRandomTranslations: (limit = 10) =>
+    api.get(`/validator/random-translations?limit=${limit}`),
+};
+
 // Suggestions API
 export const suggestionsAPI = {
   create: (data) => 
@@ -181,7 +187,9 @@ export const annotationsAPI = {
   getMyTranslations: () =>
     api.get('/annotations/my-translations'),
   getWeeklyUserActivity: () =>
-  api.get('/annotations/weekly-user-activity'),
+    api.get('/annotations/weekly-user-activity'),
+  getAllTimeUserActivity: () =>
+    api.get('/annotations/all-time-user-activity'),
 };
 
 export default api;

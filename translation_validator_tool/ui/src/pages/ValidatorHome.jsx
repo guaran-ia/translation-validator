@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 // Componentes
 import Navbar from '../components/common/Navbar';
 import CorrectnessButtons from '../components/translation/CorrectnessButtons';
 import ScoreSelector from '../components/translation/ScoreSelector';
 import NotesTextarea from '../components/translation/NotesTextarea';
+import { validatorAPI } from '../services/api';
 
 // Mock data
 const mockTranslations = [
@@ -71,6 +72,19 @@ const ValidatorHome = () => {
 
   const currentTranslation = mockTranslations[currentIndex];
 
+  useEffect(() => {
+    preloadValidatorTranslations();
+  }, []);
+
+  const preloadValidatorTranslations = async () => {
+    try {
+      const response = await validatorAPI.getRandomTranslations(10);
+      console.log('Traducciones precargadas para validar:', response.data);
+    } catch (error) {
+      console.error('Error precargando traducciones para validar:', error);
+    }
+  };
+
   const handleNextTranslation = async () => {
     setLoading(true);
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -128,9 +142,9 @@ const ValidatorHome = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-lg shadow-md p-10 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
           </div>
         </div>
       </div>
@@ -140,39 +154,48 @@ const ValidatorHome = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Controls */}
-        <div className="mb-6 flex items-center justify-between bg-white p-4 rounded-lg shadow-sm">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-md">
           <div className="flex gap-3">
             <button
               onClick={handlePreviousTranslation}
               disabled={loading}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition font-medium"
             >
               ← Anterior
             </button>
             <button
               onClick={handleNextTranslation}
               disabled={loading}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition font-medium"
             >
               Siguiente →
             </button>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 font-medium">
             Traducción {currentIndex + 1} de {mockTranslations.length}
           </div>
         </div>
 
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
+            <h1 className="text-3xl font-bold">Validaciones pendientes</h1>
+            <p className="mt-2 text-teal-100">
+              Revisa traducciones en español y guaraní, califica su calidad y sugiere mejoras cuando sea necesario.
+            </p>
+          </div>
+        </div>
+
         {/* Translation Card */}
-        <div className="card">
+        <div className="bg-white rounded-lg shadow-md p-6">
         {/* Translation Info */}
-        <div className="mb-6 p-4 bg-white rounded-lg border-gray-200">
+        <div className="mb-6 p-4 bg-teal-50 border border-teal-100 rounded-lg">
           <div>
-            <h3 className="text-sm font-semibold text-gray-700">
+            <h3 className="text-sm font-semibold text-teal-800">
               Traducción a validar
             </h3>
-            <p className="text-lg font-medium text-gray-900 mt-1">
+            <p className="text-lg font-bold text-gray-900 mt-1">
               ID de traducción: #{currentTranslation.id}
             </p>
           </div>
@@ -187,7 +210,7 @@ const ValidatorHome = () => {
                 <h3 className="text-lg font-semibold text-gray-800">Español (texto original)</h3>
                 <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Original</span>
               </div>
-              <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
                 <p className="text-gray-900 leading-relaxed">{currentTranslation.spanish_text}</p>
               </div>
             </div>
@@ -198,7 +221,7 @@ const ValidatorHome = () => {
                 <h3 className="text-lg font-semibold text-gray-800">Guaraní (traducción)</h3>
                 <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Traducción</span>
               </div>
-              <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
                 <p className="text-gray-900 leading-relaxed">{currentTranslation.guarani_text}</p>
               </div>
             </div>

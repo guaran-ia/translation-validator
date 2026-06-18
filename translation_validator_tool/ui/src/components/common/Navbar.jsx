@@ -7,6 +7,7 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [rankingOpen, setRankingOpen] = useState(false);
   const role = !user ? null : (user.role || (user.is_superuser ? 'admin' : 'validador'));
   const isAdmin = role === 'admin';
   const isValidator = role === 'validador';
@@ -38,7 +39,25 @@ const Navbar = () => {
                       <a href="/pending-translations" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Traducciones pendientes</a>
                 )}
                 {isTranslator && (
-                      <a href="/leaderboard" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ranking semanal</a>
+                  <div className="relative">
+                    <button
+                      onClick={() => setRankingOpen(!rankingOpen)}
+                      className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium flex items-center transition-colors"
+                      aria-expanded={rankingOpen}
+                    >
+                      Ranking
+                      <svg className="ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={rankingOpen ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+                      </svg>
+                    </button>
+
+                    {rankingOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-teal-700 rounded shadow-lg z-20">
+                        <a href="/leaderboard" className="block px-4 py-2 text-sm text-teal-100 hover:bg-slate-700 hover:text-teal-300 transition-colors">Semanal</a>
+                        <a href="/leaderboard-general" className="block px-4 py-2 text-sm text-teal-100 hover:bg-slate-700 hover:text-teal-300 transition-colors">General</a>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {isTranslator && (
                     <Link to="/help" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ayuda</Link>
@@ -134,8 +153,26 @@ const Navbar = () => {
                      {isTranslator && (
                       <Link to="/help" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Ayuda</Link>
                     )}
-                     {isTranslator && (
-                      <a href="/leaderboard" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ranking semanal</a>
+                    {isTranslator && (
+                      <div>
+                        <button
+                          onClick={() => setRankingOpen(!rankingOpen)}
+                          className="w-full flex items-center justify-between text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors"
+                          aria-expanded={rankingOpen}
+                        >
+                          Ranking
+                          <svg className="ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={rankingOpen ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+                          </svg>
+                        </button>
+
+                        {rankingOpen && (
+                          <div className="ml-4 mt-1 space-y-1">
+                            <a href="/leaderboard" className="block text-teal-100 px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Semanal</a>
+                            <a href="/leaderboard-general" className="block text-teal-100 px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">General</a>
+                          </div>
+                        )}
+                      </div>
                     )}
                     {isValidator && (
                       <a href="/history" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Historial</a>

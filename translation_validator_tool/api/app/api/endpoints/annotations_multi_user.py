@@ -697,3 +697,60 @@ async def get_weekly_user_activity(
         print(f"Error generando JSON público del leaderboard: {e}")
         
     return response_data
+
+
+@router.get("/all-time-user-activity", response_model=dict)
+async def get_all_time_user_activity(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Obtiene las traducciones por usuario desde el inicio de la plataforma.
+    """
+    query = text("""
+        WITH translation_stats AS (
+            SELECT
+                at.user_id,
+                COUNT(*) AS traducciones_total,
+                MIN(at.created_at) AS primera_traduccion,
+                MAX(at.created_at) AS ultima_traduccion
+            FROM annotation_translations at
+            GROUP BY at.user_id
+        )
+        SELECT
+            u.id AS user_id,
+            u.nombre_completo,
+            u.email,
+            t.traducciones_total,
+            t.primera_traduccion,
+            t.ultima_traduccion
+        FROM users u
+        INNER JOIN translation_stats t ON t.user_id = u.id
+        ORDER BY
+            t.traducciones_total DESC,
+            u.nombre_completo ASC
+        LIMIT 10;
+    """)
+
+    rows = db.execute(query).fetchall()
+
+    if not rows:
+        return {
+            "items": [],
+            "total": 0,
+        }
+
+    return {
+        "items": [
+            {
+                "user_id": row.user_id,
+                "nombre_completo": row.nombre_completo,
+                "email": row.email,
+                "traducciones_total": row.traducciones_total,
+                "primera_traduccion": row.primera_traduccion.isoformat() if row.primera_traduccion else None,
+                "ultima_traduccion": row.ultima_traduccion.isoformat() if row.ultima_traduccion else None,
+            }
+            for row in rows
+        ],
+        "total": len(rows),
+    }
