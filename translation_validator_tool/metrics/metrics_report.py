@@ -698,6 +698,127 @@ ORDER BY
     return True
 
 
+def generate_user_translations_excel(conn, output_path):
+    query = f"""
+SELECT
+    u.id AS user_id,
+    u.nombre_completo,
+    u.email,
+    at.created_at{TIME_SUB_SQL} AS fecha_traduccion,
+    a.id AS annotation_id,
+    a.question_es,
+    a.answer_es,
+    at.question_gn,
+    at.answer_gn,
+    a.source,
+    a.answer_number,
+    a.equation_solution
+FROM annotation_translations at
+INNER JOIN users u
+    ON u.id = at.user_id
+INNER JOIN annotations a
+    ON a.id = at.annotation_id
+ORDER BY
+    u.nombre_completo ASC,
+    at.created_at ASC;
+    """
+
+    result = execute_query(conn, query)
+
+    if result is None:
+        print("No se obtuvo resultado para la query de traducciones por usuario. Comprueba la query y la conexión.")
+        return False
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Traducciones por usuario"
+
+    ws["A1"] = "Última actualización"
+    ws["B1"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    ws["A3"] = "Todas las traducciones por usuario"
+    ws["A3"].font = Font(size=14, bold=True)
+
+    headers = [
+        "Nombre completo",
+        "Email",
+        "Fecha traducción",
+        "ID annotation",
+        "Pregunta original ES",
+        "Respuesta original ES",
+        "Pregunta traducida GN",
+        "Respuesta traducida GN",
+        "Fuente",
+        "Número respuesta",
+        "Solución ecuación",
+    ]
+
+    ws.append([])
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=5, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+
+    ws.freeze_panes = "A6"
+
+    current_user_id = None
+    row_index = 6
+
+    for row in result:
+        user_id = row[0]
+        full_name = row[1] or ''
+        email = row[2] or ''
+        fecha_traduccion = row[3]
+
+        if user_id != current_user_id:
+            current_user_id = user_id
+            ws.append([f"Usuario: {full_name} - {email}"])
+            ws.merge_cells(start_row=row_index, start_column=1, end_row=row_index, end_column=len(headers))
+            group_cell = ws.cell(row=row_index, column=1)
+            group_cell.font = Font(bold=True)
+            group_cell.fill = PatternFill(start_color="D9EAF7", fill_type="solid")
+            row_index += 1
+
+        ws.append([
+            full_name,
+            email,
+            fecha_traduccion.strftime('%Y-%m-%d %H:%M:%S') if fecha_traduccion else '',
+            row[4],
+            row[5] or '',
+            row[6] or '',
+            row[7] or '',
+            row[8] or '',
+            row[9] or '',
+            row[10] if row[10] is not None else '',
+            row[11] or '',
+        ])
+        row_index += 1
+
+    if row_index > 6:
+        ws.auto_filter.ref = f"A5:{get_column_letter(len(headers))}{row_index - 1}"
+
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except Exception:
+                pass
+
+        ws.column_dimensions[col_letter].width = min(max_length + 2, 80)
+
+    file_path = output_path / "Traducciones_Por_Usuario.xlsx"
+    wb.save(file_path)
+
+    print(f"Excel de traducciones por usuario generado en: {file_path}")
+    return True
+
+
 
 def get_activity_by_weekday(conn, output_path):
     """
@@ -1113,6 +1234,7 @@ def main():
         update_metrics_docx(metrics_data, documents_folder)
         #generate_users_csv(conn, documents_folder)
         generate_users_excel(conn, documents_folder)
+        generate_user_translations_excel(conn, documents_folder)
         # Generar actividad por día (PNG)
         get_activity_by_weekday(conn, documents_folder)
         # Generar traducciones por día (PNG)
