@@ -458,6 +458,56 @@ async def bulk_create_translations(
 
 # ==================== ANNOTATION LISTING ENDPOINTS ====================
 
+@router.post("/my-assignments/cleanup-completed", response_model=dict)
+async def cleanup_completed_assignments(
+    request_data: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Remove current user's pending assignments when annotations already have 3 translations.
+    """
+    annotation_ids = request_data.get("annotation_ids") or []
+    annotation_ids = [ann_id for ann_id in annotation_ids if isinstance(ann_id, int)]
+
+    if not annotation_ids:
+        return {
+            "removed_count": 0,
+            "removed_annotation_ids": [],
+        }
+
+    assignments = db.query(AnnotationAssignment).filter(
+        and_(
+            AnnotationAssignment.user_id == current_user.id,
+            AnnotationAssignment.annotation_id.in_(annotation_ids),
+        )
+    ).all()
+
+    removed_annotation_ids = []
+
+    for assignment in assignments:
+        translation_count = db.query(func.count(AnnotationTranslation.id)).filter(
+            AnnotationTranslation.annotation_id == assignment.annotation_id
+        ).scalar() or 0
+
+        if translation_count >= 3:
+            annotation = db.query(Annotation).filter(
+                Annotation.id == assignment.annotation_id
+            ).first()
+            if annotation:
+                annotation.translated = True
+
+            removed_annotation_ids.append(assignment.annotation_id)
+            db.delete(assignment)
+
+    db.commit()
+
+    return {
+        "removed_count": len(removed_annotation_ids),
+        "removed_annotation_ids": removed_annotation_ids,
+    }
+
+
 @router.get("/my-assignments", response_model=dict)
 async def get_my_assignments(
     skip: int = Query(0, ge=0),

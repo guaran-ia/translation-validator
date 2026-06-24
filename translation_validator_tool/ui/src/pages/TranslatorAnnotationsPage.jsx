@@ -60,8 +60,23 @@ const TranslatorAnnotationsPage = () => {
     try {
       // Usar el nuevo endpoint para obtener solo las anotaciones asignadas al usuario actual
       const res = await annotationsAPI.getMyAssignments();
-      const annotationsData = res?.data?.items || res?.data || [];
+      let annotationsData = res?.data?.items || res?.data || [];
       console.log('DEBUG: annotationsData from API:', annotationsData);
+      
+      if (annotationsData.length > 0) {
+        try {
+          const cleanupRes = await annotationsAPI.cleanupCompletedAssignments(
+            annotationsData.map(ann => ann.id)
+          );
+          const removedIds = new Set(cleanupRes?.data?.removed_annotation_ids || []);
+          annotationsData = annotationsData.filter(ann => !removedIds.has(ann.id));
+          if (removedIds.size > 0) {
+            toast.info(`${removedIds.size} anotación(es) ya completada(s) fueron removidas de tus pendientes.`);
+          }
+        } catch (cleanupErr) {
+          console.error('Error cleaning completed assignments:', cleanupErr);
+        }
+      }
       
       if (annotationsData && annotationsData.length > 0) {
         // Las anotaciones ya vienen completas del backend
@@ -269,8 +284,8 @@ const TranslatorAnnotationsPage = () => {
       const s = sourceText.trim().length;
       const t = translatedText.trim().length;
       if (s === 0) return true;
-      const min = Math.ceil(s * 0.5);
-      const max = Math.floor(s * 1.7);
+      const min = Math.ceil(s * 0.35);
+      const max = Math.floor(s * 2.0);
       return { valid: t >= min && t <= max, min, max };
     };
 

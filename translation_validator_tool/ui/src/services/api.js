@@ -184,6 +184,8 @@ export const annotationsAPI = {
     api.post('/annotations/translations/bulk', data),
   getMyAssignments: () =>
     api.get('/annotations/my-assignments'),
+  cleanupCompletedAssignments: (annotationIds) =>
+    api.post('/annotations/my-assignments/cleanup-completed', { annotation_ids: annotationIds }),
   getMyTranslations: () =>
     api.get('/annotations/my-translations'),
   getWeeklyUserActivity: () =>
