@@ -19,6 +19,7 @@ eval "$("$PYENV_ROOT/bin/pyenv" init -)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METRICS_SCRIPT="$SCRIPT_DIR/metrics_report.py"
+RANKING_TRANSLATIONS_FILE="$SCRIPT_DIR/documents/Ranking_Traducciones_Por_Fecha.docx"
 REQUIREMENTS_FILE="$SCRIPT_DIR/requirements_metrics.txt"
 
 LOG_DIR="$SCRIPT_DIR/logsMetrics"
@@ -231,6 +232,23 @@ if [ -f "$ACTIVIDAD_GLOBAL_DIA_HORA_IMG" ]; then
 else
     log_error "El mapa de calor no fue generado: $ACTIVIDAD_GLOBAL_DIA_HORA_IMG"
     exit 1
+fi
+
+# ============================================
+# SUBIDA WORD RANKING TRADUCCIONES POR FECHA
+# ============================================
+
+if [ -f "$RANKING_TRANSLATIONS_FILE" ]; then
+    log_message "Subiendo reporte ranking de traducciones a Google Drive..."
+
+    rclone copyto \
+        "$RANKING_TRANSLATIONS_FILE" \
+        "$DRIVE_REMOTE/Ranking_Traducciones_Por_Fecha.docx" \
+        >> "$LOG_FILE" 2>&1
+
+    log_message "Reporte ranking de traducciones actualizado en Google Drive"
+else
+    log_message "Reporte ranking de traducciones no existe, se omite subida"
 fi
 
 exit 0

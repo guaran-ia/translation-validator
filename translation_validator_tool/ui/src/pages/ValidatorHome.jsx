@@ -7,42 +7,7 @@ import ScoreSelector from '../components/translation/ScoreSelector';
 import NotesTextarea from '../components/translation/NotesTextarea';
 import { validatorAPI } from '../services/api';
 
-// Mock data
-const mockTranslations = [
-  {
-    id: 1,
-    spanish_text: 'El niño come una manzana en el parque.',
-    guarani_text: "El niño come una manzana en el parque.",
-    source: 'Literatura infantil',
-    author: 'Juan Rodríguez',
-    author_id: 42,
-    direction: 'sp-gn',
-    is_original: true,
-    validation_count: 2
-  },
-  {
-    id: 2,
-    spanish_text: 'La casa está cerca del río.',
-    guarani_text: 'Ty rupive ysype rire peguarã.',
-    source: 'Documento administrativo',
-    author: 'María García',
-    author_id: 15,
-    direction: 'sp-gn',
-    is_original: true,
-    validation_count: 1
-  },
-  {
-    id: 3,
-    spanish_text: 'Necesitamos ayuda para el proyecto.',
-    guarani_text: 'Pytyvõta yvoty´i sy tat-ê ñaê.',
-    source: 'Comunicación empresarial',
-    author: 'Carlos López',
-    author_id: 28,
-    direction: 'sp-gn',
-    is_original: false,
-    validation_count: 0
-  }
-];
+const VALIDATOR_TRANSLATION_STORAGE_KEY = 'validator_current_translation';
 
 // Caracteres especiales Guaraní
 const specialChars = [
@@ -53,8 +18,8 @@ const specialChars = [
 ];
 
 const ValidatorHome = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [currentTranslation, setCurrentTranslation] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
 
   const [suggestionFormData, setSuggestionFormData] = useState({
@@ -70,41 +35,70 @@ const ValidatorHome = () => {
     notes: ''
   });
 
-  const currentTranslation = mockTranslations[currentIndex];
-
   useEffect(() => {
-    preloadValidatorTranslations();
+    loadStoredOrFetchTranslation();
   }, []);
 
-  const preloadValidatorTranslations = async () => {
+  const normalizeValidatorTranslation = (item) => {
+    if (!item) return null;
+
+    const translation = item.translation || item;
+    const annotation = item.annotation || item;
+    const translator = item.translator || {};
+
+    return {
+      id: translation.id || item.id,
+      annotation_id: translation.annotation_id || annotation.id,
+      question_es: annotation.question_es || '',
+      answer_es: annotation.answer_es || '',
+      question_gn: translation.question_gn || '',
+      answer_gn: translation.answer_gn || '',
+      source: annotation.source || '',
+      translator_name: translator.nombre_completo || translator.username || '',
+      translator_id: translator.user_id || translation.user_id,
+      validation_count: item.validation_count || 0,
+      user_has_validated: item.user_has_validated || false
+    };
+  };
+
+  const extractTranslationFromResponse = (data) => {
+    if (Array.isArray(data)) return data[0] || null;
+    if (Array.isArray(data?.items)) return data.items[0] || null;
+    return data || null;
+  };
+
+  const loadStoredOrFetchTranslation = async () => {
     try {
-      const response = await validatorAPI.getRandomTranslations(10);
-      console.log('Traducciones precargadas para validar:', response.data);
+      const storedTranslation = localStorage.getItem(VALIDATOR_TRANSLATION_STORAGE_KEY);
+      if (storedTranslation) {
+        const parsedTranslation = JSON.parse(storedTranslation);
+        setCurrentTranslation(parsedTranslation);
+        setLoading(false);
+        return;
+      }
     } catch (error) {
-      console.error('Error precargando traducciones para validar:', error);
+      console.error('Error leyendo traducción guardada:', error);
+      localStorage.removeItem(VALIDATOR_TRANSLATION_STORAGE_KEY);
     }
+
+    await preloadValidatorTranslation();
   };
 
-  const handleNextTranslation = async () => {
+  const preloadValidatorTranslation = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setCurrentIndex((prev) => (prev + 1) % mockTranslations.length);
-    resetForm();
-    resetSuggestionForm();
-    setLoading(false);
-  };
-
-  const handlePreviousTranslation = async () => {
-    setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setCurrentIndex((prev) => (prev - 1 + mockTranslations.length) % mockTranslations.length);
-    resetForm();
-    resetSuggestionForm();
-    setLoading(false);
-  };
-
-  const resetForm = () => {
-    setFormData({ correctness: '', fluency_score: null, accuracy_score: null, notes: '' });
+    try {
+      const response = await validatorAPI.getRandomTranslations(1);
+      const translation = normalizeValidatorTranslation(extractTranslationFromResponse(response.data));
+      setCurrentTranslation(translation);
+      if (translation) {
+        localStorage.setItem(VALIDATOR_TRANSLATION_STORAGE_KEY, JSON.stringify(translation));
+      }
+    } catch (error) {
+      console.error('Error precargando traducción para validar:', error);
+      setCurrentTranslation(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetSuggestionForm = () => {
@@ -115,12 +109,6 @@ const ValidatorHome = () => {
   const handleFluencySelect = (score) => setFormData(prev => ({ ...prev, fluency_score: score }));
   const handleAccuracySelect = (score) => setFormData(prev => ({ ...prev, accuracy_score: score }));
   const handleNotesChange = (notes) => setFormData(prev => ({ ...prev, notes }));
-
-  const handleSubmitValidation = () => {
-    alert('Validación enviada (modo mockup)');
-    resetForm();
-    handleNextTranslation();
-  };
 
   const handleSuggestionSubmit = () => {
     alert('Sugerencia enviada (modo mockup)');
@@ -151,33 +139,24 @@ const ValidatorHome = () => {
     );
   }
 
+  if (!currentTranslation) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-lg shadow-md p-10 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay traducciones para validar</h2>
+            <p className="text-gray-600">No se pudo cargar una traducción pendiente desde el endpoint.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Navigation Controls */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-lg shadow-md">
-          <div className="flex gap-3">
-            <button
-              onClick={handlePreviousTranslation}
-              disabled={loading}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition font-medium"
-            >
-              ← Anterior
-            </button>
-            <button
-              onClick={handleNextTranslation}
-              disabled={loading}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition font-medium"
-            >
-              Siguiente →
-            </button>
-          </div>
-          <div className="text-sm text-gray-600 font-medium">
-            Traducción {currentIndex + 1} de {mockTranslations.length}
-          </div>
-        </div>
-
         <div className="mb-8">
           <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
             <h1 className="text-3xl font-bold">Validaciones pendientes</h1>
@@ -196,7 +175,7 @@ const ValidatorHome = () => {
               Traducción a validar
             </h3>
             <p className="text-lg font-bold text-gray-900 mt-1">
-              ID de traducción: #{currentTranslation.id}
+              ID: #{currentTranslation.id}
             </p>
           </div>
         </div>
@@ -211,7 +190,18 @@ const ValidatorHome = () => {
                 <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Original</span>
               </div>
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
-                <p className="text-gray-900 leading-relaxed">{currentTranslation.spanish_text}</p>
+                {currentTranslation.question_es && (
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Pregunta</p>
+                    <p className="text-gray-900 leading-relaxed">{currentTranslation.question_es}</p>
+                  </div>
+                )}
+                {currentTranslation.answer_es && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Respuesta</p>
+                    <p className="text-gray-900 leading-relaxed">{currentTranslation.answer_es}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -222,7 +212,18 @@ const ValidatorHome = () => {
                 <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Traducción</span>
               </div>
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
-                <p className="text-gray-900 leading-relaxed">{currentTranslation.guarani_text}</p>
+                {currentTranslation.question_gn && (
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Pregunta</p>
+                    <p className="text-gray-900 leading-relaxed">{currentTranslation.question_gn}</p>
+                  </div>
+                )}
+                {currentTranslation.answer_gn && (
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-1">Respuesta</p>
+                    <p className="text-gray-900 leading-relaxed">{currentTranslation.answer_gn}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -268,13 +269,21 @@ const ValidatorHome = () => {
               disabled={false}
             />
 
-            <div className="mb-6 justify-center flex">
-              <button
-                onClick={handleSubmitValidation}
-                className="flex-1 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Enviar validación
-              </button>
+            <div className="border-t pt-6">
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium"
+                >
+                  Siguiente evaluación
+                </button>
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                >
+                  ✓ Enviar evaluación
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -297,7 +306,7 @@ const ValidatorHome = () => {
                   Español (referencia)
                 </label>
                 <div className="p-3 bg-gray-100 rounded-lg text-gray-900 break-words">
-                  {currentTranslation.spanish_text}
+                  {currentTranslation.question_es || currentTranslation.answer_es}
                 </div>
               </div>
 
@@ -307,7 +316,7 @@ const ValidatorHome = () => {
                   Guaraní (referencia)
                 </label>
                 <div className="p-3 bg-gray-100 rounded-lg text-gray-900 break-words">
-                  {currentTranslation.guarani_text}
+                  {currentTranslation.question_gn || currentTranslation.answer_gn}
                 </div>
               </div>
 

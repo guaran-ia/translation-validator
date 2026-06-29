@@ -97,7 +97,7 @@ const PendingTranslationsPage = () => {
           </div>
         ) : annotations.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <p className="text-gray-600 text-lg">✅ No hay anotaciones pendientes de traducir</p>
+            <p className="text-gray-600 text-lg">No hay anotaciones pendientes de traducir</p>
           </div>
         ) : (
           <>

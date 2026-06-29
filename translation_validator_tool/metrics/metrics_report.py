@@ -150,6 +150,10 @@ def get_assignment_metrics(conn):
         "SELECT COUNT(*) FROM annotation_assignments;"
     )
     metrics['asignaciones_totales'] = result[0][0] if result else 0
+
+    # Total de premisas disponibles en la plataforma
+    result = execute_query(conn, "SELECT COUNT(*) FROM annotations;")
+    metrics['annotations_totales'] = result[0][0] if result else 0
     
     # Asignaciones en los últimos 2 días
     query_recent = f"""
@@ -383,7 +387,7 @@ def create_metrics_table_in_docx(doc, metrics_data):
     
     doc.add_paragraph(f"Total de premisas asignadas: {metrics_data['asignaciones']['asignaciones_totales']}")
     doc.add_paragraph(f"Premisas asignadas (últimos 2 días): {metrics_data['asignaciones']['asignaciones_2dias']}")
-    doc.add_paragraph(f"Premisas tomadas por usuarios: {metrics_data['asignaciones']['annotations_tomadas_usuarios']}/720")
+    doc.add_paragraph(f"Premisas tomadas por usuarios: {metrics_data['asignaciones']['annotations_tomadas_usuarios']}/{metrics_data['asignaciones']['annotations_totales']}")
     
     # TRADUCCIONES
     heading_trans = doc.add_paragraph(" MÉTRICAS DE TRADUCCIONES")
