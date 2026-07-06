@@ -35,6 +35,9 @@ class Annotation(Base):
     
     # Translation status: true when annotation has 3 translations (one from each of 3 users)
     translated: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Validation status: reserved for the annotation-level validation workflow.
+    validated: Mapped[bool] = mapped_column(Boolean, default=False)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)

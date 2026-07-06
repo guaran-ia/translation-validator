@@ -30,6 +30,7 @@ class AnnotationTranslationResponse(AnnotationTranslationBase):
     id: int
     annotation_id: int
     user_id: int
+    validated: bool
     created_at: datetime
 
     class Config:
@@ -77,6 +78,7 @@ class AnnotationUpdate(BaseModel):
     equation_solution: Optional[str] = None
     source: Optional[str] = None
     translated: Optional[bool] = None
+    validated: Optional[bool] = None
 
 
 class AnnotationResponse(BaseModel):
@@ -88,6 +90,7 @@ class AnnotationResponse(BaseModel):
     equation_solution: Optional[str]
     source: str
     translated: bool
+    validated: bool
     created_at: datetime
     updated_at: datetime
     
@@ -108,6 +111,7 @@ class AnnotationSimpleResponse(BaseModel):
     equation_solution: Optional[str]
     source: str
     translated: bool
+    validated: bool
     created_at: datetime
     updated_at: datetime
 

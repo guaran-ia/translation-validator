@@ -120,6 +120,10 @@ export const validationsAPI = {
 export const validatorAPI = {
   getRandomTranslations: (limit = 10) =>
     api.get(`/validator/random-translations?limit=${limit}`),
+  skipCurrent: () =>
+    api.post('/validator/skip-current'),
+  completeCurrent: (data) =>
+    api.post('/validator/complete-current', data),
 };
 
 // Suggestions API

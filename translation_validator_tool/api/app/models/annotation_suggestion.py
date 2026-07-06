@@ -13,6 +13,7 @@ class AnnotationSuggestion(Base):
     
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     annotation_id: Mapped[int] = mapped_column(ForeignKey("annotations.id"))
+    translation_id: Mapped[Optional[int]] = mapped_column(ForeignKey("annotation_translations.id"), nullable=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     
     # Which part is being suggested: "question", "answer", or "both"
@@ -33,6 +34,7 @@ class AnnotationSuggestion(Base):
     
     # Relationships - using string names to avoid circular imports
     annotation = relationship("Annotation", back_populates="suggestions")
+    translation = relationship("AnnotationTranslation", back_populates="suggestions")
     user = relationship("User", back_populates="annotation_suggestions")
     # Validations that refer to this suggestion
     validations = relationship("AnnotationValidation", back_populates="suggestion")

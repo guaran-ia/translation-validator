@@ -12,7 +12,6 @@ const Navbar = () => {
   const isAdmin = role === 'admin';
   const isValidator = role === 'validador';
   const isTranslator = role === 'traductor';
-  const canSeeHistory = isValidator || isTranslator;
 
   return (
     <nav className="bg-gradient-to-r from-slate-900 to-teal-900 shadow-2xl">
@@ -61,9 +60,6 @@ const Navbar = () => {
                 )}
                 {isTranslator && (
                     <Link to="/help" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ayuda</Link>
-                )}
-                {isValidator && (
-                  <a href="/history" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Historial</a>
                 )}
                 {isValidator && (
                   <a href="/validatorHelp" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Ayuda</a>
@@ -173,9 +169,6 @@ const Navbar = () => {
                           </div>
                         )}
                       </div>
-                    )}
-                    {isValidator && (
-                      <a href="/history" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Historial</a>
                     )}
                      {isValidator && (
                       <a href="/validatorHelp" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Ayuda</a>

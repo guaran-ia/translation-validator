@@ -9,6 +9,8 @@ import logging
 from app.database import get_db
 from app.models.user import User
 from app.models.annotation import Annotation
+from app.models.annotation_translation import AnnotationTranslation
+from app.models.annotation_suggestion import AnnotationSuggestion
 from app.services.excel_loader import get_excel_sheets, get_excel_preview, load_annotations_from_excel_bytes
 from app.models.annotation_validation import AnnotationValidation
 from app.schemas.annotation import (
@@ -17,6 +19,7 @@ from app.schemas.annotation import (
     AnnotationResponse,
     AnnotationWithStats,
     AnnotationValidationCreate,
+    AnnotationSuggestionCreate,
     AnnotationAssignCreate,
 )
 from app.api.deps import get_current_active_user
@@ -95,7 +98,7 @@ async def list_annotations(
         "items": [
             {
                 **AnnotationResponse.model_validate(a).model_dump(),
-                "validation_count": len(a.validations),
+                "validation_count": len([v for v in a.validations if v.status == "completed"]),
             }
             for a in items
         ],
@@ -195,7 +198,7 @@ async def get_my_assignments(
         "items": [
             {
                 **AnnotationResponse.model_validate(a).model_dump(),
-                "validation_count": len(a.validations),
+                "validation_count": len([v for v in a.validations if v.status == "completed"]),
             }
             for a in items
         ],
@@ -340,15 +343,21 @@ async def get_annotation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Annotation not found",
         )
-    
+
     user_validated = db.query(AnnotationValidation).filter(
         AnnotationValidation.annotation_id == annotation_id,
         AnnotationValidation.user_id == current_user.id,
+        AnnotationValidation.status == "completed",
     ).first() is not None
+
+    validation_count = db.query(func.count(AnnotationValidation.id)).filter(
+        AnnotationValidation.annotation_id == annotation_id,
+        AnnotationValidation.status == "completed",
+    ).scalar() or 0
     
     result = AnnotationResponse.model_validate(annotation).model_dump()
     result.update({
-        "validation_count": len(annotation.validations),
+        "validation_count": validation_count,
         "user_has_validated": user_validated,
     })
     
@@ -490,12 +499,25 @@ async def create_validation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Annotation not found",
         )
+
+    translation = db.query(AnnotationTranslation).filter(
+        AnnotationTranslation.id == validation_data.translation_id,
+        AnnotationTranslation.annotation_id == annotation_id,
+    ).first()
+
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Translation not found for this annotation",
+        )
     
     # Create validation record
     validation = AnnotationValidation(
         annotation_id=annotation_id,
+        translation_id=validation_data.translation_id,
         user_id=current_user.id,
-        part_type=validation_data.part_type,
+        part_type="both",
+        status="completed",
         correctness=validation_data.correctness,
         fluency_score=validation_data.fluency_score,
         accuracy_score=validation_data.accuracy_score,
@@ -583,6 +605,96 @@ async def assign_to_me(
             "user_id": assignment.user_id,
             "assigned_at": assignment.assigned_at
         }
+    }
+
+
+@router.post("/{annotation_id}/suggest", response_model=dict)
+async def create_annotation_suggestion(
+    annotation_id: int,
+    suggestion_data: AnnotationSuggestionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Create a validator suggestion for a concrete annotation translation.
+    """
+    if current_user.role not in ("validador", "admin") and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only validators can create annotation suggestions",
+        )
+
+    annotation = db.query(Annotation).filter(Annotation.id == annotation_id).first()
+    if not annotation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Annotation not found",
+        )
+
+    translation = db.query(AnnotationTranslation).filter(
+        AnnotationTranslation.id == suggestion_data.translation_id,
+    ).first()
+    if not translation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Annotation translation not found",
+        )
+    if translation.annotation_id != annotation_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Translation does not belong to the specified annotation",
+        )
+
+    suggested_question_gn = suggestion_data.suggested_question_gn.strip() if suggestion_data.suggested_question_gn else None
+    suggested_answer_gn = suggestion_data.suggested_answer_gn.strip() if suggestion_data.suggested_answer_gn else None
+    reason = suggestion_data.reason.strip() if suggestion_data.reason else None
+
+    if not suggested_question_gn and not suggested_answer_gn:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one suggestion is required",
+        )
+    if suggested_question_gn and not annotation.question_es:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This annotation does not have a question to suggest",
+        )
+    if suggested_answer_gn and not annotation.answer_es:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This annotation does not have an answer to suggest",
+        )
+
+    if suggested_question_gn and suggested_answer_gn:
+        part_type = "both"
+    elif suggested_question_gn:
+        part_type = "question"
+    else:
+        part_type = "answer"
+
+    suggestion = AnnotationSuggestion(
+        annotation_id=annotation_id,
+        translation_id=translation.id,
+        user_id=current_user.id,
+        part_type=part_type,
+        suggested_question_gn=suggested_question_gn,
+        suggested_answer_gn=suggested_answer_gn,
+        reason=reason,
+    )
+    db.add(suggestion)
+    db.commit()
+    db.refresh(suggestion)
+
+    return {
+        "id": suggestion.id,
+        "annotation_id": suggestion.annotation_id,
+        "translation_id": suggestion.translation_id,
+        "user_id": suggestion.user_id,
+        "part_type": suggestion.part_type,
+        "suggested_question_gn": suggestion.suggested_question_gn,
+        "suggested_answer_gn": suggestion.suggested_answer_gn,
+        "reason": suggestion.reason,
+        "created_at": suggestion.created_at,
     }
 
 

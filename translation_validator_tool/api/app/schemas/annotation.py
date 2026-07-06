@@ -33,6 +33,8 @@ class AnnotationResponse(AnnotationBase):
     question_gn: Optional[str] = None
     answer_gn: Optional[str] = None
     assigned_to_user_id: Optional[int] = None
+    translated: bool = False
+    validated: bool = False
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -49,6 +51,7 @@ class AnnotationWithStats(AnnotationResponse):
 class AnnotationValidationCreate(BaseModel):
     """Schema for creating annotation validation feedback."""
     part_type: str = "both"  # "question", "answer", or "both"
+    translation_id: int
     correctness: str
     fluency_score: int  # 1-5
     accuracy_score: int  # 1-5
@@ -58,6 +61,7 @@ class AnnotationValidationCreate(BaseModel):
 
 class AnnotationSuggestionCreate(BaseModel):
     """Schema for creating annotation suggestion."""
+    translation_id: int
     part_type: str = "both"  # "question", "answer", or "both"
     suggested_question_gn: Optional[str] = None
     suggested_answer_gn: Optional[str] = None

@@ -591,9 +591,9 @@ async def get_my_assignments(
     items = []
     for ann in annotation_rows:
         suggestion_count = len(ann.suggestions) if getattr(ann, 'suggestions', None) is not None else 0
-        validation_count = len(ann.validations) if getattr(ann, 'validations', None) is not None else 0
+        validation_count = len([v for v in ann.validations if v.status == "completed"]) if getattr(ann, 'validations', None) is not None else 0
         user_has_suggested = any(s.user_id == current_user.id for s in (ann.suggestions or []))
-        user_has_validated = any(v.user_id == current_user.id for v in (ann.validations or []))
+        user_has_validated = any(v.user_id == current_user.id and v.status == "completed" for v in (ann.validations or []))
         assigned_user_ids = [a.user_id for a in (ann.assignments or [])]
         assigned_to_user_id = current_user.id if current_user.id in assigned_user_ids else (assigned_user_ids[0] if assigned_user_ids else None)
 
