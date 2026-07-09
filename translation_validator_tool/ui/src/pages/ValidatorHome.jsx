@@ -38,6 +38,7 @@ const ValidatorHome = () => {
     correctness: '',
     fluency_score: null,
     accuracy_score: null,
+    regular_reason: '',
     notes: ''
   });
 
@@ -79,6 +80,7 @@ const ValidatorHome = () => {
       correctness: '',
       fluency_score: null,
       accuracy_score: null,
+      regular_reason: '',
       notes: ''
     });
     setHasSubmittedSuggestion(false);
@@ -104,27 +106,51 @@ const ValidatorHome = () => {
     setSuggestionFormData({ suggested_question_gn: '', suggested_answer_gn: '', reason: '' });
   };
 
-  const handleCorrectnessSelect = (correctness) => setFormData(prev => ({ ...prev, correctness }));
+  const handleCorrectnessSelect = (correctness) => setFormData(prev => ({
+    ...prev,
+    correctness,
+    regular_reason: correctness === 'regular_other' ? prev.regular_reason : ''
+  }));
   const handleFluencySelect = (score) => setFormData(prev => ({ ...prev, fluency_score: score }));
   const handleAccuracySelect = (score) => setFormData(prev => ({ ...prev, accuracy_score: score }));
   const handleNotesChange = (notes) => setFormData(prev => ({ ...prev, notes }));
+  const handleRegularReasonChange = (regular_reason) => setFormData(prev => ({ ...prev, regular_reason }));
   const handleSuggestionFieldChange = (fieldName, value) => {
     setSuggestionFormData(prev => ({ ...prev, [fieldName]: value }));
     setHasSubmittedSuggestion(false);
     setPendingSuggestionData(null);
   };
 
+  const validateLengthRatio = (sourceText, suggestedText) => {
+    const sourceLength = sourceText.trim().length;
+    const suggestedLength = suggestedText.trim().length;
+    if (sourceLength === 0) return true;
+    const min = Math.ceil(sourceLength * 0.35);
+    const max = Math.floor(sourceLength * 2.0);
+    return suggestedLength >= min && suggestedLength <= max;
+  };
+
   const handleSuggestionSubmit = () => {
     const suggestedQuestion = suggestionFormData.suggested_question_gn.trim();
     const suggestedAnswer = suggestionFormData.suggested_answer_gn.trim();
     const reason = suggestionFormData.reason.trim();
+    const hasQuestion = !!currentTranslation.question_es;
+    const hasAnswer = !!currentTranslation.answer_es;
 
-    if (!suggestedQuestion && !suggestedAnswer) {
-      toast.error('Completa al menos una sugerencia antes de continuar.');
+    if (hasQuestion && !suggestedQuestion) {
+      toast.error('La sugerencia para la pregunta es obligatoria');
       return;
     }
-    if (!reason) {
-      toast.error('Completa la razón antes de continuar.');
+    if (hasAnswer && !suggestedAnswer) {
+      toast.error('La sugerencia para la respuesta es obligatoria');
+      return;
+    }
+    if (hasQuestion && suggestedQuestion && !validateLengthRatio(currentTranslation.question_es, suggestedQuestion)) {
+      toast.error('En la pregunta la longitud es inválida. El texto sugerido es demasiado corto o demasiado largo.');
+      return;
+    }
+    if (hasAnswer && suggestedAnswer && !validateLengthRatio(currentTranslation.answer_es, suggestedAnswer)) {
+      toast.error('En la respuesta la longitud es inválida. El texto sugerido es demasiado corto o demasiado largo.');
       return;
     }
 
@@ -133,7 +159,7 @@ const ValidatorHome = () => {
       part_type: suggestedQuestion && suggestedAnswer ? 'both' : (suggestedQuestion ? 'question' : 'answer'),
       suggested_question_gn: suggestedQuestion || null,
       suggested_answer_gn: suggestedAnswer || null,
-      reason
+      reason: reason || null
     });
     toast.success('Sugerencia preparada. Se enviará junto con la evaluación.');
     setHasSubmittedSuggestion(true);
@@ -144,7 +170,7 @@ const ValidatorHome = () => {
     ? (formData.fluency_score + formData.accuracy_score) / 2
     : null;
   const requiresSuggestion = validationAverage !== null && validationAverage < 3;
-  const shouldShowSuggestionButton = requiresSuggestion || ['incorrect', 'regular', 'gn_more', 'es_more'].includes(formData.correctness);
+  const shouldShowSuggestionButton = requiresSuggestion || ['incorrect', 'regular', 'gn_more', 'es_more', 'regular_other'].includes(formData.correctness);
 
   const applyValidatorResponse = (data) => {
     const translation = normalizeValidatorTranslation(extractTranslationFromResponse(data));
@@ -218,8 +244,8 @@ const ValidatorHome = () => {
       return;
     }
 
-    if (requiresSuggestion && !hasSubmittedSuggestion) {
-      toast.error('La sugerencia es obligatoria cuando el promedio de fluidez y precisión es menor a 3.');
+    if (formData.correctness === 'regular') {
+      toast.error('Debes seleccionar por qué es regular.');
       return;
     }
 
@@ -239,6 +265,7 @@ const ValidatorHome = () => {
         correctness: formData.correctness,
         fluency_score: formData.fluency_score,
         accuracy_score: formData.accuracy_score,
+        regular_reason: formData.correctness === 'regular_other' ? formData.regular_reason.trim() || null : null,
         notes: formData.notes || null
       };
       if (suggestionId) payload.suggestion_id = suggestionId;
@@ -419,26 +446,11 @@ const ValidatorHome = () => {
           <div className="space-y-6 border-t border-gray-200 pt-6">
             <CorrectnessButtons
               selectedCorrectness={formData.correctness}
+              regularReason={formData.regular_reason}
               onSelect={handleCorrectnessSelect}
+              onRegularReasonChange={handleRegularReasonChange}
               disabled={submitting}
             />
-
-            {shouldShowSuggestionButton && (
-              <div className="justify-center flex">
-                <button
-                  onClick={() => setShowSuggestionsModal(true)}
-                  className="justify-center w-50 px-4 py-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-100 font-medium text-sm transition-colors"
-                >
-                  {requiresSuggestion && !hasSubmittedSuggestion ? 'Sugerir una traducción (obligatorio)' : 'Sugerir una traducción'}
-                </button>
-              </div>
-            )}
-
-            {requiresSuggestion && hasSubmittedSuggestion && (
-              <p className="text-center text-sm font-medium text-teal-700">
-                Sugerencia registrada para esta evaluación.
-              </p>
-            )}
 
             <div className="grid md:grid-cols-2 gap-6">
               <ScoreSelector
@@ -455,6 +467,23 @@ const ValidatorHome = () => {
               />
             </div>
 
+            {shouldShowSuggestionButton && (
+              <div className="justify-center flex">
+                <button
+                  onClick={() => setShowSuggestionsModal(true)}
+                  className="justify-center w-50 px-4 py-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-100 font-medium text-sm transition-colors"
+                >
+                  ¿Quieres sugerir una traducción?
+                </button>
+              </div>
+            )}
+
+            {hasSubmittedSuggestion && (
+              <p className="text-center text-sm font-medium text-teal-700">
+                Sugerencia registrada para esta evaluación.
+              </p>
+            )}
+
             <NotesTextarea
               notes={formData.notes}
               onNotesChange={handleNotesChange}
@@ -469,7 +498,7 @@ const ValidatorHome = () => {
                   disabled={submitting}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium"
                 >
-                  Siguiente evaluación
+                  Pasar a la siguiente evaluación
                 </button>
                 <button
                   type="button"
@@ -682,7 +711,7 @@ const ValidatorHome = () => {
               {/* Reason */}
               <div>
                 <label htmlFor="reason" className="block text-sm font-medium text-gray-700 mb-2">
-                  Razón de la sugerencia
+                  Razón de la sugerencia (opcional)
                 </label>
                 <textarea
                   id="reason"

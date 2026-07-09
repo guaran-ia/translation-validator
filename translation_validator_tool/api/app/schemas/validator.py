@@ -57,6 +57,7 @@ class ValidatorValidationSubmit(BaseModel):
     correctness: str
     fluency_score: int
     accuracy_score: int
+    regular_reason: Optional[str] = None
     notes: Optional[str] = None
     category: Optional[str] = None
     suggestion_id: Optional[int] = None

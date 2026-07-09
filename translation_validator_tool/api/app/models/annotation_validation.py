@@ -22,6 +22,7 @@ class AnnotationValidation(Base):
     
     # Correctness evaluation
     correctness: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)  # "correct", "minor_issues", "major_issues", "incorrect"
+    regular_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Quality scores (1-5)
     fluency_score: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # How natural the translation sounds

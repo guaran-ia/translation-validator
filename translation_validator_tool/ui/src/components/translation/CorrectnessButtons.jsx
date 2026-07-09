@@ -1,4 +1,4 @@
-const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
+const CorrectnessButtons = ({ selectedCorrectness, regularReason = '', onSelect, onRegularReasonChange, disabled }) => {
   const mainOptions = [
     {
       value: 'correct',
@@ -47,13 +47,23 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
       selectedBg: 'bg-purple-700',
       borderColor: 'border-purple-600',
       selectedBorder: 'border-purple-700'
+    },
+    {
+      value: 'regular_other',
+      label: 'Otro',
+      icon: '?',
+      bgColor: 'bg-slate-600 hover:bg-slate-700',
+      selectedBg: 'bg-slate-700',
+      borderColor: 'border-slate-600',
+      selectedBorder: 'border-slate-700'
     }
   ];
 
   const isRegularGroupSelected =
     selectedCorrectness === 'regular' ||
     selectedCorrectness === 'gn_more' ||
-    selectedCorrectness === 'es_more';
+    selectedCorrectness === 'es_more' ||
+    selectedCorrectness === 'regular_other';
 
   const showDetailOptions = isRegularGroupSelected;
 
@@ -83,7 +93,8 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
 
   const hasSecondarySelection =
     selectedCorrectness === 'gn_more' ||
-    selectedCorrectness === 'es_more';
+    selectedCorrectness === 'es_more' ||
+    selectedCorrectness === 'regular_other';
 
   const isDimmed = hasSecondarySelection && !isSelected;
 
@@ -127,7 +138,7 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
       {showDetailOptions && (
         <div className="pt-3 space-y-3">
           <p className="text-sm font-medium text-gray-700 text-center">
-            Proporcione más información:
+            ¿Por qué es regular?
           </p>
 
           <div className="flex flex-wrap justify-center gap-3">
@@ -146,6 +157,23 @@ const CorrectnessButtons = ({ selectedCorrectness, onSelect, disabled }) => {
               </button>
             ))}
           </div>
+
+          {selectedCorrectness === 'regular_other' && (
+            <div className="max-w-xl mx-auto pt-2">
+              <label htmlFor="regular_reason" className="block text-sm font-medium text-gray-700 mb-2">
+                Razón (Opcional):
+              </label>
+              <textarea
+                id="regular_reason"
+                value={regularReason}
+                onChange={(e) => onRegularReasonChange?.(e.target.value)}
+                rows={2}
+                placeholder="Explica brevemente por qué consideras que la traducción es regular..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none text-sm"
+                disabled={disabled}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

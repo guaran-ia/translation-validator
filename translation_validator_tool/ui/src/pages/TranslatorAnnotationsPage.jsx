@@ -571,14 +571,6 @@ const TranslatorAnnotationsPage = () => {
               />
             </div>
 
-            {/* Suggestions */}
-            {currentAnnotation.suggestion_count > 0 && (
-              <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
-                <p className="text-sm font-semibold text-teal-800 mb-2">
-                  💡 Sugerencias disponibles: {currentAnnotation.suggestion_count}
-                </p>
-              </div>
-            )}
           </div>
           )}
 
@@ -635,14 +627,6 @@ const TranslatorAnnotationsPage = () => {
               />
             </div>
 
-            {/* Suggestions */}
-            {currentAnnotation.suggestion_count > 0 && (
-              <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg">
-                <p className="text-sm font-semibold text-teal-800 mb-2">
-                  💡 Sugerencias disponibles: {currentAnnotation.suggestion_count}
-                </p>
-              </div>
-            )}
           </div>
           )}
 

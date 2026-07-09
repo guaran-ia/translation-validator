@@ -317,6 +317,7 @@ async def complete_current_validation(
     validation.correctness = validation_data.correctness
     validation.fluency_score = validation_data.fluency_score
     validation.accuracy_score = validation_data.accuracy_score
+    validation.regular_reason = validation_data.regular_reason
     validation.notes = validation_data.notes
     validation.category = validation_data.category
     validation.suggestion_id = suggestion_id
