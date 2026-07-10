@@ -15,17 +15,17 @@ const Navbar = () => {
 
   return (
     <nav className="bg-gradient-to-r from-slate-900 to-teal-900 shadow-2xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-2 md:grid-cols-[1fr_auto_1fr] h-16 items-center">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center justify-self-start">
             <div className="flex-shrink-0">
               <img src={guaraniaLogoNoBG} alt="Mbo'ehara Digital" className="h-10 w-auto" />
             </div>
           </div>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-6 justify-self-center">
             {user ? (
               <>
                 {isValidator && (
@@ -98,10 +98,13 @@ const Navbar = () => {
           </div>
 
           {/* Desktop user info and logout */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 justify-self-end">
             {user ? (
               <>
                 <div className="text-sm text-teal-100"><span className="font-medium text-white">Bienvenido, {user.username}</span></div>
+                {isValidator && (
+                  <button type="button" className="btn bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Cambiar a traductor</button>
+                )}
                 <button onClick={logout} className="btn bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Cerrar sesión</button>
               </>
             ) : (
@@ -112,7 +115,7 @@ const Navbar = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center justify-self-end">
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-expanded={mobileOpen}
@@ -184,7 +187,10 @@ const Navbar = () => {
 
                     <div className="pt-2 border-t border-teal-700">
                       <div className="text-sm text-teal-100">Bienvenido, <span className="font-medium text-white">{user.username}</span></div>
-                      <div className="mt-2">
+                      <div className="mt-2 space-y-2">
+                        {isValidator && (
+                          <button type="button" className="w-full text-left btn bg-teal-600 text-white hover:bg-teal-700 px-3 py-2 rounded-lg font-medium transition-colors">Cambiar a traductor</button>
+                        )}
                         <button onClick={logout} className="w-full text-left btn bg-teal-600 text-white hover:bg-teal-700 px-3 py-2 rounded-lg font-medium transition-colors">Cerrar sesión</button>
                       </div>
                     </div>
