@@ -15,6 +15,7 @@ import AdminAnnotations from './pages/AdminAnnotations';
 import TranslatorAnnotationsPage from './pages/TranslatorAnnotationsPage';
 import PendingTranslationsPage from './pages/PendingTranslationsPage';
 import HelpPage from './pages/HelpPage';
+import ValidatorHelpPage from './pages/ValidatorHelpPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import AllTimeLeaderboardPage from './pages/AllTimeLeaderboardPage';
 
@@ -122,6 +123,14 @@ const App = () => {
                 <TranslatorRoute>
                   <HelpPage />
                 </TranslatorRoute>
+              }
+            />
+            <Route
+              path="/validatorHelp"
+              element={
+                <ValidatorRoute>
+                  <ValidatorHelpPage />
+                </ValidatorRoute>
               }
             />
             <Route
