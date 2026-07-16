@@ -17,16 +17,14 @@ router = APIRouter()
 def _normalize_role(role: str) -> str:
     role_map = {
         "admin": "admin",
-        "validador": "validador",
-        "validator": "validador",
-        "traductor": "traductor",
-        "translator": "traductor",
+        "ambos": "ambos",
+        "both": "ambos",
     }
     normalized = role_map.get(str(role).strip().lower())
     if not normalized:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Rol inválido. Valores permitidos: admin, validador, traductor"
+            detail="Rol inválido. Valores permitidos: admin, ambos"
         )
     return normalized
 
@@ -85,7 +83,7 @@ async def register(
         hashed_password=hashed_password,
         nombre_completo=user_data.nombre_completo,
         contacto=user_data.contacto,
-        role="traductor",
+        role="ambos",
         is_active=True
     )
     
@@ -272,7 +270,7 @@ async def admin_update_user(
     if 'is_superuser' in updates:
         target_user.is_superuser = updates['is_superuser']
         if not role_updated:
-            target_user.role = 'admin' if updates['is_superuser'] else 'traductor'
+            target_user.role = 'admin' if updates['is_superuser'] else 'ambos'
     
     db.add(target_user)
     db.commit()

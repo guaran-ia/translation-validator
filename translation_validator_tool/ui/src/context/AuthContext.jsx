@@ -1,11 +1,13 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import { authAPI } from '../services/api';
 import { getStoredToken, setStoredToken, removeStoredToken, isAuthenticated } from '../services/auth';
+import { getStoredActiveRole, removeStoredActiveRole, setStoredActiveRole } from '../utils/roles';
 
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [activeRole, setActiveRoleState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -17,6 +19,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const response = await authAPI.getCurrentUser();
           setUser(response.data);
+          setActiveRoleState(getStoredActiveRole(response.data));
         } catch (error) {
           console.error('Failed to get current user:', error);
           removeStoredToken();
@@ -29,6 +32,15 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
+  useEffect(() => {
+    setActiveRoleState(getStoredActiveRole(user));
+  }, [user]);
+
+  const setActiveRole = (role) => {
+    setStoredActiveRole(role);
+    setActiveRoleState(role);
+  };
+
   const login = async (username, password) => {
     try {
       setError(null);
@@ -37,6 +49,7 @@ export const AuthProvider = ({ children }) => {
       
       setStoredToken(access_token);
       setUser(userData);
+      setActiveRoleState(getStoredActiveRole(userData));
       
       return { success: true, user: userData };
     } catch (error) {
@@ -60,7 +73,9 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     removeStoredToken();
+    removeStoredActiveRole();
     setUser(null);
+    setActiveRoleState(null);
     setError(null);
   };
 
@@ -75,6 +90,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    activeRole,
+    setActiveRole,
     clearError,
     isAuthenticated: !!user,
   };

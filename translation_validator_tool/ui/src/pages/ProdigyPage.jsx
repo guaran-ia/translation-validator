@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/common/Navbar';
+import { isAdmin as userIsAdmin } from '../utils/roles';
 
 const PRODIGY_MANAGER_URL = import.meta.env.VITE_PRODIGY_PROXY_URL || 'http://localhost:8085';
 const POS_PORT = import.meta.env.VITE_PRODIGY_POS_PORT || '8080';
@@ -35,8 +36,7 @@ const ProdigyPage = () => {
   const [configError, setConfigError] = useState(null);
   const [configSuccess, setConfigSuccess] = useState(false);
 
-  // Verificar si el usuario es admin (is_superuser del backend o role === 'admin')
-  const isAdmin = user?.is_superuser === true || user?.role === 'admin';
+  const isAdmin = userIsAdmin(user);
 
   useEffect(() => {
     const init = async () => {

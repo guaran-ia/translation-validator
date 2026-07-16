@@ -3,10 +3,16 @@ import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/common/Navbar';
 import { toast } from 'react-toastify';
+import { ROLE_BOTH, isAdmin as userIsAdmin } from '../utils/roles';
+
+const formatUserRole = (u) => {
+  if (u?.is_superuser || u?.role === 'admin') return 'Admin';
+  return 'Traductor y validador';
+};
 
 const AdminUsersList = () => {
   const { user } = useAuth();
-  const isAdmin = !!user && (user.is_superuser || user.role === 'admin');
+  const isAdmin = userIsAdmin(user);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('list');
@@ -14,8 +20,8 @@ const AdminUsersList = () => {
   const [deleteUser, setDeleteUser] = useState(null);
   const [changePasswordUser, setChangePasswordUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
-  const [editForm, setEditForm] = useState({ username: '', email: '', nombre_completo: '', contacto: '', role: 'traductor', is_active: true });
-  const [createForm, setCreateForm] = useState({ username: '', email: '', password: '', nombre_completo: '', contacto: '', role: 'traductor' });
+  const [editForm, setEditForm] = useState({ username: '', email: '', nombre_completo: '', contacto: '', role: ROLE_BOTH, is_active: true });
+  const [createForm, setCreateForm] = useState({ username: '', email: '', password: '', nombre_completo: '', contacto: '', role: ROLE_BOTH });
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -43,7 +49,7 @@ const AdminUsersList = () => {
       email: u.email,
       nombre_completo: u.nombre_completo || '',
       contacto: u.contacto || '',
-      role: u.role || (u.is_superuser ? 'admin' : 'traductor'),
+      role: u.is_superuser || u.role === 'admin' ? 'admin' : ROLE_BOTH,
       is_active: u.is_active,
     });
   };
@@ -121,7 +127,7 @@ const AdminUsersList = () => {
       await authAPI.updateUser(createdUser.id, { role: createForm.role });
 
       toast.success('Usuario creado y activado correctamente');
-      setCreateForm({ username: '', email: '', password: '', nombre_completo: '', contacto: '', role: 'traductor' });
+      setCreateForm({ username: '', email: '', password: '', nombre_completo: '', contacto: '', role: ROLE_BOTH });
       setActiveTab('list');
       loadUsers();
     } catch (e) {
@@ -189,7 +195,7 @@ const AdminUsersList = () => {
                       <td className="px-4 py-2 text-sm font-medium">{u.username}</td>
                       <td className="px-4 py-2 text-sm">{u.email}</td>
                       <td className="px-4 py-2 text-sm">
-                        <span className="capitalize">{u.role || (u.is_superuser ? 'admin' : 'traductor')}</span>
+                        <span>{formatUserRole(u)}</span>
                       </td>
                       <td className="px-4 py-2 text-sm">
                         {u.is_active ? (
@@ -296,8 +302,7 @@ const AdminUsersList = () => {
                   onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
                   className="w-full border rounded px-3 py-2 bg-white"
                 >
-                  <option value="validador">Validador</option>
-                  <option value="traductor">Traductor</option>
+                  <option value={ROLE_BOTH}>Traductor y validador</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>
@@ -365,8 +370,7 @@ const AdminUsersList = () => {
                       onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
                       className="border rounded px-3 py-2 bg-white"
                     >
-                      <option value="validador">Validador</option>
-                      <option value="traductor">Traductor</option>
+                      <option value={ROLE_BOTH}>Traductor y validador</option>
                       <option value="admin">Admin</option>
                     </select>
                   </div>

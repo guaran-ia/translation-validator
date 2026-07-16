@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
-USER_ROLES = ("admin", "validador", "traductor")
+USER_ROLES = ("admin", "ambos")
 
 
 class User(Base):
@@ -17,7 +17,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255))
     nombre_completo: Mapped[str] = mapped_column(String(255), nullable=False)
     contacto: Mapped[str] = mapped_column(String(255), nullable=True)
-    role: Mapped[str] = mapped_column(String(20), default="traductor", nullable=False)
+    role: Mapped[str] = mapped_column(String(20), default="ambos", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)

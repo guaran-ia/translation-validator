@@ -1,17 +1,26 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import guaraniaLogoNoBG from '../../images/logo.svg';
+import { ACTIVE_TRANSLATOR, ACTIVE_VALIDATOR, canTranslate, canValidate, isAdmin as userIsAdmin } from '../../utils/roles';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, activeRole, setActiveRole } = useAuth();
+  const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [rankingOpen, setRankingOpen] = useState(false);
-  const role = !user ? null : (user.role || (user.is_superuser ? 'admin' : 'validador'));
-  const isAdmin = role === 'admin';
-  const isValidator = role === 'validador';
-  const isTranslator = role === 'traductor';
+  const isAdmin = userIsAdmin(user);
+  const isValidator = !isAdmin && activeRole === ACTIVE_VALIDATOR;
+  const isTranslator = !isAdmin && activeRole === ACTIVE_TRANSLATOR;
+  const canSwitchToTranslator = !!user && !isAdmin && canTranslate(user) && activeRole !== ACTIVE_TRANSLATOR;
+  const canSwitchToValidator = !!user && !isAdmin && canValidate(user) && activeRole !== ACTIVE_VALIDATOR;
+
+  const switchRole = (role) => {
+    setActiveRole(role);
+    setMobileOpen(false);
+    navigate(role === ACTIVE_VALIDATOR ? '/validator' : '/translator-annotations');
+  };
 
   return (
     <nav className="bg-gradient-to-r from-slate-900 to-teal-900 shadow-2xl">
@@ -102,8 +111,11 @@ const Navbar = () => {
             {user ? (
               <>
                 <div className="text-sm text-teal-100"><span className="font-medium text-white">Bienvenido, {user.username}</span></div>
-                {isValidator && (
-                  <button type="button" className="btn bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Cambiar a traductor</button>
+                {canSwitchToTranslator && (
+                  <button type="button" onClick={() => switchRole(ACTIVE_TRANSLATOR)} className="btn bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Cambiar a traductor</button>
+                )}
+                {canSwitchToValidator && (
+                  <button type="button" onClick={() => switchRole(ACTIVE_VALIDATOR)} className="btn bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Cambiar a validador</button>
                 )}
                 <button onClick={logout} className="btn bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Cerrar sesión</button>
               </>
@@ -188,8 +200,11 @@ const Navbar = () => {
                     <div className="pt-2 border-t border-teal-700">
                       <div className="text-sm text-teal-100">Bienvenido, <span className="font-medium text-white">{user.username}</span></div>
                       <div className="mt-2 space-y-2">
-                        {isValidator && (
-                          <button type="button" className="w-full text-left btn bg-teal-600 text-white hover:bg-teal-700 px-3 py-2 rounded-lg font-medium transition-colors">Cambiar a traductor</button>
+                        {canSwitchToTranslator && (
+                          <button type="button" onClick={() => switchRole(ACTIVE_TRANSLATOR)} className="w-full text-left btn bg-teal-600 text-white hover:bg-teal-700 px-3 py-2 rounded-lg font-medium transition-colors">Cambiar a traductor</button>
+                        )}
+                        {canSwitchToValidator && (
+                          <button type="button" onClick={() => switchRole(ACTIVE_VALIDATOR)} className="w-full text-left btn bg-teal-600 text-white hover:bg-teal-700 px-3 py-2 rounded-lg font-medium transition-colors">Cambiar a validador</button>
                         )}
                         <button onClick={logout} className="w-full text-left btn bg-teal-600 text-white hover:bg-teal-700 px-3 py-2 rounded-lg font-medium transition-colors">Cerrar sesión</button>
                       </div>

@@ -17,13 +17,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column('users', sa.Column('role', sa.String(length=20), nullable=True, server_default='validador'))
+    op.add_column('users', sa.Column('role', sa.String(length=20), nullable=True, server_default='ambos'))
 
     # Preserve admin users in existing datasets.
     op.execute("UPDATE users SET role = 'admin' WHERE is_superuser = true")
-    op.execute("UPDATE users SET role = 'validador' WHERE role IS NULL")
+    op.execute("UPDATE users SET role = 'ambos' WHERE role IS NULL")
 
-    op.alter_column('users', 'role', nullable=False, server_default='validador')
+    op.alter_column('users', 'role', nullable=False, server_default='ambos')
 
 
 def downgrade() -> None:

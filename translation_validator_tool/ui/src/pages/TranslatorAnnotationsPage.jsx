@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { annotationsAPI } from '../services/api';
 import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
 import HackathonModal from '../components/auth/HackathonModal';
 import WeeklyLeaderboard from '../components/common/WeeklyLeaderboard';
+import { ACTIVE_VALIDATOR, canValidate } from '../utils/roles';
 
 const TranslatorAnnotationsPage = () => {
-  const { user } = useAuth();
+  const { user, setActiveRole } = useAuth();
+  const navigate = useNavigate();
   const [currentAnnotation, setCurrentAnnotation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -427,6 +430,11 @@ const TranslatorAnnotationsPage = () => {
     }
   };
 
+  const handleSwitchToValidator = () => {
+    setActiveRole(ACTIVE_VALIDATOR);
+    navigate('/validator');
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -508,13 +516,27 @@ const TranslatorAnnotationsPage = () => {
         {/* Main Content */}
         <div className="mb-6">
           <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
-            <h1 className="text-3xl font-bold">
-              Mis pendientes
-            </h1>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold">
+                  Mis pendientes
+                </h1>
 
-            <p className="mt-2 text-teal-100">
-              Traduce las siguientes oraciones.
-            </p>
+                <p className="mt-2 text-teal-100">
+                  Traduce las siguientes oraciones.
+                </p>
+              </div>
+
+              {canValidate(user) && (
+                <button
+                  type="button"
+                  onClick={handleSwitchToValidator}
+                  className="self-start rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white border border-white/20 hover:bg-white/20 transition-colors"
+                >
+                  Cambiar a validador
+                </button>
+              )}
+            </div>
           </div>
         </div>
         <div className="bg-white p-6 rounded-lg shadow-sm mb-6">

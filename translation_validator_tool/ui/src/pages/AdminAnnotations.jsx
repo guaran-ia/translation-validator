@@ -6,10 +6,11 @@ import api from '../services/api';
 import { toast } from 'react-toastify';
 import Navbar from '../components/common/Navbar';
 import ColumnMappingModal from '../components/admin/ColumnMappingModal';
+import { canTranslate, isAdmin as userIsAdmin } from '../utils/roles';
 
 const AdminAnnotations = () => {
   const { user } = useAuth();
-  const isAdmin = !!user && (user.is_superuser || user.role === 'admin');
+  const isAdmin = userIsAdmin(user);
   const navigate = useNavigate();
   const [idInput, setIdInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,7 +69,7 @@ const AdminAnnotations = () => {
     try {
       const res = await authAPI.getAllUsers();
       const allUsers = res?.data || res;
-      const translators = allUsers.filter(u => u.role === 'traductor');
+      const translators = allUsers.filter(u => canTranslate(u) && !userIsAdmin(u));
       setTranslators(translators);
     } catch (err) {
       console.error('Failed to load translators', err);

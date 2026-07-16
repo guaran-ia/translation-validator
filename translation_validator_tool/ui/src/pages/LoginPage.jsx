@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import HelpModal from '../components/auth/HelpModal';
 import guaraniaLogoNoBG from '../images/logo.svg';
 import WeeklyLeaderboard from '../components/common/WeeklyLeaderboard';
+import { getStoredActiveRole, isAdmin, routeForActiveRole } from '../utils/roles';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -12,17 +13,9 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
-  const getUserRole = (u) => {
-    if (!u) return null;
-    if (u.role) return u.role;
-    return u.is_superuser ? 'admin' : 'traductor';
-  };
-
   const redirectByRole = (u) => {
-    const role = getUserRole(u);
-    if (role === 'admin') return '/admin/users';
-    if (role === 'traductor') return '/translator-annotations';
-    return '/validator';
+    if (isAdmin(u)) return '/admin/users';
+    return routeForActiveRole(getStoredActiveRole(u));
   };
 
   useEffect(() => {

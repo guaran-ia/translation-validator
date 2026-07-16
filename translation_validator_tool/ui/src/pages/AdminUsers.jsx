@@ -3,10 +3,11 @@ import { authAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/common/Navbar';
 import { toast } from 'react-toastify';
+import { isAdmin as userIsAdmin } from '../utils/roles';
 
 const AdminUsers = () => {
   const { user } = useAuth();
-  const isAdmin = !!user && (user.is_superuser || user.role === 'admin');
+  const isAdmin = userIsAdmin(user);
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmUser, setConfirmUser] = useState(null);

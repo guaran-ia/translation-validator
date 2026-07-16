@@ -23,6 +23,7 @@ from app.schemas.annotation import (
     AnnotationAssignCreate,
 )
 from app.api.deps import get_current_active_user
+from app.core.roles import can_translate, can_validate, is_admin
 
 router = APIRouter()
 # Use the uvicorn error logger so logs are visible in the server output
@@ -52,7 +53,7 @@ async def list_annotations(
     query = db.query(Annotation)
     
     # Translators see ONLY non-translated annotations EXCEPT those they already translated or that are assigned to them
-    if current_user.role == "traductor":
+    if can_translate(current_user) and not is_admin(current_user):
         from app.models.annotation_assignment import AnnotationAssignment
         from app.models.annotation_translation import AnnotationTranslation
 
@@ -142,7 +143,7 @@ async def get_my_assignments(
     Returns the actual Annotation objects (with all details) that are assigned to the current user.
     No filtering applied - just show what's assigned.
     """
-    if current_user.role != "traductor":
+    if not can_translate(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only translators can view their assignments",
@@ -218,7 +219,7 @@ async def get_my_translations(
     Get translations submitted by the current user.
     Only for translators.
     """
-    if current_user.role != "traductor":
+    if not can_translate(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only translators can view their translations",
@@ -258,7 +259,7 @@ async def get_available_for_translation(
     TEMP MODE: Return annotations ordered by smallest ID first (for debugging/QA).
     Previous complex filters are commented out temporarily.
     """
-    if current_user.role != "traductor":
+    if not can_translate(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only translators can view available annotations",
@@ -375,7 +376,7 @@ async def create_annotation(
     Only admins can create annotations.
     At least one of question_es or answer_es must be provided.
     """
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can create annotations",
@@ -427,13 +428,13 @@ async def update_annotation(
         )
     
     # Check permissions
-    is_admin = current_user.role == "admin" or current_user.is_superuser
+    user_is_admin = is_admin(current_user)
     is_assigned_translator = (
-        current_user.role == "traductor" and 
+        can_translate(current_user) and not user_is_admin and
         annotation.assigned_to_user_id == current_user.id
     )
     
-    if not (is_admin or is_assigned_translator):
+    if not (user_is_admin or is_assigned_translator):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins or the assigned translator can update annotations",
@@ -464,7 +465,7 @@ async def delete_annotation(
     Delete an annotation.
     Only admins can delete annotations.
     """
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can delete annotations",
@@ -552,7 +553,7 @@ async def assign_to_me(
     Translator self-assigns to an annotation.
     Creates an assignment if not already assigned.
     """
-    if current_user.role != "traductor":
+    if not can_translate(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only translators can self-assign",
@@ -618,7 +619,7 @@ async def create_annotation_suggestion(
     """
     Create a validator suggestion for a concrete annotation translation.
     """
-    if current_user.role not in ("validador", "admin") and not current_user.is_superuser:
+    if not can_validate(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only validators can create annotation suggestions",
@@ -708,7 +709,7 @@ async def list_excel_sheets(
     Get list of sheet names from an Excel file.
     Only admins can use this endpoint.
     """
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can upload annotations",
@@ -737,7 +738,7 @@ async def preview_excel_sheet(
     Helps user map columns to annotation fields.
     Only admins can use this endpoint.
     """
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can upload annotations",
@@ -772,7 +773,7 @@ async def bulk_upload_annotations(
     
     Only admins can use this endpoint.
     """
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can upload annotations",

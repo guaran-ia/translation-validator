@@ -24,6 +24,7 @@ from app.schemas.annotation_schemas import (
     AnnotationTranslationBase,
 )
 from app.api.deps import get_current_active_user
+from app.core.roles import can_translate, is_admin
 import json
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -73,7 +74,7 @@ async def assign_annotation(
     """
     # Allow self-assignment for translators; assigning others requires admin
     if current_user.id != user_id:
-        if current_user.role != "admin" and not current_user.is_superuser:
+        if not is_admin(current_user):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only admins can assign annotations to other users",
@@ -94,7 +95,7 @@ async def assign_annotation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    if translator.role != "traductor":
+    if not can_translate(translator):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User is not a translator",
@@ -136,7 +137,7 @@ async def unassign_annotation(
 ):
     """Remove an assignment"""
     # Allow admins or the user themself to unassign
-    if not (current_user.role == "admin" or current_user.is_superuser or current_user.id == user_id):
+    if not (is_admin(current_user) or current_user.id == user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins or the assigned user can remove assignments",
@@ -166,7 +167,7 @@ async def bulk_assign(
     current_user: User = Depends(get_current_active_user),
 ):
     """Bulk assign annotations to multiple users"""
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can perform bulk assignments",
@@ -374,9 +375,9 @@ async def delete_translation(
     
     # Check permission
     is_owner = translation.user_id == current_user.id
-    is_admin = current_user.role == "admin" or current_user.is_superuser
+    user_is_admin = is_admin(current_user)
     
-    if not (is_owner or is_admin):
+    if not (is_owner or user_is_admin):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete this translation",
@@ -405,7 +406,7 @@ async def bulk_create_translations(
     """
     Bulk create translations (admin only)
     """
-    if current_user.role != "admin" and not current_user.is_superuser:
+    if not is_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can perform bulk translation operations",

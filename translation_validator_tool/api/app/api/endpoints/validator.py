@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
+from app.core.roles import can_validate
 from app.database import get_db
 from app.models.annotation import Annotation
 from app.models.annotation_suggestion import AnnotationSuggestion
@@ -158,6 +159,7 @@ def _assign_random_translation(db: Session, user_id: int) -> AnnotationValidatio
         .join(Annotation, Annotation.id == AnnotationTranslation.annotation_id)
         .join(User, User.id == AnnotationTranslation.user_id)
         .filter(AnnotationTranslation.validated == False)
+        .filter(AnnotationTranslation.user_id != user_id)
         .filter(~AnnotationTranslation.id.in_(completed_translation_ids))
         .filter(~AnnotationTranslation.id.in_(user_pending_translation_ids))
         .filter(~AnnotationTranslation.id.in_(completed_three_translation_ids))
@@ -220,6 +222,9 @@ async def get_random_translations_for_validation(
     """
     Obtiene o crea la asignación pendiente del usuario para el flujo de validación.
     """
+    if not can_validate(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only validators can validate translations")
+
     validation = _get_or_assign_translation(db, current_user.id)
     return _response_from_validation(db, validation)
 
@@ -232,6 +237,9 @@ async def skip_current_validation(
     """
     Elimina la asignación pendiente actual y asigna otra traducción aleatoria.
     """
+    if not can_validate(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only validators can validate translations")
+
     pending_validations = db.query(AnnotationValidation).filter(
         AnnotationValidation.user_id == current_user.id,
         AnnotationValidation.part_type == VALIDATOR_PART_TYPE,
@@ -255,6 +263,9 @@ async def complete_current_validation(
     """
     Completa la asignación pendiente actual y devuelve una nueva si existe.
     """
+    if not can_validate(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only validators can validate translations")
+
     if validation_data.fluency_score < 1 or validation_data.fluency_score > 5:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fluency score must be between 1 and 5")
     if validation_data.accuracy_score < 1 or validation_data.accuracy_score > 5:

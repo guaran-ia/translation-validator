@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastContainer } from 'react-toastify';
@@ -18,12 +19,25 @@ import HelpPage from './pages/HelpPage';
 import ValidatorHelpPage from './pages/ValidatorHelpPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import AllTimeLeaderboardPage from './pages/AllTimeLeaderboardPage';
+import {
+  ACTIVE_TRANSLATOR,
+  ACTIVE_VALIDATOR,
+  canTranslate,
+  canValidate,
+  getStoredActiveRole,
+  isAdmin,
+  routeForActiveRole,
+} from './utils/roles';
 
 
-const getUserRole = (user) => {
-  if (!user) return null;
-  if (user.role) return user.role;
-  return user.is_superuser ? 'admin' : 'validador';
+const ActiveRoleRoute = ({ role, children }) => {
+  const { setActiveRole } = useAuth();
+
+  useEffect(() => {
+    setActiveRole(role);
+  }, [role, setActiveRole]);
+
+  return children;
 };
 
 const AdminRoute = ({ children }) => {
@@ -33,8 +47,7 @@ const AdminRoute = ({ children }) => {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  const isAdmin = getUserRole(user) === 'admin';
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!isAdmin(user)) return <Navigate to="/" replace />;
 
   return children;
 };
@@ -44,9 +57,9 @@ const ValidatorRoute = ({ children }) => {
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (getUserRole(user) !== 'validador') return <Navigate to="/" replace />;
+  if (!canValidate(user)) return <Navigate to="/" replace />;
 
-  return children;
+  return <ActiveRoleRoute role={ACTIVE_VALIDATOR}>{children}</ActiveRoleRoute>;
 };
 
 const TranslatorRoute = ({ children }) => {
@@ -54,9 +67,9 @@ const TranslatorRoute = ({ children }) => {
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (getUserRole(user) !== 'traductor') return <Navigate to="/" replace />;
+  if (!canTranslate(user)) return <Navigate to="/" replace />;
 
-  return children;
+  return <ActiveRoleRoute role={ACTIVE_TRANSLATOR}>{children}</ActiveRoleRoute>;
 };
 
 const HistoryRoute = ({ children }) => {
@@ -65,8 +78,7 @@ const HistoryRoute = ({ children }) => {
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  const role = getUserRole(user);
-  if (role !== 'validador' && role !== 'traductor') return <Navigate to="/" replace />;
+  if (!canValidate(user) && !canTranslate(user)) return <Navigate to="/" replace />;
 
   return children;
 };
@@ -77,10 +89,10 @@ const HomeRedirect = () => {
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  const role = getUserRole(user);
-  if (role === 'admin') return <Navigate to="/admin/users" replace />;
-  if (role === 'traductor') return <Navigate to="/translator-annotations" replace />;
-  return <Navigate to="/validator" replace />;
+  if (isAdmin(user)) return <Navigate to="/admin/users" replace />;
+
+  const activeRole = getStoredActiveRole(user);
+  return <Navigate to={routeForActiveRole(activeRole)} replace />;
 };
 
 // App Component

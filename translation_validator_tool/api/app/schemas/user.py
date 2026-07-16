@@ -3,7 +3,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, EmailStr, ConfigDict
 
 
-UserRole = Literal["admin", "validador", "traductor"]
+UserRole = Literal["admin", "ambos"]
 
 
 # Base schemas
@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     username: str
     nombre_completo: str
     contacto: Optional[str] = None
-    role: UserRole = "traductor"
+    role: UserRole = "ambos"
     is_active: bool = True
     is_superuser: bool = False
 

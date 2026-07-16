@@ -4,7 +4,7 @@ Script para crear usuarios masivamente desde archivo Excel.
 Uso: 
   python bulk_create_users.py <archivo.xlsx>
   python bulk_create_users.py users.xlsx
-  python bulk_create_users.py users.xlsx --role validador  # Por defecto es "traductor"
+  python bulk_create_users.py users.xlsx --role ambos  # Por defecto es "ambos"
   python bulk_create_users.py users.xlsx --dry-run  # Simula sin insertar en BD
 """
 import sys
@@ -181,7 +181,7 @@ def check_duplicates(db_session, processed_users: List[Dict]) -> Tuple[List[Dict
     return valid_users, duplicate_users
 
 
-def create_users_in_db(db_session, valid_users: List[Dict], role: str = "traductor") -> Tuple[int, List[str]]:
+def create_users_in_db(db_session, valid_users: List[Dict], role: str = "ambos") -> Tuple[int, List[str]]:
     """
     Crear usuarios en la base de datos.
     Retorna: (cantidad_creada, lista_de_errores)
@@ -234,9 +234,9 @@ def main():
         description="Crear usuarios masivamente desde Excel"
     )
     parser.add_argument("excel_file", help="Archivo Excel con usuarios (users.xlsx)")
-    parser.add_argument("--role", default="traductor", 
-                       choices=["admin", "validador", "traductor"],
-                       help="Role de los usuarios (default: traductor)")
+    parser.add_argument("--role", default="ambos", 
+                       choices=["admin", "ambos"],
+                       help="Role de los usuarios (default: ambos)")
     parser.add_argument("--dry-run", action="store_true",
                        help="Simular sin insertar en BD")
     parser.add_argument("-v", "--verbose", action="store_true",

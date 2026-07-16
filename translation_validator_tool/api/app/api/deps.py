@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.config import settings
 from app.models.user import User
+from app.core.roles import is_admin
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -51,7 +52,6 @@ async def get_current_active_superuser(
     """Require current user to be an active superuser."""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    is_admin = getattr(current_user, 'is_superuser', False) or getattr(current_user, 'role', None) == 'admin'
-    if not is_admin:
+    if not is_admin(current_user):
         raise HTTPException(status_code=403, detail="Insufficient privileges")
     return current_user

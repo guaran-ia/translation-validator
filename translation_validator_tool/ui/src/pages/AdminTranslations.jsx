@@ -4,13 +4,14 @@ import { translationsAPI, validationsAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
 import TranslationCard from '../components/translation/TranslationCard';
 import Navbar from '../components/common/Navbar';
+import { isAdmin as userIsAdmin } from '../utils/roles';
 
 // Simple helper to truncate long text in table cells
 const truncate = (s, n = 80) => (s && s.length > n ? s.slice(0, n) + '…' : s);
 
 const AdminTranslations = () => {
   const { user } = useAuth();
-  const isAdmin = !!user && (user.is_superuser || user.role === 'admin');
+  const isAdmin = userIsAdmin(user);
   const navigate = useNavigate();
   const [idInput, setIdInput] = useState('');
   const [loading, setLoading] = useState(false);
