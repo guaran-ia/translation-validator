@@ -216,6 +216,53 @@ def get_translation_metrics(conn):
     return metrics
 
 
+def get_validation_metrics(conn):
+    """
+    Obtiene métricas de validaciones completadas sobre traducciones.
+
+    Args:
+        conn: Conexión a la base de datos
+
+    Returns:
+        dict: Métricas de validaciones
+    """
+    metrics = {}
+
+    query_validated_translations = """
+    SELECT COUNT(*)
+    FROM annotation_translations at
+    WHERE at.validated = true
+      AND EXISTS (
+          SELECT 1
+          FROM annotation_validations av
+          WHERE av.translation_id = at.id
+            AND av.status = 'completed'
+      );
+    """
+    result = execute_query(conn, query_validated_translations)
+    metrics['total_validaciones_realizadas'] = result[0][0] if result else 0
+
+    query_recent_validated_translations = f"""
+    SELECT COUNT(*)
+    FROM annotation_translations at
+    WHERE at.validated = true
+      AND EXISTS (
+          SELECT 1
+          FROM annotation_validations av
+          WHERE av.translation_id = at.id
+            AND av.status = 'completed'
+            AND (av.updated_at{TIME_SUB_SQL}) >= NOW() - INTERVAL '2 days'
+      );
+    """
+    result = execute_query(conn, query_recent_validated_translations)
+    metrics['validaciones_realizadas_2dias'] = result[0][0] if result else 0
+
+    result = execute_query(conn, "SELECT COUNT(*) FROM annotation_translations;")
+    metrics['total_traducciones'] = result[0][0] if result else 0
+
+    return metrics
+
+
 def get_user_breakdown_metrics(conn):
     """
     Obtiene métricas desglosadas sobre usuarios y sus actividades.
@@ -401,6 +448,21 @@ def create_metrics_table_in_docx(doc, metrics_data):
     # Tareas abandonadas en rojo
     p_abandoned = doc.add_paragraph()
     run_abandoned = p_abandoned.add_run(f"Premisas asignadas pero SIN traducción por el momento: {metrics_data['traducciones']['annotations_asignadas_sin_traduccion']}")
+
+    # VALIDACIONES
+    heading_validations = doc.add_paragraph(" MÉTRICAS DE VALIDACIONES")
+    heading_validations_run = heading_validations.runs[0]
+    heading_validations_run.bold = True
+    heading_validations_run.font.size = Pt(12)
+
+    doc.add_paragraph(f"Total de validaciones realizadas: {metrics_data['validaciones']['total_validaciones_realizadas']}")
+    doc.add_paragraph(f"Validaciones realizadas (últimos 2 días): {metrics_data['validaciones']['validaciones_realizadas_2dias']}")
+    doc.add_paragraph(
+        f"Validaciones/Total de traducciones: "
+        f"{metrics_data['validaciones']['total_validaciones_realizadas']}/"
+        f"{metrics_data['validaciones']['total_traducciones']}"
+    )
+
     # MÉTRICAS DE USUARIOS
     heading_user_breakdown = doc.add_paragraph(" MÉTRICAS DE USUARIOS")
     heading_user_breakdown_run = heading_user_breakdown.runs[0]
@@ -419,11 +481,6 @@ def create_metrics_table_in_docx(doc, metrics_data):
         f"Usuarios que completaron al menos una traducción en la plataforma: {metrics_data['user_breakdown']['users_with_completed_translations']}",
         style='List Bullet'
     )
-    
-    final_note = doc.add_paragraph("Se puede ver el desglose de usuarios en el otro documento word situado en el drive")
-    final_note_run = final_note.runs[0]
-    final_note_run.italic = True
-    final_note_run.font.size = Pt(10)
     
     # Separador final
     doc.add_paragraph("_" * 80)
@@ -471,12 +528,6 @@ def update_metrics_docx(metrics_data, documents_folder):
         # Si había contenido anterior, agregarlo después de las nuevas métricas
         if old_paragraphs:
             doc.add_paragraph()  # Espacio
-            heading_previous = doc.add_paragraph("REPORTES ANTERIORES")
-            heading_previous_run = heading_previous.runs[0]
-            heading_previous_run.bold = True
-            heading_previous_run.font.size = Pt(11)
-            heading_previous_run.font.color.rgb = RGBColor(128, 128, 128)
-            doc.add_paragraph()
             
             # Agregar los párrafos anteriores
             for para_data in old_paragraphs:
@@ -514,6 +565,15 @@ translation_stats AS (
     FROM annotation_translations
     GROUP BY user_id
 ),
+validation_stats AS (
+    SELECT
+        user_id,
+        COUNT(*) AS validaciones_realizadas,
+        AVG(EXTRACT(EPOCH FROM (updated_at{TIME_SUB_SQL})::time)) AS avg_validation_seconds
+    FROM annotation_validations
+    WHERE status = 'completed'
+    GROUP BY user_id
+),
 activity_stats AS (
     SELECT
         user_id,
@@ -530,6 +590,14 @@ activity_stats AS (
             user_id,
             EXTRACT(EPOCH FROM (created_at{TIME_SUB_SQL})::time) AS activity_seconds
         FROM annotation_translations
+
+        UNION ALL
+
+        SELECT
+            user_id,
+            EXTRACT(EPOCH FROM (updated_at{TIME_SUB_SQL})::time) AS activity_seconds
+        FROM annotation_validations
+        WHERE status = 'completed'
     ) activity
     GROUP BY user_id
 )
@@ -541,17 +609,21 @@ SELECT
 
     COALESCE(a.premisas_asignadas, 0) AS premisas_asignadas,
     COALESCE(t.traducciones_completadas, 0) AS traducciones_completadas,
+    COALESCE(v.validaciones_realizadas, 0) AS validaciones_realizadas,
 
     CASE
         WHEN COALESCE(a.premisas_asignadas, 0) = 0
          AND COALESCE(t.traducciones_completadas, 0) = 0
+         AND COALESCE(v.validaciones_realizadas, 0) = 0
             THEN 'inactivo'
 
         WHEN COALESCE(a.premisas_asignadas, 0) > 0
          AND COALESCE(t.traducciones_completadas, 0) = 0
+         AND COALESCE(v.validaciones_realizadas, 0) = 0
             THEN 'activo'
 
         WHEN COALESCE(t.traducciones_completadas, 0) > 0
+          OR COALESCE(v.validaciones_realizadas, 0) > 0
             THEN 'muy activo'
     END AS estado,
 
@@ -564,6 +636,11 @@ SELECT
         make_interval(secs => ROUND(t.avg_translation_seconds)::int),
         'HH24:MI'
     ) AS hora_promedio_traduccion,
+
+    TO_CHAR(
+        make_interval(secs => ROUND(v.avg_validation_seconds)::int),
+        'HH24:MI'
+    ) AS hora_promedio_validacion,
 
     TO_CHAR(
         make_interval(secs => ROUND(act.avg_activity_seconds)::int),
@@ -584,14 +661,18 @@ LEFT JOIN assignment_stats a
     ON a.user_id = u.id
 LEFT JOIN translation_stats t
     ON t.user_id = u.id
+LEFT JOIN validation_stats v
+    ON v.user_id = u.id
 LEFT JOIN activity_stats act
     ON act.user_id = u.id
 ORDER BY
     CASE
-        WHEN COALESCE(t.traducciones_completadas, 0) > 0 THEN 1
+        WHEN COALESCE(t.traducciones_completadas, 0) > 0
+          OR COALESCE(v.validaciones_realizadas, 0) > 0 THEN 1
         WHEN COALESCE(a.premisas_asignadas, 0) > 0 THEN 2
         ELSE 3
     END,
+    COALESCE(v.validaciones_realizadas, 0) DESC,
     COALESCE(t.traducciones_completadas, 0) DESC,
     COALESCE(a.premisas_asignadas, 0) DESC;
     """
@@ -620,8 +701,10 @@ ORDER BY
         "Estado",
         "Traducciones realizadas",
         "Premisas asignadas",
+        "Validaciones realizadas",
         "Hora promedio asignación",
         "Hora promedio traducción",
+        "Hora promedio validación",
         "Hora promedio activo",
         "Turno",
     ]
@@ -649,12 +732,14 @@ ORDER BY
         contact = row[3] if len(row) > 3 else ''
         premises = row[4] if len(row) > 4 else 0
         translations = row[5] if len(row) > 5 else 0
-        estado = row[6] if len(row) > 6 else ''
+        validations = row[6] if len(row) > 6 else 0
+        estado = row[7] if len(row) > 7 else ''
 
-        hora_asign = row[7] if len(row) > 7 and row[7] is not None else '-'
-        hora_trad = row[8] if len(row) > 8 and row[8] is not None else '-'
-        hora_act = row[9] if len(row) > 9 and row[9] is not None else '-'
-        turno = row[10] if len(row) > 10 and row[10] is not None else '-'
+        hora_asign = row[8] if len(row) > 8 and row[8] is not None else '-'
+        hora_trad = row[9] if len(row) > 9 and row[9] is not None else '-'
+        hora_val = row[10] if len(row) > 10 and row[10] is not None else '-'
+        hora_act = row[11] if len(row) > 11 and row[11] is not None else '-'
+        turno = row[12] if len(row) > 12 and row[12] is not None else '-'
 
         ws.append([
             full_name,
@@ -663,8 +748,10 @@ ORDER BY
             estado,
             translations,
             premises,
+            validations,
             hora_asign,
             hora_trad,
+            hora_val,
             hora_act,
             turno,
         ])
@@ -1227,6 +1314,7 @@ def main():
             'anotaciones': get_annotation_metrics(conn),
             'asignaciones': get_assignment_metrics(conn),
             'traducciones': get_translation_metrics(conn),
+            'validaciones': get_validation_metrics(conn),
             'user_breakdown': get_user_breakdown_metrics(conn),
         }
         
