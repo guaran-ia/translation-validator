@@ -910,6 +910,214 @@ ORDER BY
     return True
 
 
+def generate_user_validations_excel(conn, output_path):
+    query = f"""
+SELECT
+    validator.id AS validator_user_id,
+    validator.nombre_completo AS validator_nombre,
+    validator.email AS validator_email,
+    av.created_at{TIME_SUB_SQL} AS fecha_asignacion_validacion,
+    av.updated_at{TIME_SUB_SQL} AS fecha_validacion,
+    av.id AS validation_id,
+    av.status,
+    av.correctness,
+    av.regular_reason,
+    av.fluency_score,
+    av.accuracy_score,
+    av.notes,
+    av.category,
+    at.id AS translation_id,
+    at.created_at{TIME_SUB_SQL} AS fecha_traduccion,
+    translator.id AS translator_user_id,
+    translator.nombre_completo AS translator_nombre,
+    translator.email AS translator_email,
+    a.id AS annotation_id,
+    a.question_es,
+    a.answer_es,
+    at.question_gn,
+    at.answer_gn,
+    at.validated AS traduccion_validada,
+    a.source,
+    a.answer_number,
+    a.equation_solution,
+    sug.id AS suggestion_id,
+    sug.created_at{TIME_SUB_SQL} AS fecha_sugerencia,
+    sug.suggested_question_gn,
+    sug.suggested_answer_gn,
+    sug.reason AS suggestion_reason,
+    sug.is_promoted
+FROM annotation_validations av
+INNER JOIN users validator
+    ON validator.id = av.user_id
+INNER JOIN annotation_translations at
+    ON at.id = av.translation_id
+INNER JOIN users translator
+    ON translator.id = at.user_id
+INNER JOIN annotations a
+    ON a.id = at.annotation_id
+LEFT JOIN annotation_suggestions sug
+    ON sug.id = av.suggestion_id
+WHERE av.status = 'completed'
+ORDER BY
+    validator.nombre_completo ASC,
+    av.updated_at ASC;
+    """
+
+    result = execute_query(conn, query)
+
+    if result is None:
+        print("No se obtuvo resultado para la query de validaciones por usuario. Comprueba la query y la conexión.")
+        return False
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Validaciones por usuario"
+
+    ws["A1"] = "Última actualización"
+    ws["B1"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    ws["A3"] = "Todas las validaciones por usuario"
+    ws["A3"].font = Font(size=14, bold=True)
+
+    headers = [
+        "ID validador",
+        "Validador",
+        "Email validador",
+        "Fecha asignación validación",
+        "Fecha validación",
+        "ID validación",
+        "Estado validación",
+        "Corrección",
+        "Razón regular",
+        "Fluidez",
+        "Precisión",
+        "Notas validación",
+        "Categoría",
+        "ID traducción",
+        "Fecha traducción",
+        "ID traductor",
+        "Traductor",
+        "Email traductor",
+        "ID annotation",
+        "Pregunta original ES",
+        "Respuesta original ES",
+        "Pregunta traducida GN",
+        "Respuesta traducida GN",
+        "Traducción validada",
+        "Fuente",
+        "Número respuesta",
+        "Solución ecuación",
+        "ID sugerencia",
+        "Fecha sugerencia",
+        "Sugerencia pregunta GN",
+        "Sugerencia respuesta GN",
+        "Razón sugerencia",
+        "Sugerencia promovida",
+    ]
+
+    ws.append([])
+    ws.append(headers)
+
+    for col in range(1, len(headers) + 1):
+        cell = ws.cell(row=5, column=col)
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+
+    ws.freeze_panes = "A6"
+
+    current_user_id = None
+    row_index = 6
+    status_labels = {
+        "pending": "Pendiente",
+        "completed": "Completado",
+    }
+    correctness_labels = {
+        "correct": "Correcta",
+        "regular": "Regular",
+        "incorrect": "Incorrecta",
+        "gn_more": "Guaraní tiene más información",
+        "es_more": "Español tiene más información",
+        "regular_other": "Otro",
+    }
+
+    for row in result:
+        validator_user_id = row[0]
+        validator_name = row[1] or ''
+        validator_email = row[2] or ''
+        fecha_asignacion_validacion = row[3]
+        fecha_validacion = row[4]
+        fecha_traduccion = row[14]
+        fecha_sugerencia = row[28]
+
+        if validator_user_id != current_user_id:
+            current_user_id = validator_user_id
+            ws.append([f"Usuario: {validator_name} - {validator_email}"])
+            ws.merge_cells(start_row=row_index, start_column=1, end_row=row_index, end_column=len(headers))
+            group_cell = ws.cell(row=row_index, column=1)
+            group_cell.font = Font(bold=True)
+            group_cell.fill = PatternFill(start_color="D9EAF7", fill_type="solid")
+            row_index += 1
+
+        ws.append([
+            validator_user_id,
+            validator_name,
+            validator_email,
+            fecha_asignacion_validacion.strftime('%Y-%m-%d %H:%M:%S') if fecha_asignacion_validacion else '',
+            fecha_validacion.strftime('%Y-%m-%d %H:%M:%S') if fecha_validacion else '',
+            row[5] or '',
+            status_labels.get(row[6], row[6] or ''),
+            correctness_labels.get(row[7], row[7] or ''),
+            row[8] or '',
+            row[9] if row[9] is not None else '',
+            row[10] if row[10] is not None else '',
+            row[11] or '',
+            row[12] or '',
+            row[13],
+            fecha_traduccion.strftime('%Y-%m-%d %H:%M:%S') if fecha_traduccion else '',
+            row[15],
+            row[16] or '',
+            row[17] or '',
+            row[18],
+            row[19] or '',
+            row[20] or '',
+            row[21] or '',
+            row[22] or '',
+            "Sí" if row[23] else "No",
+            row[24] or '',
+            row[25] if row[25] is not None else '',
+            row[26] or '',
+            row[27] if row[27] is not None else '',
+            fecha_sugerencia.strftime('%Y-%m-%d %H:%M:%S') if fecha_sugerencia else '',
+            row[29] or '',
+            row[30] or '',
+            row[31] or '',
+            "Sí" if row[32] else ("No" if row[27] is not None else ''),
+        ])
+        row_index += 1
+
+    if row_index > 6:
+        ws.auto_filter.ref = f"A5:{get_column_letter(len(headers))}{row_index - 1}"
+
+    for col in ws.columns:
+        max_length = 0
+        col_letter = get_column_letter(col[0].column)
+
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except Exception:
+                pass
+
+        ws.column_dimensions[col_letter].width = min(max_length + 2, 80)
+
+    file_path = output_path / "Validaciones_Por_Usuario.xlsx"
+    wb.save(file_path)
+
+    print(f"Excel de validaciones por usuario generado en: {file_path}")
+    return True
+
+
 
 def get_activity_by_weekday(conn, output_path):
     """
@@ -1327,6 +1535,7 @@ def main():
         #generate_users_csv(conn, documents_folder)
         generate_users_excel(conn, documents_folder)
         generate_user_translations_excel(conn, documents_folder)
+        generate_user_validations_excel(conn, documents_folder)
         # Generar actividad por día (PNG)
         get_activity_by_weekday(conn, documents_folder)
         # Generar traducciones por día (PNG)

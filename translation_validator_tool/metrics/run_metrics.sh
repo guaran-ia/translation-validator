@@ -30,6 +30,7 @@ PYTHON_CMD="$PYENV_ROOT/shims/python"
 REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
 USERS_FILE="$SCRIPT_DIR/documents/Listado_Usuarios.xlsx"
 USER_TRANSLATIONS_FILE="$SCRIPT_DIR/documents/Traducciones_Por_Usuario.xlsx"
+USER_VALIDATIONS_FILE="$SCRIPT_DIR/documents/Validaciones_Por_Usuario.xlsx"
 ACTIVIDAD_GLOBAL_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia.png"
 PREMISAS_DIA_IMG="$SCRIPT_DIR/documents/premisas_por_dia.png"
 TRADUCCIONES_DIA_IMG="$SCRIPT_DIR/documents/traducciones_por_dia.png"
@@ -139,6 +140,24 @@ if [ -f "$REPORT_FILE" ]; then
         log_message "Excel de traducciones por usuario actualizado en Google Drive"
     else
         log_error "El archivo Excel no fue generado: $USER_TRANSLATIONS_FILE"
+        exit 1
+    fi
+
+    # ============================================
+    # SUBIDA EXCEL VALIDACIONES POR USUARIO
+    # ============================================
+
+    if [ -f "$USER_VALIDATIONS_FILE" ]; then
+        log_message "Subiendo validaciones por usuario a Google Drive..."
+
+        rclone copyto \
+            "$USER_VALIDATIONS_FILE" \
+            "$DRIVE_REMOTE/Validaciones_Por_Usuario.xlsx" \
+            >> "$LOG_FILE" 2>&1
+
+        log_message "Excel de validaciones por usuario actualizado en Google Drive"
+    else
+        log_error "El archivo Excel no fue generado: $USER_VALIDATIONS_FILE"
         exit 1
     fi
 

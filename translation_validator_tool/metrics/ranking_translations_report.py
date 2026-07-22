@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Genera un reporte Word con el ranking de traducciones por usuario
+Genera un reporte Word con el ranking de traducciones y validaciones por usuario
 en un rango de fechas personalizado.
 """
 
@@ -58,24 +58,53 @@ def ensure_documents_folder():
     return documents_folder
 
 
-def get_translation_ranking(conn, start_date, end_date):
+def get_activity_ranking(conn, start_date, end_date):
     query = f"""
+    WITH user_activity AS (
+        SELECT
+            at.user_id,
+            COUNT(*)::int AS traducciones_total,
+            0::int AS validaciones_total
+        FROM annotation_translations at
+        WHERE (at.created_at{TIME_SUB_SQL}) >= %s
+          AND (at.created_at{TIME_SUB_SQL}) < %s
+        GROUP BY at.user_id
+
+        UNION ALL
+
+        SELECT
+            av.user_id,
+            0::int AS traducciones_total,
+            COUNT(*)::int AS validaciones_total
+        FROM annotation_validations av
+        WHERE av.status = 'completed'
+          AND (av.updated_at{TIME_SUB_SQL}) >= %s
+          AND (av.updated_at{TIME_SUB_SQL}) < %s
+        GROUP BY av.user_id
+    ),
+    totals AS (
+        SELECT
+            user_id,
+            SUM(traducciones_total)::int AS traducciones_total,
+            SUM(validaciones_total)::int AS validaciones_total,
+            SUM(traducciones_total + validaciones_total)::int AS actividad_total
+        FROM user_activity
+        GROUP BY user_id
+    )
     SELECT
         u.id AS user_id,
         u.nombre_completo,
         u.email,
-        COUNT(*) AS traducciones_total
-    FROM annotation_translations at
+        totals.traducciones_total,
+        totals.validaciones_total,
+        totals.actividad_total
+    FROM totals
     INNER JOIN users u
-        ON u.id = at.user_id
-    WHERE (at.created_at{TIME_SUB_SQL}) >= %s
-      AND (at.created_at{TIME_SUB_SQL}) < %s
-    GROUP BY
-        u.id,
-        u.nombre_completo,
-        u.email
+        ON u.id = totals.user_id
     ORDER BY
-        COUNT(*) DESC,
+        totals.actividad_total DESC,
+        totals.traducciones_total DESC,
+        totals.validaciones_total DESC,
         u.nombre_completo ASC
     LIMIT %s;
     """
@@ -84,7 +113,7 @@ def get_translation_ranking(conn, start_date, end_date):
 
     try:
         with conn.cursor() as cursor:
-            cursor.execute(query, (start_date, end_exclusive, TOP_LIMIT))
+            cursor.execute(query, (start_date, end_exclusive, start_date, end_exclusive, TOP_LIMIT))
             return cursor.fetchall()
     except Error as e:
         print(f"Error ejecutando query de ranking: {e}")
@@ -105,7 +134,7 @@ def add_title(doc, start_date, end_date, text_tools):
 
     subtitle = doc.add_paragraph()
     subtitle_run = subtitle.add_run(
-        f"Top {TOP_LIMIT} usuarios con mas traducciones realizadas"
+        f"Top {TOP_LIMIT} usuarios con mas traducciones y validaciones realizadas"
     )
     subtitle_run.italic = True
     subtitle_run.font.size = Pt(11)
@@ -123,13 +152,20 @@ def add_title(doc, start_date, end_date, text_tools):
 
 def add_ranking_table(doc, rows):
     if not rows:
-        doc.add_paragraph("No se encontraron traducciones en el rango seleccionado.")
+        doc.add_paragraph("No se encontraron traducciones ni validaciones en el rango seleccionado.")
         return
 
-    table = doc.add_table(rows=1, cols=4)
+    table = doc.add_table(rows=1, cols=6)
     table.style = "Table Grid"
 
-    headers = ["Posicion", "Nombre completo", "Email", "Total de traducciones"]
+    headers = [
+        "Posicion",
+        "Nombre completo",
+        "Email",
+        "Traducciones",
+        "Validaciones",
+        "Total",
+    ]
     for index, header in enumerate(headers):
         cell = table.rows[0].cells[index]
         cell.text = header
@@ -138,12 +174,14 @@ def add_ranking_table(doc, rows):
                 run.bold = True
 
     for position, row in enumerate(rows, start=1):
-        user_id, full_name, email, translations_total = row
+        user_id, full_name, email, translations_total, validations_total, activity_total = row
         cells = table.add_row().cells
         cells[0].text = str(position)
         cells[1].text = full_name or "Usuario sin nombre"
         cells[2].text = email or "-"
         cells[3].text = str(translations_total)
+        cells[4].text = str(validations_total)
+        cells[5].text = str(activity_total)
 
 
 def generate_docx(rows, start_date, end_date, documents_folder):
@@ -159,7 +197,7 @@ def generate_docx(rows, start_date, end_date, documents_folder):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Genera un Word con el top 20 de traducciones por usuario."
+        description="Genera un Word con el top 20 de traducciones y validaciones por usuario."
     )
     parser.add_argument(
         "--desde",
@@ -186,7 +224,7 @@ def main():
     conn = get_connection()
 
     try:
-        rows = get_translation_ranking(conn, args.desde, args.hasta)
+        rows = get_activity_ranking(conn, args.desde, args.hasta)
         if rows is None:
             sys.exit(1)
 
