@@ -228,34 +228,30 @@ def get_validation_metrics(conn):
     """
     metrics = {}
 
-    query_validated_translations = """
+    query_completed_validations = """
     SELECT COUNT(*)
-    FROM annotation_translations at
-    WHERE at.validated = true
-      AND EXISTS (
-          SELECT 1
-          FROM annotation_validations av
-          WHERE av.translation_id = at.id
-            AND av.status = 'completed'
-      );
+    FROM annotation_validations
+    WHERE status = 'completed';
     """
-    result = execute_query(conn, query_validated_translations)
+    result = execute_query(conn, query_completed_validations)
     metrics['total_validaciones_realizadas'] = result[0][0] if result else 0
 
-    query_recent_validated_translations = f"""
+    query_recent_completed_validations = f"""
     SELECT COUNT(*)
-    FROM annotation_translations at
-    WHERE at.validated = true
-      AND EXISTS (
-          SELECT 1
-          FROM annotation_validations av
-          WHERE av.translation_id = at.id
-            AND av.status = 'completed'
-            AND (av.updated_at{TIME_SUB_SQL}) >= NOW() - INTERVAL '2 days'
-      );
+    FROM annotation_validations
+    WHERE status = 'completed'
+      AND (updated_at{TIME_SUB_SQL}) >= NOW() - INTERVAL '2 days';
     """
-    result = execute_query(conn, query_recent_validated_translations)
+    result = execute_query(conn, query_recent_completed_validations)
     metrics['validaciones_realizadas_2dias'] = result[0][0] if result else 0
+
+    query_fully_validated_translations = """
+    SELECT COUNT(*)
+    FROM annotation_translations
+    WHERE validated = true;
+    """
+    result = execute_query(conn, query_fully_validated_translations)
+    metrics['traducciones_completamente_validadas'] = result[0][0] if result else 0
 
     result = execute_query(conn, "SELECT COUNT(*) FROM annotation_translations;")
     metrics['total_traducciones'] = result[0][0] if result else 0
@@ -457,9 +453,10 @@ def create_metrics_table_in_docx(doc, metrics_data):
 
     doc.add_paragraph(f"Total de validaciones realizadas: {metrics_data['validaciones']['total_validaciones_realizadas']}")
     doc.add_paragraph(f"Validaciones realizadas (últimos 2 días): {metrics_data['validaciones']['validaciones_realizadas_2dias']}")
+    doc.add_paragraph(f"Traducciones completamente validadas: {metrics_data['validaciones']['traducciones_completamente_validadas']}")
     doc.add_paragraph(
-        f"Validaciones/Total de traducciones: "
-        f"{metrics_data['validaciones']['total_validaciones_realizadas']}/"
+        f"Traducciones completamente validadas/Total de traducciones: "
+        f"{metrics_data['validaciones']['traducciones_completamente_validadas']}/"
         f"{metrics_data['validaciones']['total_traducciones']}"
     )
 
