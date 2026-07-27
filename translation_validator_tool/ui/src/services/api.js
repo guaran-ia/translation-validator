@@ -124,6 +124,10 @@ export const validatorAPI = {
     api.post('/validator/skip-current'),
   completeCurrent: (data) =>
     api.post('/validator/complete-current', data),
+  getWeeklyUserActivity: () =>
+    api.get('/validator/weekly-user-activity'),
+  getAllTimeUserActivity: () =>
+    api.get('/validator/all-time-user-activity'),
 };
 
 // Suggestions API

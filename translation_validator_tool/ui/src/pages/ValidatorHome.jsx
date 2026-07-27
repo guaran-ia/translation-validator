@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 // Componentes
 import Navbar from '../components/common/Navbar';
+import WeeklyValidationLeaderboard from '../components/common/WeeklyValidationLeaderboard';
 import CorrectnessButtons from '../components/translation/CorrectnessButtons';
 import ScoreSelector from '../components/translation/ScoreSelector';
 import NotesTextarea from '../components/translation/NotesTextarea';
@@ -357,162 +358,168 @@ const ValidatorHome = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
-            <h1 className="text-3xl font-bold">Validaciones pendientes</h1>
-            <p className="mt-2 text-teal-100">
-              Revisa traducciones en español y guaraní, califica su calidad y sugiere mejoras cuando sea necesario.
-            </p>
-          </div>
-        </div>
-
-        {assigningNext ? (
-          <div className="bg-white rounded-lg shadow-md p-12 flex flex-col items-center justify-center min-h-[360px] text-center">
-            <div className="h-14 w-14 animate-spin rounded-full border-4 border-teal-100 border-t-teal-700"></div>
-            <p className="mt-6 text-base font-semibold text-gray-900">
-              Asignando siguiente traducción...
-            </p>
-            {assigningNextMessage && (
-              <p className="mt-2 text-sm text-gray-600">
-                {assigningNextMessage}
-              </p>
-            )}
-          </div>
-        ) : (
-        <div className="bg-white rounded-lg shadow-md p-6">
-        {/* Translation Info */}
-        <div className="mb-6 p-4 bg-teal-50 border border-teal-100 rounded-lg">
-          <div>
-            <h3 className="text-sm font-semibold text-teal-800">
-              Traducción a validar
-            </h3>
-            <p className="text-lg font-bold text-gray-900 mt-1">
-              ID: #{currentTranslation.id}
-            </p>
-          </div>
-        </div>
-
-
-          {/* Original and Translation Sections */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            {/* Spanish (Original) */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">Español (texto original)</h3>
-                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Original</span>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
-                {currentTranslation.question_es && (
-                  <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Pregunta</p>
-                    <p className="text-gray-900 leading-relaxed">{currentTranslation.question_es}</p>
-                  </div>
-                )}
-                {currentTranslation.answer_es && (
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Respuesta</p>
-                    <p className="text-gray-900 leading-relaxed">{currentTranslation.answer_es}</p>
-                  </div>
-                )}
+      <div className="max-w-[94rem] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-6 items-start">
+          <div className="flex-1 max-w-6xl mx-auto">
+            <div className="mb-8">
+              <div className="bg-gradient-to-r from-teal-600 to-teal-700 rounded-2xl shadow-lg p-8 text-white">
+                <h1 className="text-3xl font-bold">Validaciones pendientes</h1>
+                <p className="mt-2 text-teal-100">
+                  Revisa traducciones en español y guaraní, califica su calidad y sugiere mejoras cuando sea necesario.
+                </p>
               </div>
             </div>
 
-            {/* Guarani Translation */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">Guaraní (traducción)</h3>
-                <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Traducción</span>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
-                {currentTranslation.question_gn && (
-                  <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Pregunta</p>
-                    <p className="text-gray-900 leading-relaxed">{currentTranslation.question_gn}</p>
-                  </div>
-                )}
-                {currentTranslation.answer_gn && (
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">Respuesta</p>
-                    <p className="text-gray-900 leading-relaxed">{currentTranslation.answer_gn}</p>
-                  </div>
+            {assigningNext ? (
+              <div className="bg-white rounded-lg shadow-md p-12 flex flex-col items-center justify-center min-h-[360px] text-center">
+                <div className="h-14 w-14 animate-spin rounded-full border-4 border-teal-100 border-t-teal-700"></div>
+                <p className="mt-6 text-base font-semibold text-gray-900">
+                  Asignando siguiente traducción...
+                </p>
+                {assigningNextMessage && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    {assigningNextMessage}
+                  </p>
                 )}
               </div>
-            </div>
-          </div>
-
-      
-          {/* Validation Form */}
-          <div className="space-y-6 border-t border-gray-200 pt-6">
-            <CorrectnessButtons
-              selectedCorrectness={formData.correctness}
-              regularReason={formData.regular_reason}
-              onSelect={handleCorrectnessSelect}
-              onRegularReasonChange={handleRegularReasonChange}
-              disabled={submitting}
-            />
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <ScoreSelector
-                label="Puntuación de fluidez"
-                selectedScore={formData.fluency_score}
-                onSelect={handleFluencySelect}
-                disabled={submitting}
-              />
-              <ScoreSelector
-                label="Puntuación de precisión"
-                selectedScore={formData.accuracy_score}
-                onSelect={handleAccuracySelect}
-                disabled={submitting}
-              />
-            </div>
-
-            {shouldShowSuggestionButton && (
-              <div className="justify-center flex">
-                <button
-                  onClick={() => setShowSuggestionsModal(true)}
-                  className="justify-center w-50 px-4 py-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-100 font-medium text-sm transition-colors"
-                >
-                  ¿Quieres sugerir una traducción?
-                </button>
+            ) : (
+            <div className="bg-white rounded-lg shadow-md p-6">
+            {/* Translation Info */}
+            <div className="mb-6 p-4 bg-teal-50 border border-teal-100 rounded-lg">
+              <div>
+                <h3 className="text-sm font-semibold text-teal-800">
+                  Traducción a validar
+                </h3>
+                <p className="text-lg font-bold text-gray-900 mt-1">
+                  ID: #{currentTranslation.id}
+                </p>
               </div>
-            )}
+            </div>
 
-            {hasSubmittedSuggestion && (
-              <p className="text-center text-sm font-medium text-teal-700">
-                Sugerencia registrada para esta evaluación.
-              </p>
-            )}
 
-            <NotesTextarea
-              notes={formData.notes}
-              onNotesChange={handleNotesChange}
-              disabled={submitting}
-            />
+              {/* Original and Translation Sections */}
+              <div className="grid md:grid-cols-2 gap-6 mb-6">
+                {/* Spanish (Original) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800">Español (texto original)</h3>
+                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Original</span>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
+                    {currentTranslation.question_es && (
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-gray-700 mb-1">Pregunta</p>
+                        <p className="text-gray-900 leading-relaxed">{currentTranslation.question_es}</p>
+                      </div>
+                    )}
+                    {currentTranslation.answer_es && (
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">Respuesta</p>
+                        <p className="text-gray-900 leading-relaxed">{currentTranslation.answer_es}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-            <div className="border-t pt-6">
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={handleNextEvaluation}
+                {/* Guarani Translation */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800">Guaraní (traducción)</h3>
+                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200">Traducción</span>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 min-h-[120px] shadow-sm">
+                    {currentTranslation.question_gn && (
+                      <div className="mb-4">
+                        <p className="text-sm font-semibold text-gray-700 mb-1">Pregunta</p>
+                        <p className="text-gray-900 leading-relaxed">{currentTranslation.question_gn}</p>
+                      </div>
+                    )}
+                    {currentTranslation.answer_gn && (
+                      <div>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">Respuesta</p>
+                        <p className="text-gray-900 leading-relaxed">{currentTranslation.answer_gn}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+          
+              {/* Validation Form */}
+              <div className="space-y-6 border-t border-gray-200 pt-6">
+                <CorrectnessButtons
+                  selectedCorrectness={formData.correctness}
+                  regularReason={formData.regular_reason}
+                  onSelect={handleCorrectnessSelect}
+                  onRegularReasonChange={handleRegularReasonChange}
                   disabled={submitting}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium"
-                >
-                  Pasar a la siguiente evaluación
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitValidation}
+                />
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <ScoreSelector
+                    label="Puntuación de fluidez"
+                    selectedScore={formData.fluency_score}
+                    onSelect={handleFluencySelect}
+                    disabled={submitting}
+                  />
+                  <ScoreSelector
+                    label="Puntuación de precisión"
+                    selectedScore={formData.accuracy_score}
+                    onSelect={handleAccuracySelect}
+                    disabled={submitting}
+                  />
+                </div>
+
+                {shouldShowSuggestionButton && (
+                  <div className="justify-center flex">
+                    <button
+                      onClick={() => setShowSuggestionsModal(true)}
+                      className="justify-center w-50 px-4 py-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg hover:bg-teal-100 font-medium text-sm transition-colors"
+                    >
+                      ¿Quieres sugerir una traducción?
+                    </button>
+                  </div>
+                )}
+
+                {hasSubmittedSuggestion && (
+                  <p className="text-center text-sm font-medium text-teal-700">
+                    Sugerencia registrada para esta evaluación.
+                  </p>
+                )}
+
+                <NotesTextarea
+                  notes={formData.notes}
+                  onNotesChange={handleNotesChange}
                   disabled={submitting}
-                  className="px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
-                >
-                  ✓ Enviar evaluación
-                </button>
+                />
+
+                <div className="border-t pt-6">
+                  <div className="flex gap-3 justify-end">
+                    <button
+                      type="button"
+                      onClick={handleNextEvaluation}
+                      disabled={submitting}
+                      className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-medium"
+                    >
+                      Pasar a la siguiente evaluación
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmitValidation}
+                      disabled={submitting}
+                      className="px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium"
+                    >
+                      ✓ Enviar evaluación
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+            )}
           </div>
+
+          <WeeklyValidationLeaderboard />
         </div>
-        )}
       </div>
 
       {/* Submit Confirmation Modal */}

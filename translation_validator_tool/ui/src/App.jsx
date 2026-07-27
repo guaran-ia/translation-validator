@@ -19,6 +19,8 @@ import HelpPage from './pages/HelpPage';
 import ValidatorHelpPage from './pages/ValidatorHelpPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import AllTimeLeaderboardPage from './pages/AllTimeLeaderboardPage';
+import ValidationLeaderboardPage from './pages/ValidationLeaderboardPage';
+import AllTimeValidationLeaderboardPage from './pages/AllTimeValidationLeaderboardPage';
 import {
   ACTIVE_TRANSLATOR,
   ACTIVE_VALIDATOR,
@@ -159,6 +161,22 @@ const App = () => {
                 <TranslatorRoute>
                   <AllTimeLeaderboardPage />
                 </TranslatorRoute>
+              }
+            />
+            <Route
+              path="/validation-leaderboard"
+              element={
+                <ValidatorRoute>
+                  <ValidationLeaderboardPage />
+                </ValidatorRoute>
+              }
+            />
+            <Route
+              path="/validation-leaderboard-general"
+              element={
+                <ValidatorRoute>
+                  <AllTimeValidationLeaderboardPage />
+                </ValidatorRoute>
               }
             />
             <Route 

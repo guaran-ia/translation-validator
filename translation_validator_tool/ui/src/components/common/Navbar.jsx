@@ -40,6 +40,27 @@ const Navbar = () => {
                 {isValidator && (
                   <a href="/validator" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Validar</a>
                 )}
+                {isValidator && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setRankingOpen(!rankingOpen)}
+                      className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium flex items-center transition-colors"
+                      aria-expanded={rankingOpen}
+                    >
+                      Ranking
+                      <svg className="ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={rankingOpen ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+                      </svg>
+                    </button>
+
+                    {rankingOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-teal-700 rounded shadow-lg z-20">
+                        <a href="/validation-leaderboard" className="block px-4 py-2 text-sm text-teal-100 hover:bg-slate-700 hover:text-teal-300 transition-colors">Semanal</a>
+                        <a href="/validation-leaderboard-general" className="block px-4 py-2 text-sm text-teal-100 hover:bg-slate-700 hover:text-teal-300 transition-colors">General</a>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {isTranslator && (
                       <a href="/translator-annotations" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Mis pendientes</a>
                 )}
@@ -154,6 +175,27 @@ const Navbar = () => {
                   <>
                     {isValidator && (
                       <a href="/validator" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Validar</a>
+                    )}
+                    {isValidator && (
+                      <div>
+                        <button
+                          onClick={() => setRankingOpen(!rankingOpen)}
+                          className="w-full flex items-center justify-between text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors"
+                          aria-expanded={rankingOpen}
+                        >
+                          Ranking
+                          <svg className="ml-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={rankingOpen ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7'} />
+                          </svg>
+                        </button>
+
+                        {rankingOpen && (
+                          <div className="ml-4 mt-1 space-y-1">
+                            <a href="/validation-leaderboard" className="block text-teal-100 px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Semanal</a>
+                            <a href="/validation-leaderboard-general" className="block text-teal-100 px-3 py-2 rounded-md text-sm font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">General</a>
+                          </div>
+                        )}
+                      </div>
                     )}
                     {isTranslator && (
                       <a href="/translator-annotations" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Mis pendientes</a>

@@ -2,7 +2,7 @@
 Endpoints del flujo de validación.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user
@@ -339,3 +339,136 @@ async def complete_current_validation(
     db.commit()
     next_validation = _assign_random_translation(db, current_user.id)
     return _response_from_validation(db, next_validation)
+
+
+@router.get("/weekly-user-activity", response_model=dict)
+async def get_weekly_validator_activity(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Obtiene validaciones completadas por usuario de la semana actual.
+    Semana: lunes 00:00 hasta domingo 23:59:59.
+    Ajusta la hora del servidor restando 3 horas.
+    """
+    if not can_validate(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only validators can view validation rankings")
+
+    query = text("""
+        WITH week_range AS (
+            SELECT
+                date_trunc('week', NOW() - INTERVAL '3 hours') AS week_start,
+                date_trunc('week', NOW() - INTERVAL '3 hours') + INTERVAL '7 days' AS week_end
+        ),
+        validation_stats AS (
+            SELECT
+                av.user_id,
+                COUNT(*) AS validaciones_semana
+            FROM annotation_validations av
+            CROSS JOIN week_range wr
+            WHERE av.status = 'completed'
+              AND (av.updated_at - INTERVAL '3 hours') >= wr.week_start
+              AND (av.updated_at - INTERVAL '3 hours') < wr.week_end
+            GROUP BY av.user_id
+        )
+        SELECT
+            u.id AS user_id,
+            u.nombre_completo,
+            u.email,
+            COALESCE(v.validaciones_semana, 0) AS validaciones_semana,
+            wr.week_start::date AS week_start,
+            (wr.week_end::date - 1) AS week_end
+        FROM users u
+        CROSS JOIN week_range wr
+        INNER JOIN validation_stats v ON v.user_id = u.id
+        ORDER BY
+            COALESCE(v.validaciones_semana, 0) DESC,
+            u.nombre_completo ASC
+        LIMIT 10;
+    """)
+
+    rows = db.execute(query).fetchall()
+
+    if not rows:
+        return {
+            "week_start": None,
+            "week_end": None,
+            "items": [],
+            "total": 0,
+        }
+
+    return {
+        "week_start": rows[0].week_start.isoformat(),
+        "week_end": rows[0].week_end.isoformat(),
+        "items": [
+            {
+                "user_id": row.user_id,
+                "nombre_completo": row.nombre_completo,
+                "email": row.email,
+                "validaciones_semana": row.validaciones_semana,
+            }
+            for row in rows
+        ],
+        "total": len(rows),
+    }
+
+
+@router.get("/all-time-user-activity", response_model=dict)
+async def get_all_time_validator_activity(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Obtiene validaciones completadas por usuario desde el inicio de la plataforma.
+    """
+    if not can_validate(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only validators can view validation rankings")
+
+    query = text("""
+        WITH validation_stats AS (
+            SELECT
+                av.user_id,
+                COUNT(*) AS validaciones_total,
+                MIN(av.updated_at) AS primera_validacion,
+                MAX(av.updated_at) AS ultima_validacion
+            FROM annotation_validations av
+            WHERE av.status = 'completed'
+            GROUP BY av.user_id
+        )
+        SELECT
+            u.id AS user_id,
+            u.nombre_completo,
+            u.email,
+            v.validaciones_total,
+            v.primera_validacion,
+            v.ultima_validacion
+        FROM users u
+        INNER JOIN validation_stats v ON v.user_id = u.id
+        ORDER BY
+            v.validaciones_total DESC,
+            u.nombre_completo ASC
+        LIMIT 10;
+    """)
+
+    rows = db.execute(query).fetchall()
+
+    if not rows:
+        return {
+            "items": [],
+            "total": 0,
+        }
+
+    return {
+        "items": [
+            {
+                "user_id": row.user_id,
+                "nombre_completo": row.nombre_completo,
+                "email": row.email,
+                "validaciones_total": row.validaciones_total,
+                "primera_validacion": row.primera_validacion.isoformat() if row.primera_validacion else None,
+                "ultima_validacion": row.ultima_validacion.isoformat() if row.ultima_validacion else None,
+            }
+            for row in rows
+        ],
+        "total": len(rows),
+    }
