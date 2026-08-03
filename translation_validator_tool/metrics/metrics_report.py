@@ -367,6 +367,18 @@ def _format_dict(d):
     return "\n  ".join([f"{k}: {v}" for k, v in d.items()])
 
 
+def _format_minutes(total_minutes):
+    """Formatea minutos como texto breve, por ejemplo 10m o 1h 20m."""
+    total_minutes = int(total_minutes or 0)
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    if hours and minutes:
+        return f"{hours}h {minutes}m"
+    if hours:
+        return f"{hours}h"
+    return f"{minutes}m"
+
+
 def ensure_documents_folder():
     """
     Asegura que existe la carpeta 'documents' en la raíz del proyecto.
@@ -597,6 +609,45 @@ activity_stats AS (
         WHERE status = 'completed'
     ) activity
     GROUP BY user_id
+),
+session_stats AS (
+    SELECT
+        user_id,
+        MIN(first_assignment_at) AS first_assignment_at,
+        MAX(last_activity_at) AS last_activity_at
+    FROM (
+        SELECT
+            user_id,
+            assigned_at AS first_assignment_at,
+            NULL::timestamp AS last_activity_at
+        FROM annotation_assignments
+
+        UNION ALL
+
+        SELECT
+            user_id,
+            created_at AS first_assignment_at,
+            NULL::timestamp AS last_activity_at
+        FROM annotation_validations
+
+        UNION ALL
+
+        SELECT
+            user_id,
+            NULL::timestamp AS first_assignment_at,
+            created_at AS last_activity_at
+        FROM annotation_translations
+
+        UNION ALL
+
+        SELECT
+            user_id,
+            NULL::timestamp AS first_assignment_at,
+            updated_at AS last_activity_at
+        FROM annotation_validations
+        WHERE status = 'completed'
+    ) user_sessions
+    GROUP BY user_id
 )
 SELECT
     u.id,
@@ -653,6 +704,22 @@ SELECT
                 ELSE 'Noche'
             END AS turno
 
+    , u.created_at{TIME_SUB_SQL} AS dia_creacion
+
+    , ss.last_activity_at{TIME_SUB_SQL} AS ultima_actividad
+
+    , CASE
+        WHEN ss.first_assignment_at IS NULL OR ss.last_activity_at IS NULL THEN 0
+        ELSE GREATEST(
+            (
+                DATE(ss.last_activity_at{TIME_SUB_SQL})
+                - DATE(ss.first_assignment_at{TIME_SUB_SQL})
+                + 1
+            ),
+            0
+        )::int
+      END AS dias_iniciando_sesion
+
 FROM users u
 LEFT JOIN assignment_stats a
     ON a.user_id = u.id
@@ -662,6 +729,8 @@ LEFT JOIN validation_stats v
     ON v.user_id = u.id
 LEFT JOIN activity_stats act
     ON act.user_id = u.id
+LEFT JOIN session_stats ss
+    ON ss.user_id = u.id
 ORDER BY
     CASE
         WHEN COALESCE(t.traducciones_completadas, 0) > 0
@@ -704,6 +773,11 @@ ORDER BY
         "Hora promedio validación",
         "Hora promedio activo",
         "Turno",
+        "Tiempo de preparación por día",
+        "Día de creación",
+        "Última actividad",
+        "Días iniciando sesión",
+        "Tiempo de preparación total",
     ]
 
     ws.append([])
@@ -737,6 +811,10 @@ ORDER BY
         hora_val = row[10] if len(row) > 10 and row[10] is not None else '-'
         hora_act = row[11] if len(row) > 11 and row[11] is not None else '-'
         turno = row[12] if len(row) > 12 and row[12] is not None else '-'
+        dia_creacion = row[13] if len(row) > 13 and row[13] is not None else None
+        ultima_actividad = row[14] if len(row) > 14 and row[14] is not None else None
+        dias_iniciando = row[15] if len(row) > 15 and row[15] is not None else 0
+        preparacion_total_minutes = int(dias_iniciando) * 10
 
         ws.append([
             full_name,
@@ -751,6 +829,11 @@ ORDER BY
             hora_val,
             hora_act,
             turno,
+            "10m",
+            dia_creacion.strftime('%Y-%m-%d') if dia_creacion else '-',
+            ultima_actividad.strftime('%Y-%m-%d') if ultima_actividad else '-',
+            dias_iniciando,
+            _format_minutes(preparacion_total_minutes),
         ])
 
         # Colorear estado (tolerante a mayúsculas/minúsculas)
@@ -788,10 +871,20 @@ ORDER BY
 
 def generate_user_translations_excel(conn, output_path):
     query = f"""
+WITH assignment_dates AS (
+    SELECT
+        user_id,
+        annotation_id,
+        MIN(assigned_at{TIME_SUB_SQL}) AS fecha_asignacion
+    FROM annotation_assignments
+    GROUP BY user_id, annotation_id
+)
 SELECT
     u.id AS user_id,
     u.nombre_completo,
     u.email,
+    at.id AS translation_id,
+    ad.fecha_asignacion,
     at.created_at{TIME_SUB_SQL} AS fecha_traduccion,
     a.id AS annotation_id,
     a.question_es,
@@ -806,6 +899,9 @@ INNER JOIN users u
     ON u.id = at.user_id
 INNER JOIN annotations a
     ON a.id = at.annotation_id
+LEFT JOIN assignment_dates ad
+    ON ad.user_id = at.user_id
+   AND ad.annotation_id = at.annotation_id
 ORDER BY
     u.nombre_completo ASC,
     at.created_at ASC;
@@ -830,6 +926,8 @@ ORDER BY
     headers = [
         "Nombre completo",
         "Email",
+        "ID traducción",
+        "Fecha asignación",
         "Fecha traducción",
         "ID annotation",
         "Pregunta original ES",
@@ -858,7 +956,8 @@ ORDER BY
         user_id = row[0]
         full_name = row[1] or ''
         email = row[2] or ''
-        fecha_traduccion = row[3]
+        fecha_asignacion = row[4]
+        fecha_traduccion = row[5]
 
         if user_id != current_user_id:
             current_user_id = user_id
@@ -872,15 +971,17 @@ ORDER BY
         ws.append([
             full_name,
             email,
+            row[3],
+            fecha_asignacion.strftime('%Y-%m-%d %H:%M:%S') if fecha_asignacion else '',
             fecha_traduccion.strftime('%Y-%m-%d %H:%M:%S') if fecha_traduccion else '',
-            row[4],
-            row[5] or '',
-            row[6] or '',
+            row[6],
             row[7] or '',
             row[8] or '',
             row[9] or '',
-            row[10] if row[10] is not None else '',
+            row[10] or '',
             row[11] or '',
+            row[12] if row[12] is not None else '',
+            row[13] or '',
         ])
         row_index += 1
 
@@ -1112,6 +1213,188 @@ ORDER BY
     wb.save(file_path)
 
     print(f"Excel de validaciones por usuario generado en: {file_path}")
+    return True
+
+
+def _copy_worksheet(source_ws, target_ws):
+    from copy import copy
+
+    for row in source_ws.iter_rows():
+        for cell in row:
+            target_cell = target_ws.cell(row=cell.row, column=cell.column)
+            target_cell.value = cell.value
+            if cell.has_style:
+                target_cell.font = copy(cell.font)
+                target_cell.fill = copy(cell.fill)
+                target_cell.border = copy(cell.border)
+                target_cell.alignment = copy(cell.alignment)
+                target_cell.number_format = cell.number_format
+                target_cell.protection = copy(cell.protection)
+
+    for merged_range in source_ws.merged_cells.ranges:
+        target_ws.merge_cells(str(merged_range))
+
+    for col_letter, dimension in source_ws.column_dimensions.items():
+        target_ws.column_dimensions[col_letter].width = dimension.width
+
+    target_ws.freeze_panes = source_ws.freeze_panes
+    if source_ws.auto_filter.ref:
+        target_ws.auto_filter.ref = source_ws.auto_filter.ref
+
+
+def _rows_grouped_by_user(ws, name_index, email_index):
+    grouped = {}
+    for row in ws.iter_rows(min_row=6, values_only=True):
+        if not row or not any(value is not None for value in row):
+            continue
+        first_value = str(row[0] or '')
+        if first_value.startswith('Usuario:'):
+            continue
+
+        name = row[name_index] or ''
+        email = row[email_index] or ''
+        if not name and not email:
+            continue
+
+        grouped.setdefault((name, email), []).append(list(row))
+    return grouped
+
+
+def _style_row(ws, row_index, start_color, bold=True):
+    for cell in ws[row_index]:
+        cell.font = Font(bold=bold)
+        cell.fill = PatternFill(start_color=start_color, fill_type="solid")
+
+
+def _append_table(ws, row_index, title, headers, rows, max_columns):
+    ws.cell(row=row_index, column=1).value = title
+    ws.merge_cells(start_row=row_index, start_column=1, end_row=row_index, end_column=max_columns)
+    _style_row(ws, row_index, "D9EAF7")
+    row_index += 1
+
+    if not rows:
+        ws.cell(row=row_index, column=1).value = f"Sin {title.lower()}"
+        return row_index + 2
+
+    for col_index, header in enumerate(headers, start=1):
+        cell = ws.cell(row=row_index, column=col_index)
+        cell.value = header
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+    row_index += 1
+
+    for row in rows:
+        for col_index, value in enumerate(row, start=1):
+            ws.cell(row=row_index, column=col_index).value = value
+        row_index += 1
+
+    return row_index + 1
+
+
+def generate_complete_listing_excel(conn, output_path):
+    from openpyxl import load_workbook
+
+    users_file = output_path / "Listado_Usuarios.xlsx"
+    translations_file = output_path / "Traducciones_Por_Usuario.xlsx"
+    validations_file = output_path / "Validaciones_Por_Usuario.xlsx"
+
+    if not users_file.exists():
+        generate_users_excel(conn, output_path)
+    if not translations_file.exists():
+        generate_user_translations_excel(conn, output_path)
+    if not validations_file.exists():
+        generate_user_validations_excel(conn, output_path)
+
+    users_wb = load_workbook(users_file)
+    translations_wb = load_workbook(translations_file)
+    validations_wb = load_workbook(validations_file)
+
+    users_ws = users_wb.active
+    translations_ws = translations_wb.active
+    validations_ws = validations_wb.active
+
+    wb = Workbook()
+    resumen_ws = wb.active
+    resumen_ws.title = "Resumen"
+    _copy_worksheet(users_ws, resumen_ws)
+
+    complete_ws = wb.create_sheet("Listado completo")
+    translations_copy_ws = wb.create_sheet("Traducciones")
+    validations_copy_ws = wb.create_sheet("Validaciones")
+
+    _copy_worksheet(translations_ws, translations_copy_ws)
+    _copy_worksheet(validations_ws, validations_copy_ws)
+
+    translation_headers = [cell.value for cell in translations_ws[5]]
+    validation_headers = [cell.value for cell in validations_ws[5]]
+    translations_by_user = _rows_grouped_by_user(translations_ws, 0, 1)
+    validations_by_user = _rows_grouped_by_user(validations_ws, 1, 2)
+
+    max_columns = max(len(translation_headers), len(validation_headers), 4)
+    complete_ws["A1"] = "Listado completo por usuario"
+    complete_ws["A1"].font = Font(size=14, bold=True)
+    complete_ws["A2"] = "Última actualización"
+    complete_ws["B2"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    row_index = 4
+    for summary_row in users_ws.iter_rows(min_row=6, values_only=True):
+        if not summary_row or not any(value is not None for value in summary_row):
+            continue
+
+        full_name = summary_row[0] or ''
+        email = summary_row[1] or ''
+        translations_total = summary_row[4] or 0
+        validations_total = summary_row[6] or 0
+
+        if translations_total == 0 and validations_total == 0:
+            continue
+
+        key = (full_name, email)
+        ws_cell = complete_ws.cell(row=row_index, column=1)
+        ws_cell.value = f"Usuario: {full_name} - {email}"
+        complete_ws.merge_cells(start_row=row_index, start_column=1, end_row=row_index, end_column=max_columns)
+        _style_row(complete_ws, row_index, "B7DEE8")
+        row_index += 1
+
+        complete_ws.cell(row=row_index, column=1).value = f"Total de validaciones: {validations_total}"
+        row_index += 1
+        complete_ws.cell(row=row_index, column=1).value = f"Total de traducciones: {translations_total}"
+        row_index += 2
+
+        row_index = _append_table(
+            complete_ws,
+            row_index,
+            "VALIDACIONES",
+            validation_headers,
+            validations_by_user.get(key, []),
+            max_columns,
+        )
+        row_index = _append_table(
+            complete_ws,
+            row_index,
+            "TRADUCCIONES",
+            translation_headers,
+            translations_by_user.get(key, []),
+            max_columns,
+        )
+        row_index += 1
+
+    for ws in wb.worksheets:
+        for col in ws.columns:
+            max_length = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except Exception:
+                    pass
+            ws.column_dimensions[col_letter].width = min(max_length + 2, 80)
+
+    file_path = output_path / "Listado_Completo.xlsx"
+    wb.save(file_path)
+
+    print(f"Excel de listado completo generado en: {file_path}")
     return True
 
 
@@ -1533,6 +1816,7 @@ def main():
         generate_users_excel(conn, documents_folder)
         generate_user_translations_excel(conn, documents_folder)
         generate_user_validations_excel(conn, documents_folder)
+        generate_complete_listing_excel(conn, documents_folder)
         # Generar actividad por día (PNG)
         get_activity_by_weekday(conn, documents_folder)
         # Generar traducciones por día (PNG)
