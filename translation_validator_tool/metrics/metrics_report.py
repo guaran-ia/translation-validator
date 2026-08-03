@@ -610,43 +610,40 @@ activity_stats AS (
     ) activity
     GROUP BY user_id
 ),
-session_stats AS (
+activity_days AS (
     SELECT
         user_id,
-        MIN(first_assignment_at) AS first_assignment_at,
-        MAX(last_activity_at) AS last_activity_at
+        MIN(activity_date) AS primera_actividad,
+        MAX(activity_date) AS ultima_actividad,
+        COUNT(DISTINCT activity_date)::int AS dias_con_actividad
     FROM (
         SELECT
             user_id,
-            assigned_at AS first_assignment_at,
-            NULL::timestamp AS last_activity_at
+            DATE(assigned_at{TIME_SUB_SQL}) AS activity_date
         FROM annotation_assignments
 
-        UNION ALL
+        UNION
 
         SELECT
             user_id,
-            created_at AS first_assignment_at,
-            NULL::timestamp AS last_activity_at
+            DATE(created_at{TIME_SUB_SQL}) AS activity_date
         FROM annotation_validations
 
-        UNION ALL
+        UNION
 
         SELECT
             user_id,
-            NULL::timestamp AS first_assignment_at,
-            created_at AS last_activity_at
+            DATE(created_at{TIME_SUB_SQL}) AS activity_date
         FROM annotation_translations
 
-        UNION ALL
+        UNION
 
         SELECT
             user_id,
-            NULL::timestamp AS first_assignment_at,
-            updated_at AS last_activity_at
+            DATE(updated_at{TIME_SUB_SQL}) AS activity_date
         FROM annotation_validations
         WHERE status = 'completed'
-    ) user_sessions
+    ) user_activity_days
     GROUP BY user_id
 )
 SELECT
@@ -706,19 +703,11 @@ SELECT
 
     , u.created_at{TIME_SUB_SQL} AS dia_creacion
 
-    , ss.last_activity_at{TIME_SUB_SQL} AS ultima_actividad
+    , ad.primera_actividad
 
-    , CASE
-        WHEN ss.first_assignment_at IS NULL OR ss.last_activity_at IS NULL THEN 0
-        ELSE GREATEST(
-            (
-                DATE(ss.last_activity_at{TIME_SUB_SQL})
-                - DATE(ss.first_assignment_at{TIME_SUB_SQL})
-                + 1
-            ),
-            0
-        )::int
-      END AS dias_iniciando_sesion
+    , ad.ultima_actividad
+
+    , COALESCE(ad.dias_con_actividad, 0) AS dias_con_actividad
 
 FROM users u
 LEFT JOIN assignment_stats a
@@ -729,8 +718,8 @@ LEFT JOIN validation_stats v
     ON v.user_id = u.id
 LEFT JOIN activity_stats act
     ON act.user_id = u.id
-LEFT JOIN session_stats ss
-    ON ss.user_id = u.id
+LEFT JOIN activity_days ad
+    ON ad.user_id = u.id
 ORDER BY
     CASE
         WHEN COALESCE(t.traducciones_completadas, 0) > 0
@@ -775,8 +764,9 @@ ORDER BY
         "Turno",
         "Tiempo de preparación por día",
         "Día de creación",
+        "Primera actividad",
         "Última actividad",
-        "Días iniciando sesión",
+        "Días con actividad",
         "Tiempo de preparación total",
     ]
 
@@ -812,9 +802,10 @@ ORDER BY
         hora_act = row[11] if len(row) > 11 and row[11] is not None else '-'
         turno = row[12] if len(row) > 12 and row[12] is not None else '-'
         dia_creacion = row[13] if len(row) > 13 and row[13] is not None else None
-        ultima_actividad = row[14] if len(row) > 14 and row[14] is not None else None
-        dias_iniciando = row[15] if len(row) > 15 and row[15] is not None else 0
-        preparacion_total_minutes = int(dias_iniciando) * 10
+        primera_actividad = row[14] if len(row) > 14 and row[14] is not None else None
+        ultima_actividad = row[15] if len(row) > 15 and row[15] is not None else None
+        dias_con_actividad = row[16] if len(row) > 16 and row[16] is not None else 0
+        preparacion_total_minutes = int(dias_con_actividad) * 10
 
         ws.append([
             full_name,
@@ -831,8 +822,9 @@ ORDER BY
             turno,
             "10m",
             dia_creacion.strftime('%Y-%m-%d') if dia_creacion else '-',
+            primera_actividad.strftime('%Y-%m-%d') if primera_actividad else '-',
             ultima_actividad.strftime('%Y-%m-%d') if ultima_actividad else '-',
-            dias_iniciando,
+            dias_con_actividad,
             _format_minutes(preparacion_total_minutes),
         ])
 
