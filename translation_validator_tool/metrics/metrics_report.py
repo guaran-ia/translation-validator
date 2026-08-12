@@ -1390,6 +1390,162 @@ def generate_complete_listing_excel(conn, output_path):
     return True
 
 
+def generate_validation_status_excel(conn, output_path):
+    query = f"""
+WITH translation_counts AS (
+    SELECT
+        annotation_id,
+        COUNT(*)::int AS cantidad_traducciones
+    FROM annotation_translations
+    GROUP BY annotation_id
+),
+validation_counts AS (
+    SELECT
+        at.annotation_id,
+        COUNT(av.id)::int AS cantidad_validaciones
+    FROM annotation_translations at
+    INNER JOIN annotation_validations av
+        ON av.translation_id = at.id
+       AND av.status = 'completed'
+    GROUP BY at.annotation_id
+)
+SELECT
+    a.id AS annotation_id,
+    COALESCE(tc.cantidad_traducciones, 0) AS cantidad_traducciones,
+    COALESCE(vc.cantidad_validaciones, 0) AS cantidad_validaciones,
+    a.question_es,
+    a.answer_es,
+    a.source,
+    a.answer_number,
+    a.equation_solution,
+    a.md5,
+    a.created_at{TIME_SUB_SQL} AS fecha_creacion,
+    a.updated_at{TIME_SUB_SQL} AS fecha_actualizacion
+FROM annotations a
+LEFT JOIN translation_counts tc
+    ON tc.annotation_id = a.id
+LEFT JOIN validation_counts vc
+    ON vc.annotation_id = a.id
+ORDER BY
+    COALESCE(vc.cantidad_validaciones, 0) DESC,
+    a.id ASC;
+    """
+
+    result = execute_query(conn, query)
+
+    if result is None:
+        print("No se obtuvo resultado para el Excel de estado de validaciones. Comprueba la query y la conexión.")
+        return False
+
+    wb = Workbook()
+    resumen_ws = wb.active
+    resumen_ws.title = "Resumen"
+
+    generated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    headers = [
+        "ID premisa",
+        "Cantidad traducciones",
+        "Cantidad validaciones",
+        "Pregunta ES",
+        "Respuesta ES",
+        "Fuente",
+        "Número respuesta",
+        "Solución ecuación",
+        "MD5",
+        "Fecha creación",
+        "Fecha actualización",
+    ]
+
+    rows_by_validation_count = {0: [], 1: [], 2: [], 3: []}
+
+    for row in result:
+        validation_count = int(row[2] or 0)
+        if validation_count not in rows_by_validation_count:
+            continue
+
+        fecha_creacion = row[9]
+        fecha_actualizacion = row[10]
+        rows_by_validation_count[validation_count].append([
+            row[0],
+            row[1],
+            row[2],
+            row[3] or '',
+            row[4] or '',
+            row[5] or '',
+            row[6] if row[6] is not None else '',
+            row[7] or '',
+            row[8] or '',
+            fecha_creacion.strftime('%Y-%m-%d %H:%M:%S') if fecha_creacion else '',
+            fecha_actualizacion.strftime('%Y-%m-%d %H:%M:%S') if fecha_actualizacion else '',
+        ])
+
+    resumen_ws["A1"] = "Resumen de validaciones por premisa"
+    resumen_ws["A1"].font = Font(size=14, bold=True)
+    resumen_ws["A2"] = "Última actualización"
+    resumen_ws["B2"] = generated_at
+
+    summary_rows = [
+        ("Premisas con 3 validaciones", len(rows_by_validation_count[3])),
+        ("Premisas con 2 validaciones", len(rows_by_validation_count[2])),
+        ("Premisas con 1 validación", len(rows_by_validation_count[1])),
+        ("Premisas con 0 validaciones", len(rows_by_validation_count[0])),
+        ("Total premisas", len(result)),
+    ]
+
+    resumen_ws.append([])
+    resumen_ws.append(["Métrica", "Cantidad"])
+    for cell in resumen_ws[4]:
+        cell.font = Font(bold=True)
+        cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+
+    for label, total in summary_rows:
+        resumen_ws.append([label, total])
+
+    def create_detail_sheet(title, rows):
+        ws = wb.create_sheet(title)
+        ws["A1"] = title
+        ws["A1"].font = Font(size=14, bold=True)
+        ws["A2"] = "Última actualización"
+        ws["B2"] = generated_at
+        ws.append([])
+        ws.append(headers)
+
+        for col_index in range(1, len(headers) + 1):
+            cell = ws.cell(row=4, column=col_index)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+
+        for detail_row in rows:
+            ws.append(detail_row)
+
+        ws.freeze_panes = "A5"
+        ws.auto_filter.ref = f"A4:{get_column_letter(len(headers))}{max(4, len(rows) + 4)}"
+        return ws
+
+    create_detail_sheet("3 validaciones", rows_by_validation_count[3])
+    create_detail_sheet("2 validaciones", rows_by_validation_count[2])
+    create_detail_sheet("1 validacion", rows_by_validation_count[1])
+    create_detail_sheet("0 validaciones", rows_by_validation_count[0])
+
+    for ws in wb.worksheets:
+        for col in ws.columns:
+            max_length = 0
+            col_letter = get_column_letter(col[0].column)
+            for cell in col:
+                try:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+                except Exception:
+                    pass
+            ws.column_dimensions[col_letter].width = min(max_length + 2, 80)
+
+    file_path = output_path / "Estado_Validaciones_Premisas.xlsx"
+    wb.save(file_path)
+
+    print(f"Excel de estado de validaciones generado en: {file_path}")
+    return True
+
+
 
 def get_activity_by_weekday(conn, output_path):
     """
@@ -1809,6 +1965,7 @@ def main():
         generate_user_translations_excel(conn, documents_folder)
         generate_user_validations_excel(conn, documents_folder)
         generate_complete_listing_excel(conn, documents_folder)
+        generate_validation_status_excel(conn, documents_folder)
         # Generar actividad por día (PNG)
         get_activity_by_weekday(conn, documents_folder)
         # Generar traducciones por día (PNG)

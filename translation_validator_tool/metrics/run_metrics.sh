@@ -32,6 +32,7 @@ USERS_FILE="$SCRIPT_DIR/documents/Listado_Usuarios.xlsx"
 USER_TRANSLATIONS_FILE="$SCRIPT_DIR/documents/Traducciones_Por_Usuario.xlsx"
 USER_VALIDATIONS_FILE="$SCRIPT_DIR/documents/Validaciones_Por_Usuario.xlsx"
 COMPLETE_LIST_FILE="$SCRIPT_DIR/documents/Listado_Completo.xlsx"
+VALIDATION_STATUS_FILE="$SCRIPT_DIR/documents/Estado_Validaciones_Premisas.xlsx"
 ACTIVIDAD_GLOBAL_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia.png"
 PREMISAS_DIA_IMG="$SCRIPT_DIR/documents/premisas_por_dia.png"
 TRADUCCIONES_DIA_IMG="$SCRIPT_DIR/documents/traducciones_por_dia.png"
@@ -177,6 +178,24 @@ if [ -f "$REPORT_FILE" ]; then
         log_message "Excel de listado completo actualizado en Google Drive"
     else
         log_error "El archivo Excel no fue generado: $COMPLETE_LIST_FILE"
+        exit 1
+    fi
+
+    # ============================================
+    # SUBIDA EXCEL ESTADO DE VALIDACIONES POR PREMISA
+    # ============================================
+
+    if [ -f "$VALIDATION_STATUS_FILE" ]; then
+        log_message "Subiendo estado de validaciones por premisa a Google Drive..."
+
+        rclone copyto \
+            "$VALIDATION_STATUS_FILE" \
+            "$DRIVE_REMOTE/Estado_Validaciones_Premisas.xlsx" \
+            >> "$LOG_FILE" 2>&1
+
+        log_message "Excel de estado de validaciones por premisa actualizado en Google Drive"
+    else
+        log_error "El archivo Excel no fue generado: $VALIDATION_STATUS_FILE"
         exit 1
     fi
 
