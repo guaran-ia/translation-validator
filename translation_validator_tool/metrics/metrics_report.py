@@ -1391,7 +1391,7 @@ def generate_complete_listing_excel(conn, output_path):
 
 
 def generate_validation_status_excel(conn, output_path):
-    query = f"""
+    premise_query = f"""
 WITH translation_counts AS (
     SELECT
         annotation_id,
@@ -1431,10 +1431,46 @@ ORDER BY
     a.id ASC;
     """
 
-    result = execute_query(conn, query)
+    translation_query = f"""
+WITH validation_counts AS (
+    SELECT
+        translation_id,
+        COUNT(*)::int AS cantidad_validaciones
+    FROM annotation_validations
+    WHERE status = 'completed'
+    GROUP BY translation_id
+)
+SELECT
+    at.id AS translation_id,
+    at.annotation_id,
+    COALESCE(vc.cantidad_validaciones, 0) AS cantidad_validaciones,
+    a.question_es,
+    a.answer_es,
+    at.question_gn,
+    at.answer_gn,
+    a.source,
+    a.answer_number,
+    a.equation_solution,
+    at.created_at{TIME_SUB_SQL} AS fecha_traduccion
+FROM annotation_translations at
+INNER JOIN annotations a
+    ON a.id = at.annotation_id
+LEFT JOIN validation_counts vc
+    ON vc.translation_id = at.id
+ORDER BY
+    COALESCE(vc.cantidad_validaciones, 0) DESC,
+    at.annotation_id ASC,
+    at.id ASC;
+    """
 
-    if result is None:
+    premise_result = execute_query(conn, premise_query)
+    translation_result = execute_query(conn, translation_query)
+
+    if premise_result is None:
         print("No se obtuvo resultado para el Excel de estado de validaciones. Comprueba la query y la conexión.")
+        return False
+    if translation_result is None:
+        print("No se obtuvo resultado para el Excel de estado de validaciones de traducciones. Comprueba la query y la conexión.")
         return False
 
     wb = Workbook()
@@ -1442,10 +1478,13 @@ ORDER BY
     resumen_ws.title = "Resumen"
 
     generated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    headers = [
+    premise_headers = [
         "ID premisa",
         "Cantidad traducciones",
         "Cantidad validaciones",
+        "Validaciones requeridas",
+        "Validaciones faltantes",
+        "% avance",
         "Pregunta ES",
         "Respuesta ES",
         "Fuente",
@@ -1455,20 +1494,44 @@ ORDER BY
         "Fecha creación",
         "Fecha actualización",
     ]
+    translation_headers = [
+        "ID traducción",
+        "ID premisa",
+        "Cantidad validaciones",
+        "Validaciones requeridas",
+        "Validaciones faltantes",
+        "% avance",
+        "Pregunta ES",
+        "Respuesta ES",
+        "Pregunta GN",
+        "Respuesta GN",
+        "Fuente",
+        "Número respuesta",
+        "Solución ecuación",
+        "Fecha traducción",
+    ]
 
-    rows_by_validation_count = {0: [], 1: [], 2: [], 3: []}
+    required_validations_per_premise = 9
+    required_validations_per_translation = 3
+    premise_rows_by_validation_count = {count: [] for count in range(required_validations_per_premise, -1, -1)}
+    translation_rows_by_validation_count = {count: [] for count in range(required_validations_per_translation, -1, -1)}
+    total_premise_completed_validations = 0
+    total_translation_completed_validations = 0
 
-    for row in result:
+    for row in premise_result:
         validation_count = int(row[2] or 0)
-        if validation_count not in rows_by_validation_count:
-            continue
-
+        total_premise_completed_validations += validation_count
+        missing_validations = required_validations_per_premise - validation_count
+        progress = validation_count / required_validations_per_premise
         fecha_creacion = row[9]
         fecha_actualizacion = row[10]
-        rows_by_validation_count[validation_count].append([
+        detail_row = [
             row[0],
             row[1],
             row[2],
+            required_validations_per_premise,
+            missing_validations,
+            progress,
             row[3] or '',
             row[4] or '',
             row[5] or '',
@@ -1477,31 +1540,91 @@ ORDER BY
             row[8] or '',
             fecha_creacion.strftime('%Y-%m-%d %H:%M:%S') if fecha_creacion else '',
             fecha_actualizacion.strftime('%Y-%m-%d %H:%M:%S') if fecha_actualizacion else '',
-        ])
+        ]
+        if validation_count in premise_rows_by_validation_count:
+            premise_rows_by_validation_count[validation_count].append(detail_row)
 
-    resumen_ws["A1"] = "Resumen de validaciones por premisa"
+    for row in translation_result:
+        validation_count = int(row[2] or 0)
+        total_translation_completed_validations += validation_count
+        missing_validations = required_validations_per_translation - validation_count
+        progress = validation_count / required_validations_per_translation
+        fecha_traduccion = row[10]
+        detail_row = [
+            row[0],
+            row[1],
+            row[2],
+            required_validations_per_translation,
+            missing_validations,
+            progress,
+            row[3] or '',
+            row[4] or '',
+            row[5] or '',
+            row[6] or '',
+            row[7] or '',
+            row[8] if row[8] is not None else '',
+            row[9] or '',
+            fecha_traduccion.strftime('%Y-%m-%d %H:%M:%S') if fecha_traduccion else '',
+        ]
+        if validation_count in translation_rows_by_validation_count:
+            translation_rows_by_validation_count[validation_count].append(detail_row)
+
+    resumen_ws["A1"] = "Resumen de validaciones"
     resumen_ws["A1"].font = Font(size=14, bold=True)
     resumen_ws["A2"] = "Última actualización"
     resumen_ws["B2"] = generated_at
 
-    summary_rows = [
-        ("Premisas con 3 validaciones", len(rows_by_validation_count[3])),
-        ("Premisas con 2 validaciones", len(rows_by_validation_count[2])),
-        ("Premisas con 1 validación", len(rows_by_validation_count[1])),
-        ("Premisas con 0 validaciones", len(rows_by_validation_count[0])),
-        ("Total premisas", len(result)),
+    total_premises = len(premise_result)
+    total_translations = len(translation_result)
+    total_premise_target_validations = total_premises * required_validations_per_premise
+    total_translation_target_validations = total_translations * required_validations_per_translation
+
+    premise_summary_rows = [
+        ("Premisas completas (9 validaciones)", len(premise_rows_by_validation_count[9])),
+        ("Premisas con avance 2/3 (6 a 8 validaciones)", sum(len(premise_rows_by_validation_count[count]) for count in range(6, 9))),
+        ("Premisas con avance 1/3 (1 a 5 validaciones)", sum(len(premise_rows_by_validation_count[count]) for count in range(1, 6))),
+        ("Premisas con 0 validaciones", len(premise_rows_by_validation_count[0])),
+        ("Total premisas validadas", len(premise_rows_by_validation_count[9])),
+        ("Total premisas a validar", total_premises),
+        ("Total validaciones realizadas", total_premise_completed_validations),
+        ("Total validaciones a alcanzar", total_premise_target_validations),
+        ("Total premisas", total_premises),
+    ]
+    translation_summary_rows = [
+        ("Traducciones completas (3 validaciones)", len(translation_rows_by_validation_count[3])),
+        ("Traducciones con 2 validaciones", len(translation_rows_by_validation_count[2])),
+        ("Traducciones con 1 validación", len(translation_rows_by_validation_count[1])),
+        ("Traducciones sin validaciones", len(translation_rows_by_validation_count[0])),
+        ("Total traducciones validadas", len(translation_rows_by_validation_count[3])),
+        ("Total traducciones a validar", total_translations),
+        ("Total validaciones realizadas", total_translation_completed_validations),
+        ("Total validaciones a alcanzar", total_translation_target_validations),
+        ("Total traducciones", total_translations),
     ]
 
-    resumen_ws.append([])
-    resumen_ws.append(["Métrica", "Cantidad"])
-    for cell in resumen_ws[4]:
-        cell.font = Font(bold=True)
-        cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+    def append_summary_table(ws, row_index, title, rows):
+        ws.cell(row=row_index, column=1).value = title
+        ws.cell(row=row_index, column=1).font = Font(size=12, bold=True)
+        row_index += 1
 
-    for label, total in summary_rows:
-        resumen_ws.append([label, total])
+        ws.cell(row=row_index, column=1).value = "Métrica"
+        ws.cell(row=row_index, column=2).value = "Cantidad"
+        for cell in ws[row_index]:
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="CCCCCC", fill_type="solid")
+        row_index += 1
 
-    def create_detail_sheet(title, rows):
+        for label, total in rows:
+            ws.cell(row=row_index, column=1).value = label
+            ws.cell(row=row_index, column=2).value = total
+            row_index += 1
+
+        return row_index + 2
+
+    next_row = append_summary_table(resumen_ws, 4, "Resumen de premisas", premise_summary_rows)
+    append_summary_table(resumen_ws, next_row, "Resumen de traducciones", translation_summary_rows)
+
+    def create_detail_sheet(title, headers, rows):
         ws = wb.create_sheet(title)
         ws["A1"] = title
         ws["A1"].font = Font(size=14, bold=True)
@@ -1518,14 +1641,29 @@ ORDER BY
         for detail_row in rows:
             ws.append(detail_row)
 
+        for row_index in range(5, len(rows) + 5):
+            ws.cell(row=row_index, column=6).number_format = '0.00%'
+
         ws.freeze_panes = "A5"
         ws.auto_filter.ref = f"A4:{get_column_letter(len(headers))}{max(4, len(rows) + 4)}"
         return ws
 
-    create_detail_sheet("3 validaciones", rows_by_validation_count[3])
-    create_detail_sheet("2 validaciones", rows_by_validation_count[2])
-    create_detail_sheet("1 validacion", rows_by_validation_count[1])
-    create_detail_sheet("0 validaciones", rows_by_validation_count[0])
+    for validation_count in range(required_validations_per_premise, -1, -1):
+        create_detail_sheet(
+            f"{validation_count} validaciones",
+            premise_headers,
+            premise_rows_by_validation_count[validation_count]
+        )
+
+    for validation_count in range(required_validations_per_translation, -1, -1):
+        sheet_title = f"Trad {validation_count} validaciones"
+        if validation_count == 1:
+            sheet_title = "Trad 1 validacion"
+        create_detail_sheet(
+            sheet_title,
+            translation_headers,
+            translation_rows_by_validation_count[validation_count]
+        )
 
     for ws in wb.worksheets:
         for col in ws.columns:
