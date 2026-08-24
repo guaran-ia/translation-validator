@@ -1,0 +1,89 @@
+{
+  "generated_at": "2026-08-24T13:52:48Z",
+  "stats": {
+    "participants": 4,
+    "translations": 11,
+    "validations": 23,
+    "months": 6
+  },
+  "timeline": [
+    {
+      "label": "Inicio del proyecto",
+      "date": "2026-03-20"
+    },
+    {
+      "label": "Traducción",
+      "date": "2026-04-22"
+    },
+    {
+      "label": "Validación",
+      "date": "2026-07-06"
+    },
+    {
+      "label": "Finalización",
+      "date": "2026-08-24"
+    }
+  ],
+  "top_translators": [
+    {
+      "name": "traductor 2",
+      "count": 4
+    },
+    {
+      "name": "traductor3",
+      "count": 4
+    },
+    {
+      "name": "traductor 4",
+      "count": 2
+    },
+    {
+      "name": "traductor",
+      "count": 1
+    }
+  ],
+  "top_validators": [
+    {
+      "name": "traductor 2",
+      "count": 8
+    },
+    {
+      "name": "traductor3",
+      "count": 6
+    },
+    {
+      "name": "traductor 4",
+      "count": 5
+    },
+    {
+      "name": "traductor",
+      "count": 4
+    }
+  ],
+  "participants": [
+    {
+      "name": "traductor 2",
+      "translations": 4,
+      "validations": 8,
+      "total": 12
+    },
+    {
+      "name": "traductor3",
+      "translations": 4,
+      "validations": 6,
+      "total": 10
+    },
+    {
+      "name": "traductor 4",
+      "translations": 2,
+      "validations": 5,
+      "total": 7
+    },
+    {
+      "name": "traductor",
+      "translations": 1,
+      "validations": 4,
+      "total": 5
+    }
+  ]
+}

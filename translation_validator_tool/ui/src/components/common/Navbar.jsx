@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import guaraniaLogoNoBG from '../../images/logo.svg';
 import { ACTIVE_TRANSLATOR, ACTIVE_VALIDATOR, canTranslate, canValidate, isAdmin as userIsAdmin } from '../../utils/roles';
+import { PROJECT_CLOSED } from '../../config/projectStatus';
 
 const Navbar = () => {
   const { user, logout, activeRole, setActiveRole } = useAuth();
@@ -119,6 +120,8 @@ const Navbar = () => {
                   </div>
                 )}
               </>
+            ) : PROJECT_CLOSED ? (
+              <a href="/" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Inicio</a>
             ) : (
               <>
                 <a href="/" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Validar</a>
@@ -140,7 +143,7 @@ const Navbar = () => {
                 )}
                 <button onClick={logout} className="btn bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-lg font-medium transition-colors">Cerrar sesión</button>
               </>
-            ) : (
+            ) : PROJECT_CLOSED ? null : (
               <div className="hidden md:flex items-center">
                 <a href="/login" className="text-teal-100 hover:text-teal-300 px-3 py-2 text-sm font-medium transition-colors">Iniciar sesión</a>
               </div>
@@ -252,6 +255,8 @@ const Navbar = () => {
                       </div>
                     </div>
                   </>
+                ) : PROJECT_CLOSED ? (
+                  <a href="/" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Inicio</a>
                 ) : (
                   <>
                     <a href="/" className="block text-teal-100 px-3 py-2 rounded-md text-base font-medium hover:bg-slate-700 hover:text-teal-300 transition-colors">Inicio</a>

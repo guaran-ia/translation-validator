@@ -5,7 +5,7 @@ import logging
 import sys
 from pathlib import Path
 from app.config import settings
-from app.api.endpoints import auth, translations, validations, suggestions, prodigy_auth, annotations, annotations_multi_user, validator
+from app.api.endpoints import auth, translations, validations, suggestions, prodigy_auth, annotations, annotations_multi_user, validator, project_summary
 
 # Add db_schema to path for database initialization
 db_schema_path = Path(__file__).parent.parent.parent / "db_schema"
@@ -68,6 +68,7 @@ app.include_router(suggestions.router, prefix="/api/suggestions", tags=["suggest
 app.include_router(validator.router, prefix="/api/validator", tags=["validator"])
 app.include_router(annotations_multi_user.router, prefix="/api/annotations", tags=["annotations-multi-user"])
 app.include_router(annotations.router, prefix="/api/annotations", tags=["annotations"])
+app.include_router(project_summary.router, prefix="/api/project-summary", tags=["project-summary"])
 
 
 @app.get("/")

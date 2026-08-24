@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 // Pages
 import LoginPage from './pages/LoginPage';
+import ProjectClosurePage from './pages/ProjectClosurePage';
 import ValidatorHome from './pages/ValidatorHome';
 import HistoryPage from './pages/HistoryPage';
 import RegisterPage from './pages/RegisterPage';
@@ -30,6 +31,7 @@ import {
   isAdmin,
   routeForActiveRole,
 } from './utils/roles';
+import { PROJECT_CLOSED } from './config/projectStatus';
 
 
 const ActiveRoleRoute = ({ role, children }) => {
@@ -47,7 +49,7 @@ const AdminRoute = ({ children }) => {
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={PROJECT_CLOSED ? "/" : "/login"} replace />;
 
   if (!isAdmin(user)) return <Navigate to="/" replace />;
 
@@ -58,7 +60,7 @@ const ValidatorRoute = ({ children }) => {
   const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={PROJECT_CLOSED ? "/" : "/login"} replace />;
   if (!canValidate(user)) return <Navigate to="/" replace />;
 
   return <ActiveRoleRoute role={ACTIVE_VALIDATOR}>{children}</ActiveRoleRoute>;
@@ -68,7 +70,7 @@ const TranslatorRoute = ({ children }) => {
   const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={PROJECT_CLOSED ? "/" : "/login"} replace />;
   if (!canTranslate(user)) return <Navigate to="/" replace />;
 
   return <ActiveRoleRoute role={ACTIVE_TRANSLATOR}>{children}</ActiveRoleRoute>;
@@ -78,7 +80,7 @@ const HistoryRoute = ({ children }) => {
   const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={PROJECT_CLOSED ? "/" : "/login"} replace />;
 
   if (!canValidate(user) && !canTranslate(user)) return <Navigate to="/" replace />;
 
@@ -87,6 +89,8 @@ const HistoryRoute = ({ children }) => {
 
 const HomeRedirect = () => {
   const { isAuthenticated, loading, user } = useAuth();
+
+  if (PROJECT_CLOSED) return <ProjectClosurePage />;
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -105,8 +109,8 @@ const App = () => {
         <div className="App">
           <ToastContainer position="top-right" autoClose={5000} />
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={PROJECT_CLOSED ? <Navigate to="/" replace /> : <LoginPage />} />
+            <Route path="/register" element={PROJECT_CLOSED ? <Navigate to="/" replace /> : <RegisterPage />} />
             <Route 
               path="/validator" 
               element={
@@ -219,7 +223,7 @@ const App = () => {
                 </AdminRoute>
               }
             />
-            <Route path="/" element={<HomeRedirect />} />
+            <Route path="/" element={PROJECT_CLOSED ? <ProjectClosurePage /> : <HomeRedirect />} />
             <Route path="*" element={<HomeRedirect />} />
           </Routes>
         </div>

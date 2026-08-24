@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { PROJECT_CLOSED } from '../config/projectStatus';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -33,7 +34,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
-      window.location.href = '/login';
+      if (!PROJECT_CLOSED) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -68,6 +71,11 @@ export const authAPI = {
     api.post(`/auth/admin/change-password/${userId}`, { new_password: newPassword }),
   changeOwnPassword: (currentPassword, newPassword) =>
     api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
+};
+
+// Public project summary API
+export const projectAPI = {
+  getSummary: () => axios.get(`${API_URL}/project-summary`),
 };
 
 // Translations API
