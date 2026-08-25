@@ -385,7 +385,7 @@ const ParticipantsModal = ({ participants, onClose }) => {
             id="participant-search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+            className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-base text-slate-900 placeholder-slate-400 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
             placeholder="Escribí un nombre"
           />
         </div>
