@@ -477,7 +477,7 @@ const ProjectClosurePage = () => {
                   <p className="font-bold text-white motion-safe:animate-[fadeInUp_700ms_ease-out_220ms_both]">Gracias por ser parte de este proyecto.</p>
                   <p className="motion-safe:animate-[fadeInUp_700ms_ease-out_300ms_both]">Durante estos meses construimos juntos un recurso que busca aportar al fortalecimiento y la preservación del idioma guaraní.</p>
                   <p className="motion-safe:animate-[fadeInUp_700ms_ease-out_380ms_both]">Cada traducción, cada validación y cada minuto dedicado fue posible gracias al compromiso de una comunidad que decidió aportar su conocimiento.</p>
-                  <p className="closure-hero-highlight border-l-4 border-teal-300 pl-5 text-2xl font-black leading-tight text-white motion-safe:animate-[fadeInUp_700ms_ease-out_460ms_both]">El proyecto ha finalizado, pero todo lo construido queda como resultado del esfuerzo de todos.</p>
+                  <p className="closure-hero-highlight border-l-4 border-teal-300 pl-5 text-2xl font-black leading-tight text-white motion-safe:animate-[fadeInUp_700ms_ease-out_460ms_both]">La actividad ha finalizado, pero todo lo construido queda como resultado del esfuerzo de todos.</p>
                 </div>
               </div>
             </section>
@@ -499,7 +499,7 @@ const ProjectClosurePage = () => {
               </div>
               <div className="closure-participants-action mt-6 flex justify-center sm:justify-end">
                 <button type="button" onClick={() => setShowParticipants(true)} className="closure-participants-button rounded-full border border-emerald-300/60 bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-200">
-                  Ver todas las personas que hicieron posible el proyecto →
+                  Ver todas las personas que hicieron posible la actividad →
                 </button>
               </div>
             </SectionReveal>

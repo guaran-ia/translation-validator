@@ -17,7 +17,7 @@ PROJECT_TIMELINE_YEAR = 2026
 
 def _official_timeline():
     return [
-        {"label": "Inicio del proyecto", "date": date(PROJECT_TIMELINE_YEAR, 3, 20).isoformat()},
+        {"label": "Inicio de la actividad", "date": date(PROJECT_TIMELINE_YEAR, 3, 20).isoformat()},
         {"label": "Traducción", "date": date(PROJECT_TIMELINE_YEAR, 4, 22).isoformat()},
         {"label": "Validación", "date": date(PROJECT_TIMELINE_YEAR, 7, 6).isoformat()},
         {"label": "Finalización", "date": date.today().isoformat()},
