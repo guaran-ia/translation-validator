@@ -94,3 +94,4 @@ translation_validator_tool/metrics/Metricas_Plataforma.json
 translation_validator_tool/ui/data/leaderboard/weekly-leaderboard.json
 translation_validator_tool/ui/data/leaderboard
 translation_validator_tool/ui/public/leaderboard/weekly-leaderboard.json
+translation_validator_tool/api/data/project_summary.json

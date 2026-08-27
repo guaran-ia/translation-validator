@@ -19,6 +19,7 @@ eval "$("$PYENV_ROOT/bin/pyenv" init -)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METRICS_SCRIPT="$SCRIPT_DIR/metrics_report.py"
+GUARANI_PROBLEMS_SCRIPT="$SCRIPT_DIR/generar_problemas_guarani.py"
 RANKING_TRANSLATIONS_FILE="$SCRIPT_DIR/documents/Ranking_Traducciones_Por_Fecha.docx"
 REQUIREMENTS_FILE="$SCRIPT_DIR/requirements_metrics.txt"
 
@@ -33,6 +34,7 @@ USER_TRANSLATIONS_FILE="$SCRIPT_DIR/documents/Traducciones_Por_Usuario.xlsx"
 USER_VALIDATIONS_FILE="$SCRIPT_DIR/documents/Validaciones_Por_Usuario.xlsx"
 COMPLETE_LIST_FILE="$SCRIPT_DIR/documents/Listado_Completo.xlsx"
 VALIDATION_STATUS_FILE="$SCRIPT_DIR/documents/Estado_Validaciones_Premisas.xlsx"
+GUARANI_PROBLEMS_FILE="$SCRIPT_DIR/documents/problemas_matematicos_guarani.json"
 ACTIVIDAD_GLOBAL_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia.png"
 PREMISAS_DIA_IMG="$SCRIPT_DIR/documents/premisas_por_dia.png"
 TRADUCCIONES_DIA_IMG="$SCRIPT_DIR/documents/traducciones_por_dia.png"
@@ -80,6 +82,11 @@ if [ ! -f "$METRICS_SCRIPT" ]; then
     exit 1
 fi
 
+if [ ! -f "$GUARANI_PROBLEMS_SCRIPT" ]; then
+    log_error "Generador de problemas en guaraní no encontrado: $GUARANI_PROBLEMS_SCRIPT"
+    exit 1
+fi
+
 
 
 # ============================================
@@ -90,6 +97,15 @@ log_message "=== Iniciando generación de métricas ==="
 
 if $PYTHON_CMD "$METRICS_SCRIPT" >> "$LOG_FILE" 2>&1; then
     log_message "Métricas generadas exitosamente"
+
+    GUARANI_PROBLEMS_GENERATED=false
+    log_message "Generando JSON de problemas matemáticos en guaraní..."
+    if $PYTHON_CMD "$GUARANI_PROBLEMS_SCRIPT" >> "$LOG_FILE" 2>&1; then
+        GUARANI_PROBLEMS_GENERATED=true
+        log_message "JSON de problemas matemáticos generado exitosamente"
+    else
+        log_error "No se generó el JSON de problemas matemáticos; se omite su subida"
+    fi
 
    # ============================================
 # SUBIDA WORD
@@ -306,6 +322,23 @@ if [ -f "$RANKING_TRANSLATIONS_FILE" ]; then
     log_message "Reporte ranking de traducciones actualizado en Google Drive"
 else
     log_message "Reporte ranking de traducciones no existe, se omite subida"
+fi
+
+# ============================================
+# SUBIDA JSON PROBLEMAS MATEMÁTICOS EN GUARANÍ
+# ============================================
+
+if [ "$GUARANI_PROBLEMS_GENERATED" = true ] && [ -f "$GUARANI_PROBLEMS_FILE" ]; then
+    log_message "Subiendo problemas matemáticos en guaraní a Google Drive..."
+
+    rclone copyto \
+        "$GUARANI_PROBLEMS_FILE" \
+        "$DRIVE_REMOTE/problemas_matematicos_guarani.json" \
+        >> "$LOG_FILE" 2>&1
+
+    log_message "JSON de problemas matemáticos actualizado en Google Drive"
+else
+    log_message "JSON de problemas matemáticos no disponible, se omite subida"
 fi
 
 exit 0
