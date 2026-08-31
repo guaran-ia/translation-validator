@@ -1000,6 +1000,143 @@ ORDER BY
     return True
 
 
+def generate_user_translations_raw_csv(conn, output_path):
+    query = f"""
+WITH assignment_stats AS (
+    SELECT DISTINCT ON (user_id, annotation_id)
+        id AS translation_assignment_id,
+        user_id,
+        annotation_id,
+        assigned_at{TIME_SUB_SQL} AS translation_assigned_at
+    FROM annotation_assignments
+    ORDER BY user_id, annotation_id, assigned_at ASC, id ASC
+),
+validation_stats AS (
+    SELECT
+        translation_id,
+        COUNT(*)::int AS validation_total_count,
+        COUNT(*) FILTER (WHERE status = 'completed')::int AS validation_completed_count,
+        COUNT(*) FILTER (WHERE status = 'pending')::int AS validation_pending_count,
+        MIN(created_at{TIME_SUB_SQL}) AS first_validation_created_at,
+        MAX(updated_at{TIME_SUB_SQL}) AS last_validation_updated_at,
+        STRING_AGG(id::text, '|' ORDER BY id) AS validation_ids,
+        STRING_AGG(user_id::text, '|' ORDER BY id) AS validator_user_ids,
+        STRING_AGG(status, '|' ORDER BY id) AS validation_statuses,
+        STRING_AGG(COALESCE(correctness, ''), '|' ORDER BY id) AS validation_correctness_values,
+        STRING_AGG(COALESCE(category, ''), '|' ORDER BY id) AS validation_categories,
+        ROUND(AVG(fluency_score), 2) AS avg_fluency_score,
+        ROUND(AVG(accuracy_score), 2) AS avg_accuracy_score
+    FROM annotation_validations
+    GROUP BY translation_id
+),
+suggestion_stats AS (
+    SELECT
+        translation_id,
+        COUNT(*)::int AS suggestion_total_count,
+        COUNT(*) FILTER (WHERE is_promoted = true)::int AS suggestion_promoted_count,
+        MIN(created_at{TIME_SUB_SQL}) AS first_suggestion_created_at,
+        MAX(updated_at{TIME_SUB_SQL}) AS last_suggestion_updated_at,
+        STRING_AGG(id::text, '|' ORDER BY id) AS suggestion_ids,
+        STRING_AGG(user_id::text, '|' ORDER BY id) AS suggester_user_ids,
+        STRING_AGG(part_type, '|' ORDER BY id) AS suggestion_part_types,
+        STRING_AGG(COALESCE(reason, ''), '|' ORDER BY id) AS suggestion_reasons
+    FROM annotation_suggestions
+    WHERE translation_id IS NOT NULL
+    GROUP BY translation_id
+)
+SELECT
+    at.id AS translation_id,
+    at.annotation_id AS translation_annotation_id,
+    at.user_id AS translator_user_id,
+    translator.username AS translator_username,
+    translator.nombre_completo AS translator_nombre_completo,
+    translator.email AS translator_email,
+    translator.contacto AS translator_contacto,
+    translator.role AS translator_role,
+    translator.is_active AS translator_is_active,
+    translator.is_superuser AS translator_is_superuser,
+    translator.created_at{TIME_SUB_SQL} AS translator_created_at,
+    at.question_gn AS translation_question_gn,
+    at.answer_gn AS translation_answer_gn,
+    at.validated AS translation_validated,
+    at.created_at{TIME_SUB_SQL} AS translation_created_at,
+    assignment.translation_assignment_id,
+    assignment.translation_assigned_at,
+    a.id AS annotation_id,
+    a.question_es AS annotation_question_es,
+    a.answer_es AS annotation_answer_es,
+    a.answer_number AS annotation_answer_number,
+    a.equation_solution AS annotation_equation_solution,
+    a.source AS annotation_source,
+    a.md5 AS annotation_md5,
+    a.translated AS annotation_translated,
+    a.validated AS annotation_validated,
+    a.created_at{TIME_SUB_SQL} AS annotation_created_at,
+    a.updated_at{TIME_SUB_SQL} AS annotation_updated_at,
+    COALESCE(validation_stats.validation_total_count, 0) AS validation_total_count,
+    COALESCE(validation_stats.validation_completed_count, 0) AS validation_completed_count,
+    COALESCE(validation_stats.validation_pending_count, 0) AS validation_pending_count,
+    validation_stats.first_validation_created_at,
+    validation_stats.last_validation_updated_at,
+    validation_stats.validation_ids,
+    validation_stats.validator_user_ids,
+    validation_stats.validation_statuses,
+    validation_stats.validation_correctness_values,
+    validation_stats.validation_categories,
+    validation_stats.avg_fluency_score,
+    validation_stats.avg_accuracy_score,
+    COALESCE(suggestion_stats.suggestion_total_count, 0) AS suggestion_total_count,
+    COALESCE(suggestion_stats.suggestion_promoted_count, 0) AS suggestion_promoted_count,
+    suggestion_stats.first_suggestion_created_at,
+    suggestion_stats.last_suggestion_updated_at,
+    suggestion_stats.suggestion_ids,
+    suggestion_stats.suggester_user_ids,
+    suggestion_stats.suggestion_part_types,
+    suggestion_stats.suggestion_reasons
+FROM annotation_translations at
+INNER JOIN users translator
+    ON translator.id = at.user_id
+INNER JOIN annotations a
+    ON a.id = at.annotation_id
+LEFT JOIN assignment_stats assignment
+    ON assignment.user_id = at.user_id
+   AND assignment.annotation_id = at.annotation_id
+LEFT JOIN validation_stats
+    ON validation_stats.translation_id = at.id
+LEFT JOIN suggestion_stats
+    ON suggestion_stats.translation_id = at.id
+ORDER BY
+    at.created_at ASC,
+    at.id ASC;
+    """
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            headers = [column[0] for column in cursor.description]
+            rows = cursor.fetchall()
+    except Error as e:
+        print(f"No se obtuvo resultado para el CSV crudo de traducciones: {e}")
+        return False
+
+    def csv_value(value):
+        if value is None:
+            return ''
+        if isinstance(value, datetime):
+            return value.strftime('%Y-%m-%d %H:%M:%S')
+        return value
+
+    file_path = output_path / "Traducciones_Por_Usuario_Datos_Completos.csv"
+    with open(file_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow([csv_value(value) for value in row])
+
+    print(f"CSV crudo de traducciones generado en: {file_path}")
+    return True
+
+
 def generate_user_validations_excel(conn, output_path):
     query = f"""
 SELECT
@@ -1205,6 +1342,133 @@ ORDER BY
     wb.save(file_path)
 
     print(f"Excel de validaciones por usuario generado en: {file_path}")
+    return True
+
+
+def generate_user_validations_raw_csv(conn, output_path):
+    query = f"""
+SELECT
+    av.id AS validation_id,
+    av.annotation_id AS validation_annotation_id,
+    av.translation_id AS validation_translation_id,
+    av.user_id AS validator_user_id,
+    validator.username AS validator_username,
+    validator.nombre_completo AS validator_nombre_completo,
+    validator.email AS validator_email,
+    validator.contacto AS validator_contacto,
+    validator.role AS validator_role,
+    validator.is_active AS validator_is_active,
+    validator.is_superuser AS validator_is_superuser,
+    validator.created_at{TIME_SUB_SQL} AS validator_created_at,
+    av.part_type AS validation_part_type,
+    av.status AS validation_status,
+    av.correctness AS validation_correctness,
+    av.regular_reason AS validation_regular_reason,
+    av.fluency_score AS validation_fluency_score,
+    av.accuracy_score AS validation_accuracy_score,
+    av.notes AS validation_notes,
+    av.suggestion_id AS validation_suggestion_id,
+    av.category AS validation_category,
+    av.created_at{TIME_SUB_SQL} AS validation_created_at,
+    av.updated_at{TIME_SUB_SQL} AS validation_updated_at,
+    at.id AS translation_id,
+    at.annotation_id AS translation_annotation_id,
+    at.user_id AS translator_user_id,
+    translator.username AS translator_username,
+    translator.nombre_completo AS translator_nombre_completo,
+    translator.email AS translator_email,
+    translator.contacto AS translator_contacto,
+    translator.role AS translator_role,
+    translator.is_active AS translator_is_active,
+    translator.is_superuser AS translator_is_superuser,
+    translator.created_at{TIME_SUB_SQL} AS translator_created_at,
+    at.question_gn AS translation_question_gn,
+    at.answer_gn AS translation_answer_gn,
+    at.validated AS translation_validated,
+    at.created_at{TIME_SUB_SQL} AS translation_created_at,
+    assignment.id AS translation_assignment_id,
+    assignment.assigned_at{TIME_SUB_SQL} AS translation_assigned_at,
+    a.id AS annotation_id,
+    a.question_es AS annotation_question_es,
+    a.answer_es AS annotation_answer_es,
+    a.answer_number AS annotation_answer_number,
+    a.equation_solution AS annotation_equation_solution,
+    a.source AS annotation_source,
+    a.md5 AS annotation_md5,
+    a.translated AS annotation_translated,
+    a.validated AS annotation_validated,
+    a.created_at{TIME_SUB_SQL} AS annotation_created_at,
+    a.updated_at{TIME_SUB_SQL} AS annotation_updated_at,
+    sug.id AS suggestion_id,
+    sug.annotation_id AS suggestion_annotation_id,
+    sug.translation_id AS suggestion_translation_id,
+    sug.user_id AS suggester_user_id,
+    suggester.username AS suggester_username,
+    suggester.nombre_completo AS suggester_nombre_completo,
+    suggester.email AS suggester_email,
+    suggester.contacto AS suggester_contacto,
+    suggester.role AS suggester_role,
+    suggester.is_active AS suggester_is_active,
+    suggester.is_superuser AS suggester_is_superuser,
+    suggester.created_at{TIME_SUB_SQL} AS suggester_created_at,
+    sug.part_type AS suggestion_part_type,
+    sug.suggested_question_gn AS suggestion_suggested_question_gn,
+    sug.suggested_answer_gn AS suggestion_suggested_answer_gn,
+    sug.reason AS suggestion_reason,
+    sug.is_promoted AS suggestion_is_promoted,
+    sug.created_at{TIME_SUB_SQL} AS suggestion_created_at,
+    sug.updated_at{TIME_SUB_SQL} AS suggestion_updated_at
+FROM annotation_validations av
+INNER JOIN users validator
+    ON validator.id = av.user_id
+INNER JOIN annotation_translations at
+    ON at.id = av.translation_id
+INNER JOIN users translator
+    ON translator.id = at.user_id
+INNER JOIN annotations a
+    ON a.id = at.annotation_id
+LEFT JOIN annotation_suggestions sug
+    ON sug.id = av.suggestion_id
+LEFT JOIN users suggester
+    ON suggester.id = sug.user_id
+LEFT JOIN LATERAL (
+    SELECT aa.id, aa.assigned_at
+    FROM annotation_assignments aa
+    WHERE aa.user_id = at.user_id
+      AND aa.annotation_id = at.annotation_id
+    ORDER BY aa.assigned_at ASC, aa.id ASC
+    LIMIT 1
+) assignment ON true
+WHERE av.status = 'completed'
+ORDER BY
+    av.updated_at ASC,
+    av.id ASC;
+    """
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            headers = [column[0] for column in cursor.description]
+            rows = cursor.fetchall()
+    except Error as e:
+        print(f"No se obtuvo resultado para el CSV crudo de validaciones: {e}")
+        return False
+
+    def csv_value(value):
+        if value is None:
+            return ''
+        if isinstance(value, datetime):
+            return value.strftime('%Y-%m-%d %H:%M:%S')
+        return value
+
+    file_path = output_path / "Validaciones_Por_Usuario_Datos_Completos.csv"
+    with open(file_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(headers)
+        for row in rows:
+            writer.writerow([csv_value(value) for value in row])
+
+    print(f"CSV crudo de validaciones generado en: {file_path}")
     return True
 
 
@@ -2101,7 +2365,9 @@ def main():
         #generate_users_csv(conn, documents_folder)
         generate_users_excel(conn, documents_folder)
         generate_user_translations_excel(conn, documents_folder)
+        generate_user_translations_raw_csv(conn, documents_folder)
         generate_user_validations_excel(conn, documents_folder)
+        generate_user_validations_raw_csv(conn, documents_folder)
         generate_complete_listing_excel(conn, documents_folder)
         generate_validation_status_excel(conn, documents_folder)
         # Generar actividad por día (PNG)

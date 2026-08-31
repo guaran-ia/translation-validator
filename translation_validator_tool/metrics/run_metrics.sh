@@ -31,7 +31,9 @@ PYTHON_CMD="$PYENV_ROOT/shims/python"
 REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
 USERS_FILE="$SCRIPT_DIR/documents/Listado_Usuarios.xlsx"
 USER_TRANSLATIONS_FILE="$SCRIPT_DIR/documents/Traducciones_Por_Usuario.xlsx"
+USER_TRANSLATIONS_RAW_FILE="$SCRIPT_DIR/documents/Traducciones_Por_Usuario_Datos_Completos.csv"
 USER_VALIDATIONS_FILE="$SCRIPT_DIR/documents/Validaciones_Por_Usuario.xlsx"
+USER_VALIDATIONS_RAW_FILE="$SCRIPT_DIR/documents/Validaciones_Por_Usuario_Datos_Completos.csv"
 COMPLETE_LIST_FILE="$SCRIPT_DIR/documents/Listado_Completo.xlsx"
 VALIDATION_STATUS_FILE="$SCRIPT_DIR/documents/Estado_Validaciones_Premisas.xlsx"
 GUARANI_PROBLEMS_FILE="$SCRIPT_DIR/documents/problemas_matematicos_guarani.json"
@@ -162,6 +164,24 @@ if [ -f "$REPORT_FILE" ]; then
     fi
 
     # ============================================
+    # SUBIDA CSV TRADUCCIONES CRUDAS POR USUARIO
+    # ============================================
+
+    if [ -f "$USER_TRANSLATIONS_RAW_FILE" ]; then
+        log_message "Subiendo CSV crudo de traducciones por usuario a Google Drive..."
+
+        rclone copyto \
+            "$USER_TRANSLATIONS_RAW_FILE" \
+            "$DRIVE_REMOTE/Traducciones_Por_Usuario_Datos_Completos.csv" \
+            >> "$LOG_FILE" 2>&1
+
+        log_message "CSV crudo de traducciones por usuario actualizado en Google Drive"
+    else
+        log_error "El archivo CSV no fue generado: $USER_TRANSLATIONS_RAW_FILE"
+        exit 1
+    fi
+
+    # ============================================
     # SUBIDA EXCEL VALIDACIONES POR USUARIO
     # ============================================
 
@@ -176,6 +196,24 @@ if [ -f "$REPORT_FILE" ]; then
         log_message "Excel de validaciones por usuario actualizado en Google Drive"
     else
         log_error "El archivo Excel no fue generado: $USER_VALIDATIONS_FILE"
+        exit 1
+    fi
+
+    # ============================================
+    # SUBIDA CSV VALIDACIONES CRUDAS POR USUARIO
+    # ============================================
+
+    if [ -f "$USER_VALIDATIONS_RAW_FILE" ]; then
+        log_message "Subiendo CSV crudo de validaciones por usuario a Google Drive..."
+
+        rclone copyto \
+            "$USER_VALIDATIONS_RAW_FILE" \
+            "$DRIVE_REMOTE/Validaciones_Por_Usuario_Datos_Completos.csv" \
+            >> "$LOG_FILE" 2>&1
+
+        log_message "CSV crudo de validaciones por usuario actualizado en Google Drive"
+    else
+        log_error "El archivo CSV no fue generado: $USER_VALIDATIONS_RAW_FILE"
         exit 1
     fi
 
