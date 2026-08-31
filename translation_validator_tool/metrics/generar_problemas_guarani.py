@@ -67,6 +67,7 @@ WITH validation_summary AS (
 SELECT
     at.id AS translation_id,
     a.id AS annotation_id,
+    a.question_es,
     at.question_gn,
     a.answer_number,
     a.md5,
@@ -160,6 +161,7 @@ def evaluate_candidates(rows, corpus_answers):
     for row in rows:
         reasons = []
         problem = (row["question_gn"] or "").strip()
+        problem_es = (row["question_es"] or "").strip()
         expected_answer = row["answer_number"]
         if expected_answer is None and row["md5"]:
             expected_answer = corpus_answers.get(row["md5"].strip())
@@ -168,6 +170,8 @@ def evaluate_candidates(rows, corpus_answers):
             reasons.append("traducción no marcada como validada")
         if not problem:
             reasons.append("traducción al guaraní vacía")
+        if not problem_es:
+            reasons.append("premisa original en español vacía")
         if row["completed_count"] == 0:
             reasons.append("sin validaciones completadas")
         elif row["scored_count"] != row["completed_count"]:
@@ -191,6 +195,7 @@ def evaluate_candidates(rows, corpus_answers):
             {
                 "annotation_id": row["annotation_id"],
                 "problem": problem,
+                "problema_es": problem_es,
                 "expected_answer": normalize_number(expected_answer),
                 "quality_average": float(quality_average),
                 "validation_count": row["scored_count"],
@@ -233,6 +238,8 @@ def validate_and_serialize(selected):
     for index, item in enumerate(selected, start=1):
         if not item["problem"]:
             raise ValueError(f"el problema {index} está vacío")
+        if not item["problema_es"]:
+            raise ValueError(f"el problema {index} no tiene problema_es")
         if item["expected_answer"] is None:
             raise ValueError(f"el problema {index} no tiene expected_answer")
         if item["quality_average"] < MIN_QUALITY:
@@ -242,6 +249,7 @@ def validate_and_serialize(selected):
             {
                 "id": index,
                 "problem": item["problem"],
+                "problema_es": item["problema_es"],
                 "expected_answer": item["expected_answer"],
                 "difficulty": "fácil",
             }
