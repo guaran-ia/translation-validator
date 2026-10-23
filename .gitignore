@@ -95,3 +95,19 @@ translation_validator_tool/ui/data/leaderboard/weekly-leaderboard.json
 translation_validator_tool/ui/data/leaderboard
 translation_validator_tool/ui/public/leaderboard/weekly-leaderboard.json
 translation_validator_tool/api/data/project_summary.json
+
+# Instance data and unused legacy tooling (keep local copies)
+/data/data.xlsx
+/translation_validator_tool/prodigy/
+/translation_validator_tool/documents/metrics_report.docx
+/exit
+
+# Original campaign media and promotion (keep local copies)
+/translation_validator_tool/ui/src/images/bidLogo.webp
+/translation_validator_tool/ui/src/images/guaraniaLogoNoBG.png
+/translation_validator_tool/ui/src/images/hack.jpeg
+/translation_validator_tool/ui/src/images/logo.svg
+/translation_validator_tool/ui/src/images/logoCidit.svg
+/translation_validator_tool/ui/src/videos/Instructivo.mp4
+/translation_validator_tool/ui/src/videos/Validaciones.mp4
+/translation_validator_tool/ui/src/components/auth/HackathonModal.jsx

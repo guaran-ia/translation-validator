@@ -12,8 +12,11 @@ from pathlib import Path
 import psycopg2
 from psycopg2 import Error
 
+if __package__:
+    from .database_config import get_database_url
+else:
+    from database_config import get_database_url
 
-DATABASE_URL = "postgresql://postgres:1234@localhost:5432/translation_validator"
 SERVER_AHEAD_HOURS = 3
 TIME_SUB_SQL = f" - INTERVAL '{SERVER_AHEAD_HOURS} hours'"
 REPORT_FILENAME = "Ranking_Traducciones_Por_Fecha.docx"
@@ -46,8 +49,8 @@ def parse_date(value):
 
 def get_connection():
     try:
-        return psycopg2.connect(DATABASE_URL)
-    except Error as e:
+        return psycopg2.connect(get_database_url())
+    except (Error, ValueError) as e:
         print(f"Error al conectar con la base de datos: {e}")
         sys.exit(1)
 

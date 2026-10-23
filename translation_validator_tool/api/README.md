@@ -1,190 +1,227 @@
-# Backend — Translation Validator (instrucciones claras)
+# Backend — Translation Validator
 
-Este README explica cómo configurar y ejecutar el backend (FastAPI).
+This README explains how to configure and run the FastAPI backend.
+It is located in `translation_validator_tool/api`.
 
-Nota: la carpeta que contiene este README es `translation_validator_tool/api`.
+Each command block that starts with `cd translation_validator_tool/...` assumes
+you are at the repository root. For a sequential installation walkthrough, see
+the [main guide](../../README.md#installation).
 
-1) Preparar entorno (Windows / Linux)
+## 1. Set up the environment
 
-Windows (PowerShell):
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/api
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
-# Edita api/.env y configura DATABASE_URL, SECRET_KEY, CORS_ORIGINS
+# Edit api/.env and set DATABASE_URL, SECRET_KEY, and CORS_ORIGINS.
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/api
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Edita api/.env y configura DATABASE_URL, SECRET_KEY, CORS_ORIGINS
+# Edit api/.env and set DATABASE_URL, SECRET_KEY, and CORS_ORIGINS.
 ```
 
-2) Crear la base de datos y aplicar migraciones
+Copy the template only during initial setup to avoid overwriting your configuration.
 
-Recomendado: usa el helper `init_database.py` desde `translation_validator_tool/db_schema` (ejecutar con el Python del venv del backend).
+## 2. Create the database and apply migrations
 
-Windows (PowerShell):
+Use `init_database.py` from `translation_validator_tool/db_schema`, with the
+backend virtual environment's Python interpreter.
+
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe init_database.py init
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/db_schema
 ../api/venv/bin/python init_database.py init
 ```
 
-Alternativa: aplicar migraciones con Alembic (ejecutar desde `db_schema`):
+Alternatively, apply migrations with Alembic from `db_schema`:
 
-Windows (PowerShell):
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe -m alembic upgrade head
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/db_schema
 ../api/venv/bin/python -m alembic upgrade head
 ```
 
-3) Ejecutar el servidor local (desarrollo)
+## 3. Run the development server
 
-Windows (PowerShell):
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/api
 .\venv\Scripts\Activate.ps1
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/api
 source venv/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Endpoints útiles:
-- Swagger UI: http://127.0.0.1:8000/docs
-- ReDoc: http://127.0.0.1:8000/redoc
+Useful endpoints:
 
-4) Scripts útiles (ubicados en `app/scripts`)
+- [Swagger UI](http://127.0.0.1:8000/docs).
+- [ReDoc](http://127.0.0.1:8000/redoc).
 
-Crear admin (ejemplo):
+## 4. Utility scripts
 
-Windows (PowerShell):
+Scripts are located in `app/scripts`.
+
+### Create an administrator
+
+The full name defaults to `Administrador`. To customize it, append
+`--nombre-completo "Administrator name"` to the command. The automatic database
+initializer also uses `Administrador` as the default full name.
+
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/api
 .\venv\Scripts\Activate.ps1
 python -m app.scripts.create_admin --username admin --email admin@example.com --password admin123
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/api
 source venv/bin/activate
 python -m app.scripts.create_admin --username admin --email admin@example.com --password admin123
 ```
 
-Cargar corpus desde CSV (ejemplo):
+Replace example credentials with your own values.
 
-Windows (PowerShell):
+### Import a sentence corpus from CSV
+
+Provide your own UTF-8 CSV file; the campaign dataset is not distributed with the repository.
+
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/api
 .\venv\Scripts\Activate.ps1
 python -m app.scripts.load_corpus --file ..\..\data\translations.csv
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/api
 source venv/bin/activate
 python -m app.scripts.load_corpus --file ../../data/translations.csv
 ```
 
-Opciones del script:
-- `--file PATH` — ruta al CSV
-- `--sample` — cargar datos de ejemplo
+Options:
 
-Formato mínimo esperado en CSV:
-```
+- `--file PATH` — Path to the CSV file.
+- `--sample` — Load sample data.
+
+Expected CSV columns:
+
+```csv
 guarani,spanish,source
 ```
 
-5) Desarrollo y migraciones (resumen)
+## 5. Development and migrations
 
-Crear una nueva migración (desde `db_schema` con venv activo):
+Create a migration from `db_schema` using the backend interpreter:
 
-Windows (PowerShell):
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe -m alembic revision --autogenerate -m "Describe changes"
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/db_schema
 ../api/venv/bin/python -m alembic revision --autogenerate -m "Describe changes"
 ```
 
-Aplicar migraciones:
+Apply migrations:
 
-Windows (PowerShell):
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe -m alembic upgrade head
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/db_schema
 ../api/venv/bin/python -m alembic upgrade head
 ```
 
-Revertir la última migración:
+Revert the latest migration:
 
-Windows (PowerShell):
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe -m alembic downgrade -1
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/db_schema
 ../api/venv/bin/python -m alembic downgrade -1
 ```
 
-6) Troubleshooting rápido
+## 6. Troubleshooting
 
-- `No module named 'psycopg2'`: instala la dependencia en el venv:
+- `No module named 'psycopg2'`: install the dependency in the backend virtual environment.
 
-	Windows:
-	```powershell
-	.\venv\Scripts\python.exe -m pip install psycopg2-binary
-	```
+  From `api/` on Windows:
 
-	Linux:
-	```bash
-	source venv/bin/activate
-	python -m pip install psycopg2-binary
-	```
+  ```powershell
+  .\venv\Scripts\python.exe -m pip install psycopg2-binary
+  ```
 
-- `CREATE DATABASE cannot be executed inside a transaction`: usa el helper `init_database.py` o crea la BD manualmente con `psql`/`createdb`.
-- Problemas de encoding al cargar CSV: asegúrate que el archivo está en UTF-8.
+  From `api/` on Linux/macOS:
 
-7) Organización recomendada
+  ```bash
+  source venv/bin/activate
+  python -m pip install psycopg2-binary
+  ```
 
-- Scripts que usan modelos y `SessionLocal`: `api/app/scripts`.
-- Migraciones e inicialización de BD: `db_schema`.
+- `CREATE DATABASE cannot be executed inside a transaction`: use `init_database.py`
+  or create the database manually with `psql` or `createdb`.
+- CSV encoding errors: save the input file as UTF-8.
 
----
----
+## 7. Code organization
+
+- Scripts using models and `SessionLocal`: `api/app/scripts`.
+- Database migrations and initialization: `db_schema`.

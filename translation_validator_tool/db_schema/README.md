@@ -1,89 +1,105 @@
-# 🗄️ Database schema and initialization
+# Database schema and initialization
 
-Herramientas y documentación para gestionar la base de datos PostgreSQL del
-proyecto. Incluye scripts para inicializar, resetear y aplicar migraciones.
+Tools and documentation for managing the project's PostgreSQL database,
+including initialization, reset operations, and migrations.
 
-Resumen rápido
-- Migraciones: `db_schema/alembic/` (Alembic)
-- Helper de inicialización: `init_database.py` (usa `init_db.py`)
-- Configuración: `translation_validator_tool/api/.env` contiene `DATABASE_URL` y claves
+## Overview
 
-Estructura importante
+- Migrations: `db_schema/alembic/` (Alembic).
+- Initialization helper: `init_database.py`, backed by `init_db.py`.
+- Configuration: `translation_validator_tool/api/.env` contains `DATABASE_URL` and other settings.
 
-```
+Migrations and `add_column.py` read `DATABASE_URL` from the environment or
+`api/.env`, without a fallback connection containing fixed credentials.
+Exported environment variables take precedence. Configure this variable before
+running the scripts. Migrations also load backend settings, including `SECRET_KEY`,
+as shown in `api/.env.example`.
+
+## Directory layout
+
+```text
 db_schema/
-├── alembic/                # Migraciones con Alembic (versions/, env.py)
-├── alembic.ini             # Configuración de Alembic
-├── init_db.py              # Funciones reutilizables para init/reset
-├── init_database.py        # Script ejecutable para init/reset/test
-└── README.md               # Esta documentación
+├── alembic/                # Alembic migrations (versions/, env.py)
+├── alembic.ini             # Alembic configuration
+├── init_db.py              # Reusable initialization/reset functions
+├── init_database.py        # Initialization/reset/connection-test command
+└── README.md               # This guide
 ```
 
-Objetivo de los scripts
+## Script commands
 
-- `init_database.py init` — crea la base de datos (si no existe), crea tablas y
-	agrega un admin por defecto (útil en desarrollo).
-- `init_database.py reset` — elimina tablas y las vuelve a crear (dev).
-- `init_database.py drop` — elimina todas las tablas (peligroso, borra datos).
-- `init_database.py test` — prueba la conexión a la base de datos.
+- `init_database.py init` — Creates the database if needed, applies migrations,
+  and adds a default administrator when no users exist.
+- `init_database.py reset` — Drops and recreates tables for development.
+- `init_database.py drop` — Drops all tables and deletes their data.
+- `init_database.py test` — Tests the database connection.
 
-Nota: los scripts importan módulos del backend (`app.*`), por lo que deben
-ejecutarse usando el Python del venv del `api` o con el venv activado.
+The scripts import backend modules (`app.*`). Run them with the API virtual
+environment's Python interpreter or activate that environment first.
 
-Uso (ejemplos Windows / Linux)
+## Initialization
 
-Windows (PowerShell):
+The following examples start at the repository root.
+
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe init_database.py init
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/db_schema
 ../api/venv/bin/python init_database.py init
 ```
 
-Migraciones (Alembic)
+## Alembic migrations
 
-Ejecuta Alembic desde `db_schema` para que `alembic.ini` se resuelva correctamente.
+Run Alembic from `db_schema` so that it can locate `alembic.ini`.
+The following examples start at the repository root.
 
-Windows (PowerShell):
+**Windows — PowerShell:**
+
 ```powershell
 cd translation_validator_tool/db_schema
 ..\api\venv\Scripts\python.exe -m alembic upgrade head
 ```
 
-Linux / macOS (bash):
+**Linux/macOS — Bash:**
+
 ```bash
 cd translation_validator_tool/db_schema
 ../api/venv/bin/python -m alembic upgrade head
 ```
 
-Recomendaciones y notas
+## Notes
 
-- No existen archivos `init.sql`, `seed.sql`, `migrate.bat` ni `migrate.sh`.
-	La funcionalidad está en `init_database.py` y Alembic.
-- Si ves `No module named 'app'`, ejecuta desde `db_schema` y usa el Python del
-	venv del backend.
-- Si prefieres crear la BD manualmente (entornos controlados), crea la BD con
-	`psql`/`createdb` y luego aplica las migraciones con Alembic.
+- There are no `init.sql`, `seed.sql`, `migrate.bat`, or `migrate.sh` files.
+  Initialization is handled by `init_database.py` and Alembic.
+- If you get `No module named 'app'`, run the command from `db_schema` with the
+  backend environment's Python interpreter.
+- If you prefer to create the database manually, use `psql` or `createdb`, then
+  apply the Alembic migrations.
 
-Backup & restore (ejemplos genéricos)
+## Backup and restore
+
+Generic examples; replace the connection details with your own:
 
 ```bash
 pg_dump -h localhost -p 5432 -U postgres -d translation_validator -f backup.sql
 psql -h localhost -p 5432 -U postgres -d translation_validator -f backup.sql
 ```
 
-Solución de problemas rápidos
+## Troubleshooting
 
-- `CREATE DATABASE` dentro de transacción: usa `init_database.py init` o crea la
-	BD manualmente con `psql`.
-- Variables de entorno: revisa `translation_validator_tool/api/.env`.
-- Encoding CSV: asegúrate que los CSV estén en UTF-8.
+- `CREATE DATABASE` inside a transaction: use `init_database.py init` or create
+  the database manually with `psql`.
+- Environment variables: check `translation_validator_tool/api/.env`.
+- CSV encoding: save input files as UTF-8.
 
-Referencias
+## References
 
-- Scripts y utilidades: `translation_validator_tool/api/app/scripts/`
-- Migraciones: `translation_validator_tool/db_schema/alembic/`
+- Scripts and utilities: `translation_validator_tool/api/app/scripts/`.
+- Migrations: `translation_validator_tool/db_schema/alembic/`.

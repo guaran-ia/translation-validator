@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import HelpModal from './HelpModal';
-import guaraniaLogoNoBG from '../../images/guaraniaLogoNoBG.png';
+import platformLogo from '../../images/platform-logo.svg';
 
 const LoginForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -49,7 +49,7 @@ const LoginForm = ({ onSuccess }) => {
         <div>
           {/*<div className="flex justify-center mb-6">
             <img 
-              src={guaraniaLogoNoBG} 
+              src={platformLogo}
               alt="Mbo'ehara Digital Logo" 
               className="h-50 w-auto"
             />

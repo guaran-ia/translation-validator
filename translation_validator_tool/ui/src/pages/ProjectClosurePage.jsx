@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { projectAPI } from '../services/api';
-import guaraniaLogo from '../images/logo.svg';
-import ciditLogo from '../images/logoCidit.svg';
-import bidLogo from '../images/bidLogo.webp';
+import platformLogo from '../images/platform-logo.svg';
 
 const EMPTY_SUMMARY = {
   stats: { participants: 0, translations: 0, validations: 0, months: 0 },
@@ -453,7 +451,7 @@ const ProjectClosurePage = () => {
 
       <div className="closure-page-container relative mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
         <header className="closure-header flex flex-wrap items-center justify-between gap-4 py-4">
-          <img src={guaraniaLogo} alt="Mbo'ehara Digital" className="closure-header-logo h-12 w-auto" />
+          <img src={platformLogo} alt="Plataforma de traducción" className="closure-header-logo h-12 w-auto" />
         </header>
 
         {error ? (
@@ -519,12 +517,10 @@ const ProjectClosurePage = () => {
               </div>
             </SectionReveal>
 
-            <footer className="closure-footer mt-16 border-t border-white/10 py-10 sm:mt-24" aria-label="Instituciones">
-              <p className="closure-footer-text text-center text-xs font-bold uppercase tracking-[0.25em] text-teal-100/80">Un proyecto desarrollado con el acompañamiento de:</p>
-              <div className="closure-footer-logos mt-7 flex flex-col items-center justify-center gap-8 sm:flex-row sm:gap-12">
-                <img src={guaraniaLogo} alt="Mbo'ehara Digital" className="closure-footer-logo h-12 w-auto max-w-[210px]" />
-                <img src={ciditLogo} alt="CIDIT" className="closure-footer-logo h-12 w-auto max-w-[210px]" />
-                <img src={bidLogo} alt="BID" className="closure-footer-logo h-12 w-auto max-w-[210px]" />
+            <footer className="closure-footer mt-16 border-t border-white/10 py-10 sm:mt-24" aria-label="Plataforma">
+              <div className="flex flex-col items-center gap-4 text-center">
+                <img src={platformLogo} alt="Plataforma de traducción" className="h-12 w-auto" />
+                <p className="text-sm text-teal-100">Plataforma colaborativa de traducción y validación.</p>
               </div>
             </footer>
           </>

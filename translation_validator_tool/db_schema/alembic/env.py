@@ -57,16 +57,11 @@ def get_url():
     import os
     from app.config import settings
     
-    # Try to get from environment first, then from settings
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        try:
-            url = settings.DATABASE_URL
-        except Exception:
-            # Fallback URL for initial setup
-            url = "postgresql://user:password@localhost:5432/translation_validator"
-    
-    return url
+    url = os.getenv("DATABASE_URL") or settings.DATABASE_URL
+    if not url or not url.strip():
+        raise ValueError("DATABASE_URL es obligatoria. Configúrala en el entorno o en api/.env.")
+    return url.strip()
+
 
 
 def run_migrations_offline() -> None:

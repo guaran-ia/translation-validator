@@ -3,7 +3,6 @@
 
 import argparse
 import json
-import os
 import sys
 from collections import Counter
 from pathlib import Path
@@ -13,10 +12,13 @@ from openpyxl import load_workbook
 from psycopg2 import Error
 from psycopg2.extras import RealDictCursor
 
+if __package__:
+    from .database_config import get_database_url
+else:
+    from database_config import get_database_url
 
 LIMIT = 10
 MIN_QUALITY = 4.0
-DEFAULT_DATABASE_URL = "postgresql://postgres:1234@localhost:5432/translation_validator"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_FILE = SCRIPT_DIR / "documents" / "problemas_matematicos_guarani.json"
@@ -284,9 +286,9 @@ def print_discard_summary(discarded):
 
 def main():
     parse_args()
-    database_url = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
     try:
+        database_url = get_database_url()
         corpus_answers = load_corpus_answers()
         rows = fetch_candidates(database_url)
         selected, discarded = evaluate_candidates(rows, corpus_answers)

@@ -4,14 +4,16 @@ Script para agregar la columna translated a la tabla annotations usando psycopg2
 """
 import os
 import sys
+import re
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Cargar variables de entorno
-env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+env_path = Path(__file__).resolve().parents[1] / "api" / ".env"
 load_dotenv(env_path)
 
 # Obtener DATABASE_URL
-db_url = "postgresql://postgres:1234@localhost:5432/translation_validator"
+db_url = os.getenv("DATABASE_URL", "").strip()
 
 if not db_url:
     print("❌ Error: DATABASE_URL no está configurada en .env")
@@ -21,32 +23,11 @@ try:
     import psycopg2
     from psycopg2 import sql
     
-    # Parsear la URL de conexión
-    # postgresql+psycopg://user:password@host:port/dbname
-    db_url_clean = db_url.replace('postgresql+psycopg://', '').replace('postgresql://', '')
-    
-    parts = db_url_clean.split('@')
-    credentials = parts[0].split(':')
-    host_db = parts[1].split('/')
-    
-    user = credentials[0]
-    password = credentials[1]
-    host_port = host_db[0].split(':')
-    host = host_port[0]
-    port = int(host_port[1]) if len(host_port) > 1 else 5432
-    dbname = host_db[1]
-    
-    print(f"🔄 Conectando a PostgreSQL: {host}:{port}/{dbname}...")
-    
-    # Conectar
-    conn = psycopg2.connect(
-        host=host,
-        port=port,
-        database=dbname,
-        user=user,
-        password=password
-    )
-    
+    # psycopg2 handles escaped credentials, ports and query parameters.
+    database_url = re.sub(r"^postgresql\+[^:]+://", "postgresql://", db_url)
+    print("🔄 Conectando a PostgreSQL...")
+    conn = psycopg2.connect(database_url)
+
     cursor = conn.cursor()
     
     # Verificar si la columna ya existe

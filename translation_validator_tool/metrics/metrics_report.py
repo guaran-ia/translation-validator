@@ -18,9 +18,11 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+if __package__:
+    from .database_config import get_database_url
+else:
+    from database_config import get_database_url
 
-# Configuración de la base de datos
-DATABASE_URL = "postgresql://postgres:1234@localhost:5432/translation_validator"
 
 # está 3 horas adelantado
 SERVER_AHEAD_HOURS = 3
@@ -39,9 +41,9 @@ def get_connection():
         Error: Si hay problemas al conectarse
     """
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(get_database_url())
         return conn
-    except Error as e:
+    except (Error, ValueError) as e:
         print(f"❌ Error al conectar con la base de datos: {e}")
         sys.exit(1)
 

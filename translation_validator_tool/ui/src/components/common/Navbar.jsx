@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import guaraniaLogoNoBG from '../../images/logo.svg';
+import platformLogo from '../../images/platform-logo.svg';
 import { ACTIVE_TRANSLATOR, ACTIVE_VALIDATOR, canTranslate, canValidate, isAdmin as userIsAdmin } from '../../utils/roles';
 import { PROJECT_CLOSED } from '../../config/projectStatus';
 
@@ -30,7 +30,7 @@ const Navbar = () => {
           {/* Logo */}
           <div className="flex items-center justify-self-start">
             <div className="flex-shrink-0">
-              <img src={guaraniaLogoNoBG} alt="Mbo'ehara Digital" className="h-10 w-auto" />
+              <img src={platformLogo} alt="Plataforma de traducción" className="h-10 w-auto" />
             </div>
           </div>
 

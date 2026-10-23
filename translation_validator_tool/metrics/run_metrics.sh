@@ -2,20 +2,8 @@
 
 set -e
 
-# ============================================
-# PYENV CONFIG
-# ============================================
-
-export HOME="/home/clugo"
-export PYENV_ROOT="/opt/pyenv"
-export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/local/bin:/usr/bin:/bin:$PATH"
-
-eval "$("$PYENV_ROOT/bin/pyenv" init -)"
-
-
-# ============================================
-# CONFIGURACIÓN
-# ============================================
+# Use the active Python environment, or set METRICS_PYTHON to an interpreter path.
+# Optional uploads use METRICS_DRIVE_REMOTE (an rclone remote and folder).
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 METRICS_SCRIPT="$SCRIPT_DIR/metrics_report.py"
@@ -26,7 +14,7 @@ REQUIREMENTS_FILE="$SCRIPT_DIR/requirements_metrics.txt"
 LOG_DIR="$SCRIPT_DIR/logsMetrics"
 LOG_FILE="$LOG_DIR/metrics_report.log"
 
-PYTHON_CMD="$PYENV_ROOT/shims/python"
+PYTHON_CMD="${METRICS_PYTHON:-python3}"
 
 REPORT_FILE="$SCRIPT_DIR/documents/Metricas_Plataforma.docx"
 USERS_FILE="$SCRIPT_DIR/documents/Listado_Usuarios.xlsx"
@@ -43,7 +31,7 @@ TRADUCCIONES_DIA_IMG="$SCRIPT_DIR/documents/traducciones_por_dia.png"
 ACTIVIDAD_GLOBAL_DIARIA_IMG="$SCRIPT_DIR/documents/actividad_global_diaria.png"
 ACTIVIDAD_GLOBAL_DIA_HORA_IMG="$SCRIPT_DIR/documents/actividad_global_por_dia_hora.png"
 
-DRIVE_REMOTE="gdrive:Mboehara/Estadisticas"
+DRIVE_REMOTE="${METRICS_DRIVE_REMOTE:-}"
 
 # Crear directorio de logs si no existe
 mkdir -p "$LOG_DIR"
@@ -66,15 +54,9 @@ log_error() {
 
 cd "$SCRIPT_DIR"
 
-# activar entorno pyenv del proyecto (usa .python-version si existe)
-if ! "$PYENV_ROOT/bin/pyenv" version &> /dev/null; then
-    log_error "pyenv no está correctamente configurado"
-    exit 1
-fi
-
 # verificar python
-if ! command -v $PYTHON_CMD &> /dev/null; then
-    log_error "Python no encontrado en pyenv"
+if ! command -v "$PYTHON_CMD" &> /dev/null; then
+    log_error "Python no encontrado. Activa tu entorno o configura METRICS_PYTHON."
     exit 1
 fi
 
@@ -97,16 +79,25 @@ fi
 
 log_message "=== Iniciando generación de métricas ==="
 
-if $PYTHON_CMD "$METRICS_SCRIPT" >> "$LOG_FILE" 2>&1; then
+if "$PYTHON_CMD" "$METRICS_SCRIPT" >> "$LOG_FILE" 2>&1; then
     log_message "Métricas generadas exitosamente"
 
     GUARANI_PROBLEMS_GENERATED=false
     log_message "Generando JSON de problemas matemáticos en guaraní..."
-    if $PYTHON_CMD "$GUARANI_PROBLEMS_SCRIPT" >> "$LOG_FILE" 2>&1; then
+    if "$PYTHON_CMD" "$GUARANI_PROBLEMS_SCRIPT" >> "$LOG_FILE" 2>&1; then
         GUARANI_PROBLEMS_GENERATED=true
         log_message "JSON de problemas matemáticos generado exitosamente"
     else
         log_error "No se generó el JSON de problemas matemáticos; se omite su subida"
+    fi
+
+    if [ -z "$DRIVE_REMOTE" ]; then
+        log_message "Reportes guardados localmente. Configura METRICS_DRIVE_REMOTE para subirlos con rclone."
+        exit 0
+    fi
+    if ! command -v rclone &> /dev/null; then
+        log_error "rclone no está instalado; los reportes se conservaron localmente."
+        exit 1
     fi
 
    # ============================================

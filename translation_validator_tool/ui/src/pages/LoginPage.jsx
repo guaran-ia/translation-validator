@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import HelpModal from '../components/auth/HelpModal';
-import guaraniaLogoNoBG from '../images/logo.svg';
+import platformLogo from '../images/platform-logo.svg';
 import WeeklyLeaderboard from '../components/common/WeeklyLeaderboard';
 import { getStoredActiveRole, isAdmin, routeForActiveRole } from '../utils/roles';
 
@@ -70,7 +70,7 @@ const LoginPage = () => {
           <div className="hidden xl:flex flex-col justify-center items-start space-y-8 pr-8">
             {/* Logo - image plus descriptive text */}
             <div className="flex items-center space-x-4">
-              <img src={guaraniaLogoNoBG} alt="Mbo'ehara Digital" className="h-14 w-auto" />
+              <img src={platformLogo} alt="Plataforma de traducción" className="h-14 w-auto" />
             </div>
 
             {/* Main Title */}
@@ -225,12 +225,12 @@ const LoginPage = () => {
                     type="button"
                     onClick={() => setShowHelp(true)}
                     className="w-full inline-flex flex-col items-start justify-center bg-teal-500 hover:bg-teal-600 text-white text-sm font-semibold px-4 py-3 rounded-full shadow-md transition duration-200"
-                    aria-label="Necesitas ayuda - ver video instructivo"
+                    aria-label="Necesitas ayuda - ver instrucciones"
                   >
                     <div className="flex items-center space-x-3">
                       <div className="text-left">
                         <span className="block text-sm font-semibold">¿Necesitas ayuda?</span>
-                        <span className="block text-xs font-normal text-teal-100">Tenemos un video instructivo que puede ayudarte.</span>
+                        <span className="block text-xs font-normal text-teal-100">Consulta las instrucciones para comenzar.</span>
                       </div>
                     </div>
                   </button>

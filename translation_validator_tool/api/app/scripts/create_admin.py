@@ -9,7 +9,7 @@ from app.core.security import get_password_hash
 from app.database import Base
 
 
-def create_admin_user(username: str, email: str, password: str):
+def create_admin_user(username: str, email: str, password: str, nombre_completo: str = "Administrador"):
     """Create an admin user."""
     db = SessionLocal()
     
@@ -28,6 +28,7 @@ def create_admin_user(username: str, email: str, password: str):
         admin_user = User(
             username=username,
             email=email,
+            nombre_completo=nombre_completo,
             hashed_password=hashed_password,
             role="admin",
             is_active=True,
@@ -56,6 +57,7 @@ def main():
     parser.add_argument("--username", type=str, required=True, help="Admin username")
     parser.add_argument("--email", type=str, required=True, help="Admin email")
     parser.add_argument("--password", type=str, required=True, help="Admin password")
+    parser.add_argument("--nombre-completo", default="Administrador", help="Nombre completo del administrador")
     
     args = parser.parse_args()
     
@@ -64,7 +66,7 @@ def main():
     Base.metadata.create_all(bind=engine)
     
     # Create admin user
-    create_admin_user(args.username, args.email, args.password)
+    create_admin_user(args.username, args.email, args.password, args.nombre_completo)
 
 
 if __name__ == "__main__":
