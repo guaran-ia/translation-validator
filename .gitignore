@@ -1,0 +1,113 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+pip-wheel-metadata/
+htmlcov/
+coverage.xml
+.coverage
+.cache
+.pytest_cache/
+.mypy_cache/
+.tox/
+venv/
+ENV/
+env/
+.envrc
+
+# Virtualenvs inside subfolders (explicit)
+api/venv/
+db_schema/venv/
+ui/venv/
+
+# Node / Frontend
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+ui/dist/
+ui/.env.local
+ui/.vite/
+.vite/
+
+translation_validator_tool/metrics/documents/
+translation_validator_tool/metrics/logsMetrics/
+
+# Env files (keep .env.example)
+.env
+*.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Logs
+*.log
+logs/
+*.out
+
+# Database / runtime
+*.sqlite3
+*.db
+*.sql.gz
+
+# Build / packaging
+*.tar.gz
+*.zip
+
+# Misc
+coverage/
+coverage-report/
+*.bak
+*.swp
+*.tmp
+
+prodigy/data/batch_monitor_state.json
+
+#datajson
+data/*.jsonl
+data/*.csv
+
+# Keep Alembic migrations tracked (do NOT ignore db_schema/alembic/versions/)
+# If you have generated SQL dumps for local testing you may add patterns:
+# db_schema/*.sql     # uncomment only if you want to ignore generated SQL files
+openai_cache/
+
+translation_validator_tool/metrics/documents/Metricas_Plataforma.docx
+translation_validator_tool/metrics/Metricas_Plataforma.json
+translation_validator_tool/ui/data/leaderboard/weekly-leaderboard.json
+translation_validator_tool/ui/data/leaderboard
+translation_validator_tool/ui/public/leaderboard/weekly-leaderboard.json
+translation_validator_tool/api/data/project_summary.json
+
+# Instance data and unused legacy tooling (keep local copies)
+/data/data.xlsx
+/translation_validator_tool/prodigy/
+/translation_validator_tool/documents/metrics_report.docx
+/exit
+
+# Original campaign media and promotion (keep local copies)
+/translation_validator_tool/ui/src/images/bidLogo.webp
+/translation_validator_tool/ui/src/images/guaraniaLogoNoBG.png
+/translation_validator_tool/ui/src/images/hack.jpeg
+/translation_validator_tool/ui/src/images/logo.svg
+/translation_validator_tool/ui/src/images/logoCidit.svg
+/translation_validator_tool/ui/src/videos/Instructivo.mp4
+/translation_validator_tool/ui/src/videos/Validaciones.mp4
+/translation_validator_tool/ui/src/components/auth/HackathonModal.jsx

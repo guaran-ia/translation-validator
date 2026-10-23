@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Translation platform</title>
+  <rect width="64" height="64" rx="16" fill="#f0fdfa"/>
+  <path d="M14 17h24a5 5 0 0 1 5 5v14a5 5 0 0 1-5 5H25l-11 8V22a5 5 0 0 1 5-5Z" fill="#0f766e"/>
+  <path d="M43 27h3a5 5 0 0 1 5 5v17l-9-6h-9" stroke="#14b8a6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M23 26h11M23 33h7" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+</svg>

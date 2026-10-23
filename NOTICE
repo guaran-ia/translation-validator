@@ -1,0 +1,40 @@
+GuaranIA — Translation Validator
+
+Origins
+-------
+This project is derived from the tool used by the Universidad Nacional
+de Itapúa (UNI) for its Lacuna Fund translation hackathon.
+
+Original repository:
+https://github.com/aalvarez-fiuni/guarani-corpus-lacuna-uni
+
+Original instance of the tool:
+https://guarani.uni.edu.py/login
+
+Authorship of the original code is acknowledged to its respective authors.
+References to UNI and Lacuna Fund describe the project's origins.
+
+GuaranIA modifications
+---------------------
+Copyright 2026 the GuaranIA contributors, with respect to their own
+contributions.
+
+GuaranIA maintains a modified version of the original repository. Changes
+made to prepare it for reuse include environment-based configuration,
+administrator creation adjustments, disabling hackathon promotion, and
+separating datasets, generated reports, and unused legacy modules from
+the distributed code.
+
+License scope
+-------------
+GuaranIA's own contributions are offered under the Apache License 2.0.
+The complete license text is available in LICENSE.
+
+Dependencies, datasets, images, logos, videos, and other third-party
+materials retain their respective rights and terms. Their presence in
+the repository does not imply that they are offered under the Apache
+License 2.0.
+
+This file provides attribution and scope information; it does not modify
+the Apache License 2.0 text. Attribution and permissions for the original
+code will be updated when confirmed with the responsible parties.
